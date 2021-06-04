@@ -306,7 +306,7 @@ def variance_op(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         np_arr = np.random.randn(2,3,4,5)
@@ -618,6 +618,154 @@ def _add(x, y):
         return BroadcastAdd()(x, y)
 
 
+class Asin(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("asin").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("asin")
+@experimental_api
+def asin_op(input):
+    r"""
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \sin^{-1}(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
+        >>> output = flow.asin(input)
+        >>> print(output.shape)
+        flow.Size([4])
+        >>> print(output.numpy())
+        [-0.5235988  0.9272952  1.5707964 -0.9272952]
+        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
+        >>> output1 = input1.asin()
+        >>> print(output1.shape)
+        flow.Size([2, 2])
+        >>> print(output1.numpy())
+        [[ 0.9272952   1.5707964 ]
+         [-0.64350116 -1.5707964 ]]
+    """
+    return Asin()(input)
+
+
+@register_tensor_op("asin")
+@experimental_api
+def asin_op_tensor(input):
+    r"""
+
+    See :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+
+@oneflow_export("arcsin")
+@experimental_api
+def arcsin_op(input):
+    r"""
+  
+    Alias for :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+
+@register_tensor_op("arcsin")
+@experimental_api
+def arcsin_op_tensor(input):
+    r"""
+
+    See :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+
+class Asinh(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("asinh").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("asinh")
+@experimental_api
+def asinh_op(input):
+    r"""
+    Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution() 
+        >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
+        >>> output = flow.asinh(input)
+        >>> print(output.shape)
+        flow.Size([3])
+        >>> print(output.numpy())
+        [1.4436355 1.8184465 2.0947125]
+
+        >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> output1 = input1.asinh()
+        >>> print(output1.shape)
+        flow.Size([2, 3])
+        >>> print(output1.numpy())
+        [[-0.8813736   0.         -0.39003533]
+         [ 2.3124382   2.6441207   0.7326682 ]]
+
+    """
+    return Asinh()(input)
+
+
+@oneflow_export("arcsinh")
+@experimental_api
+def arcsinh_op(input):
+    r"""
+  
+    Alias for :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+
+
+@register_tensor_op("asinh")
+@experimental_api
+def asinh_op_tensor(input):
+    r"""
+
+    See :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+
+
+@register_tensor_op("arcsinh")
+@experimental_api
+def arcsinh_op_tensor(input):
+    r"""
+
+    See :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+
+
 class Sin(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -628,27 +776,50 @@ class Sin(Module):
 
 
 @oneflow_export("sin")
-@register_tensor_op("sin")
 @experimental_api
 def sin_op(tensor):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
 
     .. math::
+
         \text{out}_{i} = \sin(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
-        input = flow.Tensor(arr, dtype=flow.float32)
-        output = flow.sin(input)
-        # [-0.51935846  0.13429303 -0.40318328 -0.27116194]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
+        >>> out1 = flow.sin(x1)
+        >>> out1.numpy() #doctest: +ELLIPSIS
+        array([-0.5193...,  0.1342..., -0.4031..., -0.2711...], dtype=float32)
+        >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
+        >>> out2 = flow.sin(x2)
+        >>> out2.numpy() #doctest: +ELLIPSIS
+        array([-0.9854...,  0.5155..., -0.5298...], dtype=float32)
+
     """
+
+    return Sin()(tensor)
+
+
+@register_tensor_op("sin")
+@experimental_api
+def sin_op_tensor(tensor):
+    r"""
+
+    sin() -> Tensor
+
+    See :func:`oneflow.experimental.sin`
+    
+    """
+
     return Sin()(tensor)
 
 
@@ -960,6 +1131,42 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
+class Cosh(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("cosh").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("cosh")
+@register_tensor_op("cosh")
+@experimental_api
+def cosh_op(tensor):
+    r"""
+    Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \cosh(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.cosh(input)
+        # [1.0133467 1.7859949 1.2535787 1.2804903]
+
+    """
+    return Cosh()(tensor)
+
+
 
 class Ceil(Module):
     def __init__(self) -> None:
@@ -969,9 +1176,7 @@ class Ceil(Module):
     def forward(self, x):
         return self._op(x)[0]
 
-
 @oneflow_export("ceil")
-@register_tensor_op("ceil")
 @experimental_api
 def ceil_op(x):
     r"""Returns a new tensor with the ceil of the elements of :attr:`x`,
@@ -993,17 +1198,56 @@ def ceil_op(x):
 
     .. code-block:: python 
         
-        import numpy as np
-        import oneflow as flow
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution() 
         
-        x = flow.Tensor(np.array([1.0, -1.3, 2.3]).astype(np.float32)) 
-        y = flow.ceil(x)
+        >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
+        >>> y = flow.ceil(x)
+        >>> print(y.shape)
+        flow.Size([3])
+        >>> print(y.numpy())
+        [ 1. -2.  4.]
 
-        # y tensor([ 1. -1.  3.])
+
+        >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
+        >>> y = flow.ceil(x)
+        >>> print(y.shape)
+        flow.Size([2, 3])
+        >>> print(y.numpy())
+        [[ 3.  5.  1.]
+         [ 8.  9. 10.]]
+
+
+
+
+        >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
+        >>> y = flow.ceil(x)
+        >>> print(y.shape)
+        flow.Size([2, 2, 3])
+        >>> print(y.numpy())
+        [[[ 3.  5.  7.]
+          [ 8.  9. 10.]]
+        <BLANKLINE>
+         [[11. 12. 13.]
+          [14. 15. 16.]]]
 
     """
 
     return Ceil()(x)
+
+
+@register_tensor_op("ceil")
+@experimental_api
+def ceil_op_tensor(x):
+    r"""
+    See :func:`oneflow.experimental.ceil`
+    """
+
+    return Ceil()(x)
+
+
+
 
 
 class Expm1(Module):
@@ -1016,7 +1260,6 @@ class Expm1(Module):
 
 
 @oneflow_export("expm1")
-@register_tensor_op("expm1")
 @experimental_api
 def expm1_op(x):
     """Returns a new tensor with the exponential of the elements minus 1
@@ -1038,13 +1281,60 @@ def expm1_op(x):
 
     .. code-block:: python 
         
-        import numpy as np
-        import oneflow as flow
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution() 
         
-        x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        y = flow.expm1(x)
+        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
+        >>> y = flow.expm1(x)
+        >>> print(y.shape)
+        flow.Size([3])
+        >>> print(y.numpy())
+        [ 1.7182817  6.389056  19.085537 ]
 
-        # y [ 1.7182819  6.389056  19.085537 ]
+
+        >>> x = flow.Tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
+        >>> y = flow.expm1(x)
+        >>> print(y.shape)
+        flow.Size([2, 3])
+        >>> print(y.numpy())
+        [[6.3890562e+00 5.3598152e+01 4.0242880e+02]
+         [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
+
+
+
+        >>> x = flow.Tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
+        >>> y = flow.expm1(x)
+        >>> print(y.shape)
+        flow.Size([2, 2, 3])
+        >>> print(y.numpy())
+        [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
+          [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
+        <BLANKLINE>
+         [[2.2025465e+04 5.9873141e+04 1.6275380e+05]
+          [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
+
 
     """
     return Expm1()(x)
+
+
+
+@register_tensor_op("expm1")
+@experimental_api
+def expm1_op_tensor(x):
+    r"""
+    See :func:`oneflow.experimental.expm1`
+    """
+
+    return Expm1()(x)
+
+
+
+
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
+    
