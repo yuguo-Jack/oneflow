@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/madler/zlib/archive/v1.2.8.tar.gz'
+tag='MD5=1eabf2698dc49f925ce0ffb81397098f'

@@ -1,0 +1,1 @@
+cmd='/opt/cmake/cmake-3.14.0-Linux-x86_64/bin/cmake;-DCMAKE_BUILD_TYPE:STRING=Release;-DCMAKE_INSTALL_PREFIX=/home/yuzailiang/oneflow/docker/package/manylinux/manylinux2014-build-cache/build-third-party-install/flatbuffers;-DCMAKE_INSTALL_INCLUDEDIR=include;-DCMAKE_INSTALL_LIBDIR=lib;-DCMAKE_INSTALL_BINDIR=bin;-GUnix Makefiles;<SOURCE_DIR><SOURCE_SUBDIR>'

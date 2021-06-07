@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/Oneflow-Inc/eigen-git-mirror/archive/e9e95489a.tar.gz'
+tag='MD5=a23cb70e12d1bf9b09cb28af51bc26ae'

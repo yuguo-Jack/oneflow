@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/Oneflow-Inc/libjpeg-turbo/archive/3041cf67f.tar.gz'
+tag='MD5=04e30c853d771ce0c29192579043dd86'

@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/NVlabs/cub/archive/v1.8.0.tar.gz'
+tag='MD5=9203ea2499b56782601fddf8a12e9b08'

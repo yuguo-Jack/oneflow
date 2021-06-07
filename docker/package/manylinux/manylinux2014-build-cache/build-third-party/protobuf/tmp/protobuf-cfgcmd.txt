@@ -1,0 +1,1 @@
+cmd='/opt/cmake/cmake-3.14.0-Linux-x86_64/bin/cmake;cmake/;-Dprotobuf_BUILD_TESTS=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE=ON;-DZLIB_ROOT=/home/yuzailiang/oneflow/docker/package/manylinux/manylinux2014-build-cache/build-third-party/zlib/install;-DCMAKE_CXX_FLAGS_DEBUG=-g -std=c++11 -Wall -Wno-sign-compare -Wno-unused-function -fPIC'

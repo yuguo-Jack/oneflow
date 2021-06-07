@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/Oneflow-Inc/re2/archive/e17af7789.tar.gz'
+tag='MD5=3b2e20c1edd1cfe887aeef3b0747eac0'

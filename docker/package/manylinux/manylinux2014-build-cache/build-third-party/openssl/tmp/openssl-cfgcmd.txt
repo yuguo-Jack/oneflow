@@ -1,0 +1,1 @@
+cmd='/home/yuzailiang/oneflow/docker/package/manylinux/manylinux2014-build-cache/build-third-party/openssl/src/openssl/config;--prefix=/home/yuzailiang/oneflow/docker/package/manylinux/manylinux2014-build-cache/build-third-party-install/openssl'

@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/Oneflow-Inc/cocoapi/archive/ed842bf.tar.gz'
+tag='MD5=e7e0504231e5614ffaa34f081773f7f1'

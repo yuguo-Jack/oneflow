@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/Oneflow-Inc/half/archive/v2.1.0-fix-cuda-raise.zip'
+tag='MD5=30b0dc289729f9e85ddf6995f2e6968f'

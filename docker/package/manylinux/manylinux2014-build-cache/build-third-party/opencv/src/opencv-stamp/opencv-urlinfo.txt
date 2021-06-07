@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/Oneflow-Inc/opencv/archive/51cef2651.tar.gz'
+tag='MD5=59870e55385f5202c1aa178fe37ed2de'

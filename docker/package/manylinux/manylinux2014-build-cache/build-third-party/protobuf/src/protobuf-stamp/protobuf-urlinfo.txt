@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/Oneflow-Inc/protobuf/archive/1d2c7b6c7.tar.gz'
+tag='MD5=b859a1c299f1b374b25de2f0df9f9b50'

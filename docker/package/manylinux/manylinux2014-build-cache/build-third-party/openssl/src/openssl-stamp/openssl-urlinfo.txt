@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/openssl/openssl/archive/OpenSSL_1_1_1g.tar.gz'
+tag='MD5=dd32f35dd5d543c571bc9ebb90ebe54e'

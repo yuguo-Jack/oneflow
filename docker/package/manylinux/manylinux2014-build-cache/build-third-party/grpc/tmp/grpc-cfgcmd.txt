@@ -1,0 +1,1 @@
+cmd='/opt/cmake/cmake-3.14.0-Linux-x86_64/bin/cmake;-C<TMP_DIR>/grpc-cache-$<CONFIG>.cmake;-GUnix Makefiles;<SOURCE_DIR><SOURCE_SUBDIR>'

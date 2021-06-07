@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://github.com/Oneflow-Inc/gflags/archive/9314597d4.tar.gz'
+tag='MD5=9677cc51d63642ba3d5f2a57a1fa2bd0'
