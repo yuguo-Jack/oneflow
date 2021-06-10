@@ -28,6 +28,25 @@ option(BUILD_PROFILER "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
+set(AUTO_THIRD_PARTY_MIRROR "" CACHE STRING ON)
+
+if (AUTO_THIRD_PARTY_MIRROR)
+  execute_process(
+    COMMAND ping -c 1 -q google.com >&/dev/null; echo $?
+    RESULT_VARIABLE STATUS
+    OUTPUT_VARIABLE OUTPUT
+    ERROR_QUIET
+  )
+  if(NOT STATUS EQUAL 0)
+    string(STRIP ${OUTPUT} STRIPPED)
+    set(DEFAULT_THIRD_PARTY_MIRROR aliyun)
+    set(DEFAULT_PIP_SIMPLE_INDEX_URL https://pypi.tuna.tsinghua.edu.cn/simple)
+    message(STATUS "Using third party mirror: ${DEFAULT_THIRD_PARTY_MIRROR}")
+    message(STATUS "Using pip simple index url: ${DEFAULT_PIP_SIMPLE_INDEX_URL}")
+    set(THIRD_PARTY_MIRROR ${DEFAULT_THIRD_PARTY_MIRROR})
+    set(PIP_INDEX_ARG "-i ${DEFAULT_PIP_SIMPLE_INDEX_URL}")
+  endif()
+endif()
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CUDNN_STATIC OFF CACHE BOOL "")
