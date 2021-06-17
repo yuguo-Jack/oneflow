@@ -117,7 +117,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     _{{ util.class_name(cls) }}_();
     explicit _{{ util.class_name(cls) }}_(const _{{ util.class_name(cls) }}_& other);
     explicit _{{ util.class_name(cls) }}_(_{{ util.class_name(cls) }}_&& other);
-    _{{ util.class_name(cls) }}_(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
+    explicit _{{ util.class_name(cls) }}_(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
     ~_{{ util.class_name(cls) }}_();
 
     void InitFromProto(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
@@ -236,7 +236,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   Const{{ util.class_name(cls) }}(const Const{{ util.class_name(cls) }}&);
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept;
   Const{{ util.class_name(cls) }}();
-  Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
+  explicit Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
   virtual ~Const{{ util.class_name(cls) }}() override;
 
   using PbMessage = ::google::protobuf::Message;
@@ -327,7 +327,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   // enable nothrow for ::std::vector<{{ util.class_name(cls) }}> resize 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept;
   {{ util.class_name(cls) }}();
-  {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
+  explicit {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
 
   ~{{ util.class_name(cls) }}() override;
 
