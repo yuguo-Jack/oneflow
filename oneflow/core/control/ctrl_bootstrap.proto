@@ -10,6 +10,7 @@ message ProcessCtx {
   repeated Address ctrl_addr = 1;
   required int64 rank = 2;
   required int64 node_size = 3;
+  repeated int64 num_process_distribution_in_cluster = 4;
 }
 
 message BootstrapConf {

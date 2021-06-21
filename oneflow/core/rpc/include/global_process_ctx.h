@@ -26,7 +26,7 @@ struct GlobalProcessCtx {
   static int64_t LocalRank();
   static int64_t NodeSize();
   static int64_t ThisNodeId();
-  static int64_t NumOfProcessPerNode();
+  static int64_t NumOfProcessOnNode();
   static bool IsThisProcessMaster();
   static size_t WorldSize();
   static std::string LogDirEntry();
