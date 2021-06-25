@@ -30,4 +30,4 @@ class GlogManager final {
 
 }  // namespace oneflow
 
-#endif
+#endif // ONEFLOW_CORE_JOB_GLOG_MANAGER_H_
