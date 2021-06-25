@@ -40,27 +40,6 @@ namespace oneflow {
 
 namespace {
 
-std::string LogDir(const std::string& log_dir) {
-  char hostname[255];
-  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
-  std::string v = JoinPath(log_dir, std::string(hostname));
-  return v;
-}
-
-void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) {
-  if (!default_physical_env) {
-    FLAGS_log_dir = LogDir(logging_conf.log_dir());
-  } else {
-    std::string default_env_log_path = JoinPath(logging_conf.log_dir(), "default_physical_env_log");
-    FLAGS_log_dir = LogDir(default_env_log_path);
-  }
-  FLAGS_logtostderr = logging_conf.logtostderr();
-  FLAGS_logbuflevel = logging_conf.logbuflevel();
-  FLAGS_stderrthreshold = 1;  // 1=WARNING
-  google::InitGoogleLogging("oneflow");
-  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
-}
-
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 int32_t GetDefaultGpuDeviceNum() {
@@ -89,8 +68,6 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   thread_id_ = std::this_thread::get_id();
-  is_default_physical_env_ = env_proto.is_default_physical_env();
-  InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
@@ -174,7 +151,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
-  google::ShutdownGoogleLogging();
 }
 
 const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
