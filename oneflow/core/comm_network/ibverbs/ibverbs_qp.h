@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/actor/actor_message.h"
+#include <queue>
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -79,10 +80,20 @@ class IBVerbsQP final {
   ibv_context* ctx_;
   ibv_pd* pd_;
   ibv_qp* qp_;
+  
   std::vector<ActorMsgMR*> recv_msg_buf_;
+
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
+
+    //TODO(lambda:the first PR)
+  std::mutex numMsg_in_SendBuf_mtx;
+  uint32_t numMsg_in_SendBuf_;
+  uint32_t max_send_wr_;
+  std::mutex pend_msg_buf_mtx_;
+  std::queue<ActorMsgRP*> PendingBuf;//this buf is used when the numMsg_in_buf is bigger then max_send_wr;
+
 };
 
 }  // namespace oneflow
