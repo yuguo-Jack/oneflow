@@ -64,7 +64,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   max_recv_wr_ = max_recv_wr;
   numMsg_in_SendBuf_ = 0;
   CHECK(PendingBuf.empty());
-
+//lambda
 }
 
 IBVerbsQP::~IBVerbsQP() {
