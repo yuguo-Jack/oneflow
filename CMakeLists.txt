@@ -182,4 +182,4 @@ endif()
 # skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
   include(oneflow)
-endif()
+endif() #cmake lambda
