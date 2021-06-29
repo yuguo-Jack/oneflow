@@ -86,13 +86,12 @@ class IBVerbsQP final {
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
-
     //TODO(lambda:the first PR)
-  std::mutex numMsg_in_SendBuf_mtx;
-  uint32_t numMsg_in_SendBuf_;
-  uint32_t max_send_wr_;
-  std::mutex pend_msg_buf_mtx_;
-  std::queue<ActorMsgRP*> PendingBuf;//this buf is used when the numMsg_in_buf is bigger then max_send_wr;
+  std::mutex num_msg_in_send_buf_mutex_;
+  uint32_t num_msg_in_send_buf_; 
+  uint32_t max_send_wr_in_send_buf_;
+  std::mutex wait_msg_buf_mtx_;
+  std::queue<ActorMsgRP*> wait_msg_buf_;//this buf is used when the numMsg_in_buf is bigger then max_send_wr;
 
 };
 

@@ -47,7 +47,6 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   qp_init_attr.srq = nullptr;
   qp_init_attr.cap.max_send_wr = std::min(device_attr.max_qp_wr, kMaxSendWr);
   qp_init_attr.cap.max_recv_wr = max_recv_wr;
-
   qp_init_attr.cap.max_send_sge = 1;
   qp_init_attr.cap.max_recv_sge = 1;
   qp_init_attr.cap.max_inline_data = 0;
@@ -61,10 +60,9 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
    //TODO(lambda)
-  max_recv_wr_ = max_recv_wr;
-  numMsg_in_SendBuf_ = 0;
-  CHECK(PendingBuf.empty());
-//lambda
+  max_send_wr_in_send_buf_ = max_recv_wr;
+  num_msg_in_send_buf_ = 0;
+  CHECK(wait_msg_buf_.empty());
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -74,9 +72,9 @@ IBVerbsQP::~IBVerbsQP() {
     send_msg_buf_.pop();
   }
   //TODO lambda
-  while(PendingBuf.empty() == false){
-    delete PendinBuf.front();
-    PendingBuf.pop();
+  while(wait_msg_buf_.empty() == false){
+    delete wait_msg_buf_.front();
+    wait_msg_buf_.pop();
   }
   for (ActorMsgMR* msg_mr : recv_msg_buf_) { delete msg_mr; }
 }
@@ -162,7 +160,6 @@ void IBVerbsQP::PostReadRequest(const IBVerbsMemDescProto& remote_mem,
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   ActorMsgMR* msg_mr = GetOneSendMsgMRFromBuf();
-  
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
@@ -191,19 +188,16 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   {
     std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
-    //TODO(lambda：when the numMsg_in_SendBuf_ is greater than the max_send_wr_,
-    //TODO we should put the msg in the pending queue)
-    if(numMsg_in_SendBuf_ > max_send_wr_){
-        std::unique_lock<std::mutex> lck(pend_msg_buf_mtx_);
-        PendingBuf.push(wr_id->msg_wr);
-
-    }else{
-        std::unique_lock<std::mutex> lck(numMsg_in_SendBuf_mtx);
-        numMsg_in_SendBuf_++;;
-        send_msg_buf_.push(wr_id->msg_mr);
-
+    //lambda：when the numMsg_in_SendBuf_ is greater than the max_send_wr_,
+    // we should put the msg in the pending queue)
+    std::unique_lock<std::mutex> lck1(num_msg_in_send_buf_mutex_);
+    if(num_msg_in_send_buf_ >=  max_send_wr_in_send_buf_ ) {
+      std::unique_lock<std::mutex> lck2(wait_msg_buf_mtx_);
+      wait_msg_buf_.push(wr_id->msg_wr);
+    }else {
+      num_msg_in_send_buf_++;
+      send_msg_buf_.push(wr_id->msg_wr);
     }
-    
   }
   DeleteWorkRequestId(wr_id);
 }
@@ -228,28 +222,22 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
 
 ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
   std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
-  std::unique_lock<std::mutex> lck(numMsg_in_SendBuf_mtx);
-
-  if (send_msg_buf_.empty()) { 
+  std::unique_lock<std::mutex> lck1(num_msg_in_send_buf_mutex_);
+  if(send_msg_buf_.empty()) {
     send_msg_buf_.push(new ActorMsgMR(pd_));
-    numMsg_in_SendBuf_++;
-    //lambda:because one msg is added into the send_msg_buf
+    num_msg_in_send_buf_++;
   }
-
   ActorMsgMR* msg_mr = send_msg_buf_.front();
-  numMsg_in_SendBuf_--;
+  num_msg_in_send_buf--;
   send_msg_buf_.pop();
-  if((max_send_wr_ - numMsg_in_SendBuf_) < (2 * max_send_wr_  / 3)){
-    std::unique_lock<std::mutex> lck(pend_msg_buf_mtx_);
-    if(!PendingBuf.empty()){
-      //the PendingBug is not empty
-      //so we push the message from the PendingBug into the send_msg_bug_
-      uint32_t num_msg_from_buf = max_send_wr_ - numMsg_in_SendBuf_;
-      while(num_msg_from_buf > 0 &&!PendingBuf.empty() ){
-          send_msg_buf_.push(PendingBuf.front());
-          num_msg_from_buf--;
-          PendingBuf.pop();
-          numMsg_in_SendBuf_++;
+  if((max_send_wr_in_send_buf_ - num_msg_in_send_buf_ ) <(2 * max_send_wr_in_send_buf_ / 3)) {
+    std::unique_lock<std::lock> lck2(wait_msg_buf_);
+    if(wait_msg_buf_.empty() == false) {
+      uint32_t num_msg_pull_from_wait_buf = max_send_wr_in_send_buf_ - num_msg_in_send_buf_;
+      while(num_msg_pull_from_wait_buf > 0 && wait_msg_buf_.empty() == false) {
+        send_msg_buf_.push(wait_msg_buf_.front());
+        wait_msg_buf_.pop();
+        num_msg_pull_from_wait_buf--;
       }
     }
   }
