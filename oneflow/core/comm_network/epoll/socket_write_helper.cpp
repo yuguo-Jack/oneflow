@@ -35,7 +35,7 @@ SocketWriteHelper::~SocketWriteHelper() {
 SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
   sockfd_ = sockfd;
   queue_not_empty_fd_ = eventfd(0, 0);
-  //queue_not_empty_fd_ = eventfd(unsigned int __count, int __flags)
+  // queue_not_empty_fd_ = eventfd(unsigned int __count, int __flags)
   PCHECK(queue_not_empty_fd_ != -1);
   poller->AddFdWithOnlyReadHandler(queue_not_empty_fd_,
                                    std::bind(&SocketWriteHelper::ProcessQueueNotEmptyEvent, this));
@@ -69,7 +69,6 @@ void SocketWriteHelper::ProcessQueueNotEmptyEvent() {
 
 void SocketWriteHelper::WriteUntilMsgQueueEmptyOrSocketNotWriteable() {
   while ((this->*cur_write_handle_)()) {}
-  
 }
 
 bool SocketWriteHelper::InitMsgWriteHandle() {

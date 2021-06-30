@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/id_manager.h"
 
@@ -84,6 +85,13 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   msg.actor_cmd_ = cmd;
   return msg;
 }
+
+//TODO(lambda7xx@gmail.com)
+void ActorMsg::ChangeCommandMsg(ActorMsg msg) {
+  msg.msg_type_ = ActorMsgType::kUnuseMsg;
+}
+
+
 
 int64_t ActorMsg::SrcMachineId() const {
   return Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_);

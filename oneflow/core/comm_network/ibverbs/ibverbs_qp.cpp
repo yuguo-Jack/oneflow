@@ -59,7 +59,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
-   //TODO(lambda)
+  // TODO(lambda)
   max_send_wr_in_send_buf_ = max_recv_wr;
   num_msg_in_send_buf_ = 0;
   CHECK(wait_msg_buf_.empty());
@@ -71,8 +71,8 @@ IBVerbsQP::~IBVerbsQP() {
     delete send_msg_buf_.front();
     send_msg_buf_.pop();
   }
-  //TODO lambda
-  while(wait_msg_buf_.empty() == false){
+  // TODO lambda
+  while (wait_msg_buf_.empty() == false) {
     delete wait_msg_buf_.front();
     wait_msg_buf_.pop();
   }
@@ -188,13 +188,13 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   {
     std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
-    //lambda：when the numMsg_in_SendBuf_ is greater than the max_send_wr_,
+    // lambda：when the numMsg_in_SendBuf_ is greater than the max_send_wr_,
     // we should put the msg in the pending queue)
     std::unique_lock<std::mutex> lck1(num_msg_in_send_buf_mutex_);
-    if(num_msg_in_send_buf_ >=  max_send_wr_in_send_buf_ ) {
+    if (num_msg_in_send_buf_ >= max_send_wr_in_send_buf_) {
       std::unique_lock<std::mutex> lck2(wait_msg_buf_mtx_);
       wait_msg_buf_.push(wr_id->msg_wr);
-    }else {
+    } else {
       num_msg_in_send_buf_++;
       send_msg_buf_.push(wr_id->msg_wr);
     }
@@ -203,9 +203,16 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
 }
 
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
-  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(wr_id->msg_mr->msg());
+  ActorMsg msg = wr_id->msg_mr->msg();
+  
+  if(msg.msg_type != ActorMsgType::kUnuseMsg) {
+    Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(wr_id->msg_mr->msg());
+    PostRecvRequest(wr_id->msg_mr);
+    DeleteWorkRequestId(wr_id);
+  }
+  /*Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
-  DeleteWorkRequestId(wr_id);
+  DeleteWorkRequestId(wr_id);*/
 }
 
 void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
@@ -223,18 +230,18 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
 ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
   std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
   std::unique_lock<std::mutex> lck1(num_msg_in_send_buf_mutex_);
-  if(send_msg_buf_.empty()) {
+  if (send_msg_buf_.empty()) {
     send_msg_buf_.push(new ActorMsgMR(pd_));
     num_msg_in_send_buf_++;
   }
   ActorMsgMR* msg_mr = send_msg_buf_.front();
   num_msg_in_send_buf--;
   send_msg_buf_.pop();
-  if((max_send_wr_in_send_buf_ - num_msg_in_send_buf_ ) <(2 * max_send_wr_in_send_buf_ / 3)) {
+  if ((max_send_wr_in_send_buf_ - num_msg_in_send_buf_) < (2 * max_send_wr_in_send_buf_ / 3)) {
     std::unique_lock<std::lock> lck2(wait_msg_buf_);
-    if(wait_msg_buf_.empty() == false) {
+    if (wait_msg_buf_.empty() == false) {
       uint32_t num_msg_pull_from_wait_buf = max_send_wr_in_send_buf_ - num_msg_in_send_buf_;
-      while(num_msg_pull_from_wait_buf > 0 && wait_msg_buf_.empty() == false) {
+      while (num_msg_pull_from_wait_buf > 0 && wait_msg_buf_.empty() == false) {
         send_msg_buf_.push(wait_msg_buf_.front());
         wait_msg_buf_.pop();
         num_msg_pull_from_wait_buf--;
