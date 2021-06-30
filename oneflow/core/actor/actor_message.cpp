@@ -86,6 +86,15 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   return msg;
 }
 
+ActorMsg ActorMsg::BuildUnuseMsg(int64_t dst_actor_id, ActorCmd cmd) {
+    ActorMsg msg;
+  msg.src_actor_id_ = -1;
+  msg.dst_actor_id_ = dst_actor_id;
+  msg.msg_type_ = ActorMsgType::kUnuseMsg;
+  msg.actor_cmd_ = cmd;
+  return msg;
+}
+
 //TODO(lambda7xx@gmail.com)
 void ActorMsg::ChangeCommandMsg(ActorMsg msg) {
   msg.msg_type_ = ActorMsgType::kUnuseMsg;

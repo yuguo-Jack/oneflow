@@ -44,7 +44,7 @@ class ActorMsg final {
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
   //TODO(lambda7xx@gmail.com)
   static void ChangeCommandMsg(ActorMsg msg);
-
+  static ActorMsg BuildUnuseMsg(int64_t dst_actor_id, ActorCmd cmd);
   // Getters
   int64_t SrcMachineId() const;
   int64_t src_actor_id() const { return src_actor_id_; }

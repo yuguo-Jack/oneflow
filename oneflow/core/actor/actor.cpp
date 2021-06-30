@@ -339,7 +339,8 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     ActUntilFail();
-  } else {
+  } else if(msg.msg_type() == ActorMsgType::kUnuseMsg) {
+    } else {
     UNIMPLEMENTED();
   }
   // handler halts
