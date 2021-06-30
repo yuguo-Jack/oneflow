@@ -29,7 +29,7 @@ enum class ActorCmd {
   kConstructActor
 };
 
-enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg,kUnuseMsg };
+enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
 
 class ActorMsg final {
  public:
@@ -43,13 +43,14 @@ class ActorMsg final {
   static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
   //TODO(lambda7xx@gmail.com)
-  static void ChangeCommandMsg(ActorMsg msg);
   static ActorMsg BuildUnuseMsg(int64_t dst_actor_id, ActorCmd cmd);
   // Getters
   int64_t SrcMachineId() const;
   int64_t src_actor_id() const { return src_actor_id_; }
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
+  //TODO(lambda7xx- by shixiaoxiang)
+  int getFlag()           const  { return flag_useful_; }
   ActorCmd actor_cmd() const;
   Regst* regst() const;
   int64_t regst_desc_id() const;
@@ -80,6 +81,7 @@ class ActorMsg final {
   int64_t src_actor_id_;
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
+  int flag_useful_ ; 
   union {
     ActorCmd actor_cmd_;
     RegstWrapper regst_wrapper_;

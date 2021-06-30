@@ -83,24 +83,19 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   msg.dst_actor_id_ = dst_actor_id;
   msg.msg_type_ = ActorMsgType::kCmdMsg;
   msg.actor_cmd_ = cmd;
+  msg.flag_useful_  =1;
   return msg;
 }
 
 ActorMsg ActorMsg::BuildUnuseMsg(int64_t dst_actor_id, ActorCmd cmd) {
-    ActorMsg msg;
+  ActorMsg msg;
   msg.src_actor_id_ = -1;
   msg.dst_actor_id_ = dst_actor_id;
-  msg.msg_type_ = ActorMsgType::kUnuseMsg;
+  msg.msg_type_ =  ActorMsgType::kCmdMsg;
   msg.actor_cmd_ = cmd;
+  msg.flag_useful_ = 0;
   return msg;
 }
-
-//TODO(lambda7xx@gmail.com)
-void ActorMsg::ChangeCommandMsg(ActorMsg msg) {
-  msg.msg_type_ = ActorMsgType::kUnuseMsg;
-}
-
-
 
 int64_t ActorMsg::SrcMachineId() const {
   return Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_);
