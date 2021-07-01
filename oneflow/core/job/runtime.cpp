@@ -47,7 +47,7 @@ void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
     //send a lot of unusefule messgae by RDMA, to test  the RDMA's maximunm queue lenght
     ActorMsg unuse_msg = ActorMsg::BuildUnuseMsg(task->task_id(), cmd);
     printf("SendCmdMsg\n");
-    for(uint i = 0; i < 6000; i ++){
+    for(uint i = 0; i < 1000; i ++){
       Global<ActorMsgBus>::Get()->SendMsg(unuse_msg);
     }
 
