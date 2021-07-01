@@ -79,6 +79,7 @@ void IBVerbsCommNet::RegisterMemoryDone() {
 }
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
+  printf("we use RDMA to send the msg\n");
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 

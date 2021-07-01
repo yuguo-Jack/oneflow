@@ -121,6 +121,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
 #ifdef WITH_RDMA
       if (ibv::IsAvailable()) {
         Global<IBVerbsCommNet>::New();
+        printf("we use the IBVerbsCommNet\n");
         Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
       } else {
         LOG(ERROR) << "libibverbs not available, falling back to epoll";

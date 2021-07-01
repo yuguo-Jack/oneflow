@@ -236,16 +236,22 @@ ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
     num_msg_in_send_buf_++;
   }
   ActorMsgMR* msg_mr = send_msg_buf_.front();
-  num_msg_in_send_buf--;
+  num_msg_in_send_buf_--;
   send_msg_buf_.pop();
-  if ((max_send_wr_in_send_buf_ - num_msg_in_send_buf_) < (2 * max_send_wr_in_send_buf_ / 3)) {
+  printf("GetOneSendMsgMRFromBuf and num_msg_in_send_buf_:%d\n", num_msg_in_send_buf_);
+  if(num_msg_in_send_buf_ == 0) {
+    //when the num_msg_in_send_buf_ is zero 
+    //it respresent that there is no mssage in the send_msg_buf_
     std::unique_lock<std::lock> lck2(wait_msg_buf_);
-    if (wait_msg_buf_.empty() == false) {
-      uint32_t num_msg_pull_from_wait_buf = max_send_wr_in_send_buf_ - num_msg_in_send_buf_;
-      while (num_msg_pull_from_wait_buf > 0 && wait_msg_buf_.empty() == false) {
+    if(wait_msg_buf_.empty() = false)  {
+      //the wait is not empty
+      printf("we first pull from the wait_msg_buf_\n");
+      //so we pull from the  wait_msg_buf_;
+      uint32_t  num_pull_from_wait_buf = 0;
+      while(wait_msg_buf_.empty() == false && num_pull_from_wait_buf < this.max_send_wr_in_send_buf_) {
         send_msg_buf_.push(wait_msg_buf_.front());
         wait_msg_buf_.pop();
-        num_msg_pull_from_wait_buf--;
+        num_pull_from_wait_buf++;
       }
     }
   }
