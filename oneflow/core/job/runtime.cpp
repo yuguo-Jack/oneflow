@@ -31,6 +31,8 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
+
+#include <stdio.h>
 #ifdef WITH_RDMA
 #include "oneflow/core/dl/include/ibv.h"
 #endif  // WITH_RDMA
@@ -131,6 +133,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       LOG(FATAL) << "RDMA components not found";
 #endif
     } else {
+      printf("we use the EpollCommNet\n");
       Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
     }
 #endif
