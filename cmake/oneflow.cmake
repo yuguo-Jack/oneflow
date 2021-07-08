@@ -335,6 +335,10 @@ foreach(cc ${of_main_cc})
   set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 endforeach()
 
+oneflow_add_executable(rocm_square ${PROJECT_SOURCE_DIR}/oneflow/square.cpp)
+target_link_libraries(rocm_square ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+set_target_properties(rocm_square PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+
 # build test
 if(BUILD_TESTING)
   if (of_all_test_cc)
