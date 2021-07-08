@@ -327,6 +327,9 @@ if __name__ == "__main__":
         "--skip_wheel", default=False, action="store_true", required=False
     )
     parser.add_argument(
+        "--only_build_img", default=False, action="store_true", required=False
+    )
+    parser.add_argument(
         "--skip_img", default=False, action="store_true", required=False
     )
     parser.add_argument(
@@ -346,6 +349,8 @@ if __name__ == "__main__":
     parser.add_argument("--bash", default=False, action="store_true", required=False)
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
+    if args.only_build_img:
+        assert args.skip_img == False
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
     assert args.package_name
     extra_oneflow_cmake_args = " ".join(
@@ -450,6 +455,8 @@ gcc --version
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
+            if args.only_build_img:
+                continue
             if args.skip_third_party == False:
                 build_third_party(
                     img_tag,
