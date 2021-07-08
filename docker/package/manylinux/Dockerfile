@@ -17,7 +17,7 @@ ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
 # use tuna mirror
 COPY docker/package/manylinux/CentOS7-Base-163.repo /tmp/CentOS-Base.repo
-RUN if [ "${use_tuna_yum}" = "1" ]; then mv /tmp/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
+RUN if [ "${use_tuna_yum}" = "1" ]; then curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo && yum makecache ; fi
 
 # to speed up docker img building disable cuda repo
 # in 10.1, cuda yum repo will update cublas to 10.2 and breaks build
