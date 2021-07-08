@@ -381,7 +381,7 @@ if __name__ == "__main__":
             img_prefix = f"oneflow-manylinux2014-cuda{cuda_version}"
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
-            if cuda_version in ["11.0", "11.1"]:
+            if cuda_version in ["10.2", "11.0", "11.1"]:
                 versioned_img_tag = f"{img_prefix}:0.2"
             enforced_oneflow_cmake_args = ""
             enforced_oneflow_cmake_args += " -DBUILD_TESTING=ON"
@@ -405,9 +405,10 @@ if __name__ == "__main__":
                 img_tag = args.custom_img_tag
                 skip_img = True
             elif skip_img:
-                assert is_img_existing(
-                    versioned_img_tag
-                ), f"img not found: {versioned_img_tag}"
+                inc_img_tag = f"oneflowinc/{versioned_img_tag}"
+                assert is_img_existing(versioned_img_tag) or is_img_existing(
+                    inc_img_tag
+                ), f"img not found, please run 'docker pull {inc_img_tag}'"
                 img_tag = versioned_img_tag
             else:
                 img_tag = user_img_tag
@@ -456,7 +457,7 @@ gcc --version
                     sub_dir += "-cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.only_build_img:
-                continue
+                return
             if args.skip_third_party == False:
                 build_third_party(
                     img_tag,
