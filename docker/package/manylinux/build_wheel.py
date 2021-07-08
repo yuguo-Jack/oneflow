@@ -406,10 +406,14 @@ if __name__ == "__main__":
                 skip_img = True
             elif skip_img:
                 inc_img_tag = f"oneflowinc/{versioned_img_tag}"
-                assert is_img_existing(versioned_img_tag) or is_img_existing(
-                    inc_img_tag
-                ), f"img not found, please run 'docker pull {inc_img_tag}'"
-                img_tag = versioned_img_tag
+                if is_img_existing(versioned_img_tag):
+                    img_tag = versioned_img_tag
+                elif is_img_existing(inc_img_tag):
+                    img_tag = inc_img_tag
+                else:
+                    raise ValueError(
+                        f"img not found, please run 'docker pull {inc_img_tag}'"
+                    )
             else:
                 img_tag = user_img_tag
             assert img_tag is not None
