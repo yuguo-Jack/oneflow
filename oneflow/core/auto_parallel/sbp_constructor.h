@@ -33,7 +33,7 @@ namespace oneflow {
 class SbpConstructor {
  public:
   SbpConstructor() {
-    std::ifstream ifs("/home/liyipeng/OneFlow-Benchmark/Classification/cnns/CostRatioFile.txt");
+    std::ifstream ifs("/home/zengaohan/Oneflow-Benchmark/experiments/CostRatioFile.txt");
     if (ifs.is_open()) {
       ifs >> CostRatio;
     } else {

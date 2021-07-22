@@ -88,7 +88,7 @@ Maybe<double> VariableOp::GetComputeComplexity(
     std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
     const ParallelDesc& parallel_desc) const {
   double CostRatio;
-  std::ifstream ifs("/root/work/codes/OneFlow-Benchmark/Classification/cnns/VarCostRatioFile.txt");
+  std::ifstream ifs("/home/zengaohan/Oneflow-Benchmark/experiments/VarCostRatioFile.txt");
   if (ifs.is_open()) {
     ifs >> CostRatio;
   } else

@@ -17,9 +17,9 @@ limitations under the License.
 #include <type_traits>
 #include <vector>
 #define DEBUG_ALGORITHM_
-// #define TEST_DEBUG_
-// #define PRINT_GRAPH_
-// #define TEST_DEBUG_2
+//#define TEST_DEBUG_
+//#define PRINT_GRAPH_
+#define TEST_DEBUG_2
 
 #include "sbp_constructor.h"
 
@@ -107,8 +107,8 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
 
 #ifdef PRINT_GRAPH_
   // Now we have the sbp graph.
-  // sbp_graph.PrintGraph();
-  std::cout << sbp_graph.NextId << std::endl;
+   sbp_graph.PrintGraph();
+//  std::cout << sbp_graph.NextId << std::endl;
 #endif  // PRINT_GRAPH_
 }
 
