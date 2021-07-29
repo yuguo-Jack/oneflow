@@ -11,7 +11,6 @@ import astpretty
 import sys
 from astpretty import pprint
 from collections import Counter
-from ast import Attribute
 import pandas as pd
 from typed_ast.ast27 import Name, alias
 
@@ -32,8 +31,6 @@ SHOULD_SAVE_ASTSHOULD_SAVE_AST = args.ast
 
 
 class CompatibilityVisitor(ast.NodeVisitor):
-    from ast import ImportFrom, Import, Call, Name
-
     def __init__(self) -> None:
         super().__init__()
         self.module_num = Counter()
@@ -42,7 +39,7 @@ class CompatibilityVisitor(ast.NodeVisitor):
         self.ids_tracked = set()
         self.id2full_path = {}
 
-    def visit_ImportFrom(self, node: ImportFrom):
+    def visit_ImportFrom(self, node: ast.ImportFrom):
         if node.module:
             if node.module == "torch" or "torch." in node.module:
                 for a in node.names:
@@ -53,7 +50,7 @@ class CompatibilityVisitor(ast.NodeVisitor):
                     # pprint(a)
                 self.module_num.update([node.module])
 
-    def visit_Import(self, node: Import):
+    def visit_Import(self, node: ast.Import):
         modules = [
             a.name
             for a in node.names
@@ -64,22 +61,31 @@ class CompatibilityVisitor(ast.NodeVisitor):
     def visit_Name(self, node: Name) -> bool:
         self.current_module_in_call.insert(0, node.id)
 
-    def visit_Attribute(self, node: Attribute) -> bool:
+    def visit_Attribute(self, node: ast.Attribute) -> bool:
         self.current_module_in_call.insert(0, node.attr)
 
-    def visit_Call(self, node: Call):
+    def record_attr(self, node: ast.Call):
+        if self.current_module_in_call:
+            attr_full = ".".join(
+                [self.id2full_path[self.current_module_in_call[0]],]
+                + self.current_module_in_call[1::]
+                + [node.func.attr]
+            )
+        else:
+            attr_full = self.id2full_path[node.func.id]
+        self.attribute_num.update([attr_full])
+
+    def visit_Call(self, node: ast.Call):
         func = node.func
         self.current_module_in_call = []
-        if isinstance(func, Attribute):
+        if isinstance(func, ast.Attribute):
             self.visit(func.value)
             if self.current_module_in_call:
                 if self.current_module_in_call[0] in self.ids_tracked:
-                    attr_full = ".".join(
-                        [self.id2full_path[self.current_module_in_call[0]],]
-                        + self.current_module_in_call[1::]
-                        + [node.func.attr]
-                    )
-                    self.attribute_num.update([attr_full])
+                    self.record_attr(node)
+        elif isinstance(func, ast.Name):
+            if func.id in self.ids_tracked:
+                self.record_attr(node)
 
 
 def analyze_py(args):
