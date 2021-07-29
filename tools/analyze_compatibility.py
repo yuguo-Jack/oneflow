@@ -1,4 +1,4 @@
-# python3 -m pip install astpretty
+# python3 -m pip install astpretty pandas
 # requires python3.9 to run
 import ast
 import os
@@ -12,7 +12,7 @@ import sys
 from astpretty import pprint
 from collections import Counter
 from ast import Attribute
-
+import pandas as pd
 from typed_ast.ast27 import Name, alias
 
 parser = argparse.ArgumentParser()
@@ -113,5 +113,5 @@ if __name__ == "__main__":
     for r in results:
         module_num.update(r.module_num)
         attribute_num.update(r.attribute_num)
-    print(module_num.most_common())
-    print(attribute_num.most_common())
+    print(pd.DataFrame(module_num.most_common()).to_markdown())
+    print(pd.DataFrame(attribute_num.most_common()).to_markdown())
