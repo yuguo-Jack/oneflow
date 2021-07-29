@@ -13,7 +13,7 @@ from astpretty import pprint
 from collections import Counter
 from ast import Attribute
 
-from typed_ast.ast27 import alias
+from typed_ast.ast27 import Name, alias
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -38,13 +38,16 @@ class CompatibilityVisitor(ast.NodeVisitor):
         super().__init__()
         self.module_num = Counter()
         self.attribute_num = Counter()
+        self.current_module = []
+        self.ids_tracked = set()
 
     def visit_ImportFrom(self, node: ImportFrom):
         if node.module:
             if node.module == "torch" or "torch." in node.module:
                 for a in node.names:
                     assert isinstance(a, ast.alias)
-                    pprint(a)
+                    self.ids_tracked.add(a.asname)
+                    # pprint(a)
                 self.module_num.update([node.module])
 
     def visit_Import(self, node: Import):
@@ -55,11 +58,23 @@ class CompatibilityVisitor(ast.NodeVisitor):
         ]
         self.module_num.update(modules)
 
-    # def visit_Name(self, node: Name) -> bool:
-    #     return None
+    def visit_Name(self, node: Name) -> bool:
+        self.current_module.insert(0, node.id)
 
-    # def visit_Call(self, node: Call):
-    #     pprint(node.func.value)
+    def visit_Attribute(self, node: Attribute) -> bool:
+        self.current_module.insert(0, node.attr)
+
+    def visit_Call(self, node: Call):
+        func = node.func
+        self.current_module = []
+        if isinstance(func, Attribute):
+            self.visit(func.value)
+            if self.current_module:
+                if (
+                    self.current_module[0] in self.module_num
+                    or self.current_module[0] in self.ids_tracked
+                ):
+                    print(".".join(self.current_module + [node.func.attr]))
 
 
 def analyze_py(args):
