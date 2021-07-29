@@ -42,12 +42,13 @@ class CompatibilityVisitor(ast.NodeVisitor):
                 for a in node.names:
                     assert isinstance(a, ast.alias)
                     pprint(a)
+                self.module_num.update([node.module])
 
     def visit_Import(self, node: Import):
         modules = [
             a.name
             for a in node.names
-            if a.name.startswith("torch") and a.name != "torch"
+            if a.name.startswith("torch.") and a.name != "torch"
         ]
         self.module_num.update(modules)
 
@@ -57,14 +58,16 @@ def analyze_py(args):
     tree = ast.parse(src.read_text())
     v = CompatibilityVisitor()
     v.visit(tree)
-    print(v.module_num.most_common())
+    return v
 
 
 if __name__ == "__main__":
     print(ONEFLOW_TEST_PYTORCH_VISION_PATH)
     py_srcs = ONEFLOW_TEST_PYTORCH_VISION_PATH.glob("**/*.py")
     pool = multiprocessing.Pool()
-    pool.map(
-        analyze_py, [{"src": src,} for src in py_srcs],
-    )
+    results = pool.map(analyze_py, [{"src": src,} for src in py_srcs],)
     pool.close()
+    module_num = Counter()
+    for r in results:
+        module_num.update(r.module_num)
+    print(module_num.most_common())
