@@ -19,6 +19,7 @@ parser.add_argument(
     "--out_dir", type=str, default="python",
 )
 parser.add_argument("--verbose", "-v", action="store_true")
+parser.add_argument("--ast", action="store_true")
 ONEFLOW_TEST_PYTORCH_VISION_DIR = os.getenv("ONEFLOW_TEST_PYTORCH_VISION_DIR")
 parser.add_argument(
     "--pytorch_vision_dir", type=str, default=ONEFLOW_TEST_PYTORCH_VISION_DIR,
@@ -26,6 +27,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 ONEFLOW_TEST_PYTORCH_VISION_PATH = Path(args.pytorch_vision_dir)
+SHOULD_SAVE_ASTSHOULD_SAVE_AST = args.ast
 
 
 class CompatibilityVisitor(ast.NodeVisitor):
@@ -58,6 +60,12 @@ def analyze_py(args):
     tree = ast.parse(src.read_text())
     v = CompatibilityVisitor()
     v.visit(tree)
+    if SHOULD_SAVE_ASTSHOULD_SAVE_AST:
+        src.with_suffix(".ast.py").write_text(
+            f"""from ast import *
+{astpretty.pformat(tree)}
+"""
+        )
     return v
 
 
