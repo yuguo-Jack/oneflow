@@ -24,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 
+#include "oneflow/core/profiler/profiler.h"
+
 namespace oneflow {
 namespace one {
 
@@ -92,6 +94,7 @@ Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_gra
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  OF_PROFILER_RANGE_PUSH("AutogradInterpreter::Apply");
   bool requires_grad = false;
   if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
     requires_grad =
@@ -100,14 +103,19 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   }
   {
     autograd::AutoGradMode mode(false);
+    OF_PROFILER_RANGE_PUSH("internal_->Apply");
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
+    OF_PROFILER_RANGE_POP();
     JUST(DetermineIsLeaf(outputs, inputs.size() == 0, requires_grad));
     JUST(DetermineRequiresGrad(outputs, requires_grad));
   }
   if (requires_grad) {
+    OF_PROFILER_RANGE_PUSH("Capture");
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     JUST(grad_closure->Capture(inputs, *outputs, ctx.attrs));
+    OF_PROFILER_RANGE_POP();
 
+    OF_PROFILER_RANGE_PUSH("AddBackwardFuncPtr");
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -118,7 +126,9 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
             });
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
                                                             backward_fn, inputs, outputs));
+    OF_PROFILER_RANGE_POP();
   }
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 

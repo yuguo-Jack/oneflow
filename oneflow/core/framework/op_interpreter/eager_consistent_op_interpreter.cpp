@@ -29,11 +29,15 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 
+#include "oneflow/core/profiler/profiler.h"
+
 namespace oneflow {
 namespace one {
 
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_PUSH("Eager consistent Interpret");
+
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   const auto& placement_scope = JUST(GetCurrentScope())->placement_scope();
   const auto& infer_args =
@@ -74,6 +78,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, parallel_desc, instr_type_name);
   }));
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 

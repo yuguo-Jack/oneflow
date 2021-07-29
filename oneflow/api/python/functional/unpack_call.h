@@ -24,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/common/function_traits.h"
 
+#include "oneflow/core/profiler/profiler.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -45,7 +47,10 @@ template<typename F, typename R, int index>
 struct unpack_call_dispatcher<F, R, 0, index> {
   template<typename... Args>
   static R apply(const F& f, const std::vector<PythonArg>& args, Args&&... unpacked_args) {
-    return f(std::forward<Args>(unpacked_args)...);
+    OF_PROFILER_RANGE_PUSH("functor call");
+    const auto& res = f(std::forward<Args>(unpacked_args)...);
+    OF_PROFILER_RANGE_POP();
+    return res;
   }
 };
 

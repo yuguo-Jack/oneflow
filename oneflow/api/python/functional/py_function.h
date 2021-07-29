@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/api/python/functional/unpack_call.h"
 #include "oneflow/api/python/framework/throw.h"
 
+#include "oneflow/core/profiler/profiler.h"
+
 namespace py = pybind11;
 
 namespace oneflow {
@@ -27,6 +29,8 @@ namespace functional {
 
 template<typename SchemaT>
 inline py::object PyFunction(py::args args, py::kwargs kwargs) {
+  OF_PROFILER_RANGE_PUSH("PyFunction");
+
   // TODO(): Support multiple function signatures.
   CHECK_LE_OR_THROW(args.size(), SchemaT::max_positionals)
       << "The maximum count of positional arguments is " << SchemaT::max_positionals;
@@ -49,7 +53,13 @@ inline py::object PyFunction(py::args args, py::kwargs kwargs) {
   }
   using FType = typename SchemaT::FType;
   using R = typename SchemaT::R;
-  return py::cast(detail::unpack_call<FType, R>::apply(*SchemaT::func, _args));
+
+  OF_PROFILER_RANGE_PUSH("unpack_call");
+  auto result = py::cast(detail::unpack_call<FType, R>::apply(*SchemaT::func, _args));
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_POP();
+  return result;
 }
 
 }  // namespace functional
