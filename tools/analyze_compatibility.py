@@ -13,6 +13,7 @@ from astpretty import pprint
 from collections import Counter
 import pandas as pd
 from typed_ast.ast27 import Name, alias
+import importlib
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -104,6 +105,38 @@ def analyze_py(args):
     return v
 
 
+def postprocess(c: Counter, symbol_type="module"):
+    import oneflow
+
+    ret = []
+    for k, n in c:
+        import oneflow
+
+        r = {
+            "symbol": k,
+            "count": n,
+        }
+        m = k.replace("torch", "oneflow")
+        if symbol_type == "module":
+            try:
+                importlib.import_module(m)
+                r["oneflow"] = m
+            except ModuleNotFoundError:
+                r["oneflow"] = "UNIMPLEMENTED"
+        if symbol_type == "attribute":
+            m = ".".join(k.split(".")[0:-1]).replace("torch", "oneflow")
+            try:
+                i = importlib.import_module(m)
+                if hasattr(i, k.split(".")[-1]):
+                    r["oneflow"] = k.replace("torch", "oneflow")
+                else:
+                    r["oneflow"] = "UNIMPLEMENTED"
+            except ModuleNotFoundError:
+                r["oneflow"] = "UNIMPLEMENTED"
+        ret.append(r)
+    return ret
+
+
 if __name__ == "__main__":
     print(ONEFLOW_TEST_PYTORCH_VISION_PATH)
     py_srcs = ONEFLOW_TEST_PYTORCH_VISION_PATH.glob("**/*.py")
@@ -118,5 +151,7 @@ if __name__ == "__main__":
     for r in results:
         module_num.update(r.module_num)
         attribute_num.update(r.attribute_num)
-    print(pd.DataFrame(module_num.most_common()).to_markdown())
-    print(pd.DataFrame(attribute_num.most_common()).to_markdown())
+    module_num = postprocess(module_num.most_common())
+    attribute_num = postprocess(attribute_num.most_common(), symbol_type="attribute")
+    print(pd.DataFrame(module_num).to_markdown())
+    print(pd.DataFrame(attribute_num).to_markdown())
