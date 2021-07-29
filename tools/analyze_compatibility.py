@@ -10,6 +10,9 @@ from pathlib import Path
 import astpretty
 import sys
 from astpretty import pprint
+from collections import Counter
+
+from typed_ast.ast27 import alias
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -30,6 +33,8 @@ class CompatibilityVisitor(ast.NodeVisitor):
 
     def __init__(self) -> None:
         super().__init__()
+        self.module_num = Counter()
+        self.attribute_num = Counter()
 
     def visit_ImportFrom(self, node: ImportFrom):
         if node.module:
@@ -39,10 +44,12 @@ class CompatibilityVisitor(ast.NodeVisitor):
                     pprint(a)
 
     def visit_Import(self, node: Import):
-        for a in node.names:
-            assert isinstance(a, ast.alias)
-            if a.name.startswith("torch") and a.name != "torch":
-                pprint(a.name)
+        modules = [
+            a.name
+            for a in node.names
+            if a.name.startswith("torch") and a.name != "torch"
+        ]
+        self.module_num.update(modules)
 
 
 def analyze_py(args):
@@ -50,6 +57,7 @@ def analyze_py(args):
     tree = ast.parse(src.read_text())
     v = CompatibilityVisitor()
     v.visit(tree)
+    print(v.module_num.most_common())
 
 
 if __name__ == "__main__":
