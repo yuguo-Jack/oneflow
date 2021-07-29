@@ -75,13 +75,12 @@ class CompatibilityVisitor(ast.NodeVisitor):
                 if self.current_module[0] in self.module_num:
                     print(".".join(self.current_module + [node.func.attr]))
                 if self.current_module[0] in self.ids_tracked:
-                    print(
-                        ".".join(
-                            [self.id2full_path[self.current_module[0]],]
-                            + self.current_module[1::]
-                            + [node.func.attr]
-                        )
+                    attr_full = ".".join(
+                        [self.id2full_path[self.current_module[0]],]
+                        + self.current_module[1::]
+                        + [node.func.attr]
                     )
+                    self.attribute_num.update([attr_full])
 
 
 def analyze_py(args):
@@ -110,6 +109,9 @@ if __name__ == "__main__":
     )
     pool.close()
     module_num = Counter()
+    attribute_num = Counter()
     for r in results:
         module_num.update(r.module_num)
+        attribute_num.update(r.attribute_num)
     print(module_num.most_common())
+    print(attribute_num.most_common())
