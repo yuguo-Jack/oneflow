@@ -11,6 +11,7 @@ import astpretty
 import sys
 from astpretty import pprint
 from collections import Counter
+from ast import Attribute
 
 from typed_ast.ast27 import alias
 
@@ -31,7 +32,7 @@ SHOULD_SAVE_ASTSHOULD_SAVE_AST = args.ast
 
 
 class CompatibilityVisitor(ast.NodeVisitor):
-    from ast import ImportFrom, Import
+    from ast import ImportFrom, Import, Call, Name
 
     def __init__(self) -> None:
         super().__init__()
@@ -54,6 +55,12 @@ class CompatibilityVisitor(ast.NodeVisitor):
         ]
         self.module_num.update(modules)
 
+    # def visit_Name(self, node: Name) -> bool:
+    #     return None
+
+    # def visit_Call(self, node: Call):
+    #     pprint(node.func.value)
+
 
 def analyze_py(args):
     src: Path = args["src"]
@@ -61,11 +68,13 @@ def analyze_py(args):
     v = CompatibilityVisitor()
     v.visit(tree)
     if SHOULD_SAVE_ASTSHOULD_SAVE_AST:
-        src.with_suffix(".ast.py").write_text(
-            f"""from ast import *
+        ast_path = src.with_suffix(".ast.py")
+        if not ast_path.exists():
+            ast_path.write_text(
+                f"""from ast import *
 {astpretty.pformat(tree)}
 """
-        )
+            )
     return v
 
 
@@ -73,7 +82,10 @@ if __name__ == "__main__":
     print(ONEFLOW_TEST_PYTORCH_VISION_PATH)
     py_srcs = ONEFLOW_TEST_PYTORCH_VISION_PATH.glob("**/*.py")
     pool = multiprocessing.Pool()
-    results = pool.map(analyze_py, [{"src": src,} for src in py_srcs],)
+    results = pool.map(
+        analyze_py,
+        [{"src": src,} for src in py_srcs if not src.name.endswith(".ast.py")],
+    )
     pool.close()
     module_num = Counter()
     for r in results:
