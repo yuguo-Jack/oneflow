@@ -25,7 +25,9 @@ ONEFLOW_TEST_PYTORCH_VISION_PATH = Path(args.pytorch_vision_dir)
 
 
 def analyze_py(args):
-    print(args["src"])
+    src: Path = args["src"]
+    tree = ast.parse(src.read_text())
+    print(tree)
 
 
 if __name__ == "__main__":
