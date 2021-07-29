@@ -47,8 +47,9 @@ class CompatibilityVisitor(ast.NodeVisitor):
             if node.module == "torch" or "torch." in node.module:
                 for a in node.names:
                     assert isinstance(a, ast.alias)
-                    self.ids_tracked.add(a.asname)
-                    self.id2full_path[a.asname] = ".".join([node.module, a.name])
+                    asname = a.asname or a.name
+                    self.ids_tracked.add(asname)
+                    self.id2full_path[asname] = ".".join([node.module, a.name])
                     # pprint(a)
                 self.module_num.update([node.module])
 
