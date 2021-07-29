@@ -73,8 +73,6 @@ class CompatibilityVisitor(ast.NodeVisitor):
         if isinstance(func, Attribute):
             self.visit(func.value)
             if self.current_module:
-                if self.current_module[0] in self.module_num:
-                    print(".".join(self.current_module + [node.func.attr]))
                 if self.current_module[0] in self.ids_tracked:
                     attr_full = ".".join(
                         [self.id2full_path[self.current_module[0]],]
