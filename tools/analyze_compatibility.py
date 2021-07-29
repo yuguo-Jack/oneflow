@@ -38,7 +38,7 @@ class CompatibilityVisitor(ast.NodeVisitor):
         super().__init__()
         self.module_num = Counter()
         self.attribute_num = Counter()
-        self.current_module = []
+        self.current_module_in_call = []
         self.ids_tracked = set()
         self.id2full_path = {}
 
@@ -62,21 +62,21 @@ class CompatibilityVisitor(ast.NodeVisitor):
         self.module_num.update(modules)
 
     def visit_Name(self, node: Name) -> bool:
-        self.current_module.insert(0, node.id)
+        self.current_module_in_call.insert(0, node.id)
 
     def visit_Attribute(self, node: Attribute) -> bool:
-        self.current_module.insert(0, node.attr)
+        self.current_module_in_call.insert(0, node.attr)
 
     def visit_Call(self, node: Call):
         func = node.func
-        self.current_module = []
+        self.current_module_in_call = []
         if isinstance(func, Attribute):
             self.visit(func.value)
-            if self.current_module:
-                if self.current_module[0] in self.ids_tracked:
+            if self.current_module_in_call:
+                if self.current_module_in_call[0] in self.ids_tracked:
                     attr_full = ".".join(
-                        [self.id2full_path[self.current_module[0]],]
-                        + self.current_module[1::]
+                        [self.id2full_path[self.current_module_in_call[0]],]
+                        + self.current_module_in_call[1::]
                         + [node.func.attr]
                     )
                     self.attribute_num.update([attr_full])
