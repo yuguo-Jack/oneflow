@@ -40,6 +40,7 @@ class CompatibilityVisitor(ast.NodeVisitor):
         self.attribute_num = Counter()
         self.current_module = []
         self.ids_tracked = set()
+        self.id2full_path = {}
 
     def visit_ImportFrom(self, node: ImportFrom):
         if node.module:
@@ -47,6 +48,7 @@ class CompatibilityVisitor(ast.NodeVisitor):
                 for a in node.names:
                     assert isinstance(a, ast.alias)
                     self.ids_tracked.add(a.asname)
+                    self.id2full_path[a.asname] = ".".join([node.module, a.name])
                     # pprint(a)
                 self.module_num.update([node.module])
 
@@ -70,11 +72,16 @@ class CompatibilityVisitor(ast.NodeVisitor):
         if isinstance(func, Attribute):
             self.visit(func.value)
             if self.current_module:
-                if (
-                    self.current_module[0] in self.module_num
-                    or self.current_module[0] in self.ids_tracked
-                ):
+                if self.current_module[0] in self.module_num:
                     print(".".join(self.current_module + [node.func.attr]))
+                if self.current_module[0] in self.ids_tracked:
+                    print(
+                        ".".join(
+                            [self.id2full_path[self.current_module[0]],]
+                            + self.current_module[1::]
+                            + [node.func.attr]
+                        )
+                    )
 
 
 def analyze_py(args):
