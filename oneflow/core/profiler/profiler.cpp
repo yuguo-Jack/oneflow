@@ -27,6 +27,8 @@ namespace oneflow {
 
 namespace profiler {
 
+static std::atomic<bool> is_profiler_enabled(true);
+
 void NameThisHostThread(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
   nvtxNameOsThreadA(syscall(SYS_gettid), name.c_str());
@@ -35,13 +37,17 @@ void NameThisHostThread(const std::string& name) {
 
 void RangePush(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
-  nvtxRangePushA(name.c_str());
+  if (is_profiler_enabled) {
+    nvtxRangePushA(name.c_str());
+  }
 #endif  // OF_ENABLE_PROFILER
 }
 
 void RangePop() {
 #ifdef OF_ENABLE_PROFILER
-  nvtxRangePop();
+  if (is_profiler_enabled) {
+    nvtxRangePop();
+  }
 #endif  // OF_ENABLE_PROFILER
 }
 
@@ -97,6 +103,18 @@ void ProfilerStart() {
 void ProfilerStop() {
 #ifdef OF_ENABLE_PROFILER
   OF_CUDA_CHECK(cudaProfilerStop());
+#endif  // OF_ENABLE_PROFILER
+}
+
+void EnableProfiler() {
+#ifdef OF_ENABLE_PROFILER
+  is_profiler_enabled = true;
+#endif  // OF_ENABLE_PROFILER
+}
+
+void DisableProfiler() {
+#ifdef OF_ENABLE_PROFILER
+  is_profiler_enabled = false;
 #endif  // OF_ENABLE_PROFILER
 }
 

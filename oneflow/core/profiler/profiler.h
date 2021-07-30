@@ -34,6 +34,10 @@ void ProfilerStart();
 
 void ProfilerStop();
 
+void EnableProfiler();
+
+void DisableProfiler();
+
 class RangeGuardCtx;
 
 class RangeGuard final {

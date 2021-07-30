@@ -17,3 +17,5 @@ from oneflow.framework.profiler import ProfilerStart as profiler_start
 from oneflow.framework.profiler import ProfilerStop as profiler_stop
 from oneflow.framework.profiler import RangePop as range_pop
 from oneflow.framework.profiler import RangePush as range_push
+from oneflow.framework.profiler import DisableProfiler as disable_profiler
+from oneflow.framework.profiler import EnableProfiler as enable_profiler

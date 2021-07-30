@@ -30,6 +30,10 @@ ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
   m.def("ProfilerStart", []() { profiler::ProfilerStart(); });
 
   m.def("ProfilerStop", []() { profiler::ProfilerStop(); });
+
+  m.def("EnableProfiler", []() { profiler::EnableProfiler(); });
+
+  m.def("DisableProfiler", []() { profiler::DisableProfiler(); });
 }
 
 }  // namespace oneflow
