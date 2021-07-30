@@ -151,7 +151,7 @@ if __name__ == "__main__":
     for r in results:
         module_num.update(r.module_num)
         attribute_num.update(r.attribute_num)
-    module_num = postprocess(module_num.most_common())
-    attribute_num = postprocess(attribute_num.most_common(), symbol_type="attribute")
+    module_num = postprocess(module_num.most_common(100))
+    attribute_num = postprocess(attribute_num.most_common(100), symbol_type="attribute")
     print(pd.DataFrame(module_num).to_markdown())
     print(pd.DataFrame(attribute_num).to_markdown())
