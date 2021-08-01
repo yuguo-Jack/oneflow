@@ -44,8 +44,9 @@ void NameThisHostThread(const std::string& name) {
 }
 
 uint64_t nanos() {
-  int64_t ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::
-               now().time_since_epoch()).count();
+  int64_t ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   std::chrono::high_resolution_clock::now().time_since_epoch())
+                   .count();
   return ns;
 }
 
@@ -69,12 +70,8 @@ class Profiler {
     auto& item = items_[frame.name];
     item.instances += 1;
     item.total_time += time;
-    if (time < item.minium) {
-      item.minium = time;
-    }
-    if (time > item.maxium) {
-      item.maxium = time;
-    }
+    if (time < item.minium) { item.minium = time; }
+    if (time > item.maxium) { item.maxium = time; }
     stack_.pop();
   }
 
@@ -85,12 +82,21 @@ class Profiler {
       sum += it.second.total_time;
       sorted_items.emplace(it.second.total_time, it.first);
     }
-    std::cout << std::setw(7) << "Time(%)" << std::setw(17) << "Total Time (ns)" << std::setw(11) << "Instances" << std::setw(11) << "Average" << std::setw(11) << "Minimum" << std::setw(11) << "Maximum" << std::setw(20) << "Range" << std::endl;
-    std::cout << std::setw(7) << "-------" << std::setw(17) << "  ---------------" << std::setw(11) << "  ----------" << std::setw(11) << "  ---------" << std::setw(11) << "  ---------" << std::setw(11) << "  ---------" << std::setw(20) << "  --------------------------" << std::endl;
+    std::cout << std::setw(7) << "Time(%)" << std::setw(17) << "Total Time (ns)" << std::setw(11)
+              << "Instances" << std::setw(11) << "Average" << std::setw(11) << "Minimum"
+              << std::setw(11) << "Maximum" << std::setw(20) << "Range" << std::endl;
+    std::cout << std::setw(7) << "-------" << std::setw(17) << "  ---------------" << std::setw(11)
+              << "  ----------" << std::setw(11) << "  ---------" << std::setw(11) << "  ---------"
+              << std::setw(11) << "  ---------" << std::setw(20) << "  --------------------------"
+              << std::endl;
     for (auto it = sorted_items.rbegin(); it != sorted_items.rend(); ++it) {
       const std::string& name = it->second;
       const auto& item = items_.at(name);
-      std::cout << std::setw(7) << (item.total_time / sum) * 100 << std::setw(17) << item.total_time << std::setw(11) << item.instances << std::setw(11) << item.total_time / static_cast<float>(item.instances) << std::setw(11) << item.minium << std::setw(11) << item.maxium << std::left << std::setw(20) << name << std::endl;
+      std::cout << std::setw(7) << (item.total_time / sum) * 100 << std::setw(17) << item.total_time
+                << std::setw(11) << item.instances << std::setw(11)
+                << item.total_time / static_cast<float>(item.instances) << std::setw(11)
+                << item.minium << std::setw(11) << item.maxium << std::left << std::setw(20) << name
+                << std::endl;
     }
   }
 
