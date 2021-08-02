@@ -54,7 +54,7 @@ class Profiler {
  public:
   Profiler() = default;
   virtual ~Profiler() {
-    std::cout << "======================= PROFILE RESULT =====================" << std::endl;
+    std::cout << "========================== PROFILE RESULT ==========================" << std::endl;
     Print();
   }
 
@@ -82,21 +82,58 @@ class Profiler {
       sum += it.second.total_time;
       sorted_items.emplace(it.second.total_time, it.first);
     }
-    std::cout << std::setw(7) << "Time(%)" << std::setw(17) << "Total Time (ns)" << std::setw(11)
-              << "Instances" << std::setw(11) << "Average" << std::setw(11) << "Minimum"
-              << std::setw(11) << "Maximum" << std::setw(20) << "Range" << std::endl;
-    std::cout << std::setw(7) << "-------" << std::setw(17) << "  ---------------" << std::setw(11)
-              << "  ----------" << std::setw(11) << "  ---------" << std::setw(11) << "  ---------"
-              << std::setw(11) << "  ---------" << std::setw(20) << "  --------------------------"
-              << std::endl;
+    const char* sep = "  ";
+
+    std::cout.setf(std::ios::fixed);
+    std::cout.precision(1);
+
+    std::cout << std::setw(7) << "Time(%)";
+    std::cout << sep;
+    std::cout << std::setw(17) << "Total Time (ns)";
+    std::cout << sep;
+    std::cout << std::setw(11) << "Instances";
+    std::cout << sep;
+    std::cout << std::setw(11) << "Average";
+    std::cout << sep;
+    std::cout << std::setw(11) << "Minimum";
+    std::cout << sep;
+    std::cout << std::setw(11) << "Maximum";
+    std::cout << sep;
+    std::cout << std::left << std::setw(31) << "Range";
+    std::cout << std::endl;
+
+    std::cout << std::setw(7) << "-------";
+    std::cout << sep;
+    std::cout << std::setw(17) << "-----------------";
+    std::cout << sep;
+    std::cout << std::setw(11) << "-----------";
+    std::cout << sep;
+    std::cout << std::setw(11) << "-----------";
+    std::cout << sep;
+    std::cout << std::setw(11) << "-----------";
+    std::cout << sep;
+    std::cout << std::setw(11) << "-----------";
+    std::cout << sep;
+    std::cout << std::left << std::setw(31) << "-------------------------------";
+    std::cout << std::endl;
+
     for (auto it = sorted_items.rbegin(); it != sorted_items.rend(); ++it) {
       const std::string& name = it->second;
       const auto& item = items_.at(name);
-      std::cout << std::setw(7) << (item.total_time / sum) * 100 << std::setw(17) << item.total_time
-                << std::setw(11) << item.instances << std::setw(11)
-                << item.total_time / static_cast<float>(item.instances) << std::setw(11)
-                << item.minium << std::setw(11) << item.maxium << std::left << std::setw(20) << name
-                << std::endl;
+      std::cout << std::right << std::setw(7) << (item.total_time / sum) * 100;
+      std::cout << sep;
+      std::cout << std::right << std::setw(17) << item.total_time;
+      std::cout << sep;
+      std::cout << std::right << std::setw(11) << item.instances;
+      std::cout << sep;
+      std::cout << std::right << std::setw(11) << item.total_time / static_cast<float>(item.instances);
+      std::cout << sep;
+      std::cout << std::right << std::setw(11) << item.minium;
+      std::cout << sep;
+      std::cout << std::right << std::setw(11) << item.maxium;
+      std::cout << sep;
+      std::cout << std::left << std::setw(31) << name;
+      std::cout << std::endl;
     }
   }
 
