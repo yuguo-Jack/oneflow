@@ -58,6 +58,8 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(VariableOp);
   APPLY_IF(CastToMirroredOp);
   APPLY_IF(CastFromMirroredOp);
+  APPLY_IF(CastToConsistentOp);
+  APPLY_IF(CastFromConsistentOp);
   APPLY_IF(DistributeSplitOp);
   APPLY_IF(DistributeCloneOp);
   APPLY_IF(DistributeConcatOp);
@@ -112,7 +114,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   if (requires_grad) {
     OF_PROFILER_RANGE_PUSH("Capture");
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
-    JUST(grad_closure->Capture(inputs, *outputs, ctx.attrs));
+    JUST(grad_closure->Capture(inputs, *outputs, ctx));
     OF_PROFILER_RANGE_POP();
 
     OF_PROFILER_RANGE_PUSH("AddBackwardFuncPtr");
