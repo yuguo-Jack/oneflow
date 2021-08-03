@@ -120,7 +120,12 @@ namespace functional {{
 namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {{
-{1}
+  static PyMethodDef functions[] = {{
+{1}    {{NULL, NULL, 0, NULL}}
+  }};
+  PyObject* module = m.ptr();
+  CHECK_OR_THROW(PyModule_Check(module));
+  PyModule_AddFunctions(module, functions);
 }}
 
 }}  // namespace oneflow
@@ -503,9 +508,18 @@ class FunctionalGenerator:
             schema_fmt += "std::vector<ArgumentDef> {0}Schema::argument_def = {{{1}}};\n".format(
                 signature._name, ", ".join(argument_def)
             )
-            module_fmt += '  m.def("{0}", &functional::PyFunction<functional::{1}Schema>);\n'.format(
-                name, signature._name
-            )
+            if signature._max_args_count == 0:
+                module_fmt += '    {{"{0}", functional::PyFunction<functional::{1}Schema>, METH_NOARGS, NULL}},\n'.format(
+                    name, signature._name
+                )
+            elif signature._max_keyword_args_count == 0:
+                module_fmt += '    {{"{0}", functional::PyFunction<functional::{1}Schema>, METH_VARARGS, NULL}},\n'.format(
+                    name, signature._name
+                )              
+            else:
+                module_fmt += '    {{"{0}", (PyCFunction)functional::PyFunctionWithKeywords<functional::{1}Schema>, METH_VARARGS | METH_KEYWORDS, NULL}},\n'.format(
+                    name, signature._name
+                )
 
         render_file_if_different(
             target_pybind_source_file, pybind_fmt.format(schema_fmt, module_fmt)

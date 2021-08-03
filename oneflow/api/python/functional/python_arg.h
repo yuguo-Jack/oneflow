@@ -50,7 +50,8 @@ struct AnyData : public AnyDataBase {
 class PythonArg {
  public:
   PythonArg() = default;
-  PythonArg(py::object object) : object_(object.ptr()), active_tag_(HAS_OBJECT) {}
+  PythonArg(PyObject* object) : object_(object), active_tag_(HAS_OBJECT) {}
+  PythonArg(py::object object) : PythonArg(object.ptr()) {}
 
   PythonArg(const std::shared_ptr<const detail::AnyDataBase>& value)
       : immediate_(value), active_tag_(HAS_IMMEDIATE) {}
