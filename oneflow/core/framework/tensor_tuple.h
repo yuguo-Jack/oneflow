@@ -25,14 +25,9 @@ namespace one {
 
 class Tensor;
 
-class TensorTuple final : public std::vector<std::shared_ptr<Tensor>>,
-                          public std::enable_shared_from_this<TensorTuple> {
+class TensorTuple final : public std::vector<std::shared_ptr<Tensor>> {
  public:
-  // TensorTuple(const TensorTuple&) = delete;
-  // TensorTuple(TensorTuple&) = delete;
-  TensorTuple() = default;
-  TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size);
-  TensorTuple(std::initializer_list<std::shared_ptr<Tensor>> init_list);
+  using std::vector<std::shared_ptr<Tensor>>::vector;
   ~TensorTuple() = default;
 };
 

@@ -54,7 +54,8 @@ class Profiler {
  public:
   Profiler() = default;
   virtual ~Profiler() {
-    std::cout << "========================== PROFILE RESULT ==========================" << std::endl;
+    std::cout << "========================== PROFILE RESULT =========================="
+              << std::endl;
     Print();
   }
 
@@ -126,7 +127,8 @@ class Profiler {
       std::cout << sep;
       std::cout << std::right << std::setw(9) << item.instances;
       std::cout << sep;
-      std::cout << std::right << std::setw(9) << item.total_time / static_cast<float>(item.instances);
+      std::cout << std::right << std::setw(9)
+                << item.total_time / static_cast<float>(item.instances);
       std::cout << sep;
       std::cout << std::right << std::setw(7) << item.minium;
       std::cout << sep;

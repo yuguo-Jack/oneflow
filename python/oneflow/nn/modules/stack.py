@@ -26,23 +26,7 @@ class Stack(Module):
         self.dim = dim
 
     def forward(self, inputs):
-        assert isinstance(inputs, (List, Tuple))
-        input_shape = inputs[0].shape
-        max_dim = len(input_shape)
-        if self.dim < 0:
-            self.dim = self.dim + max_dim + 1
-        assert self.dim >= 0 and self.dim <= max_dim
-        input_list_length = len(inputs)
-        unsqueezed = list()
-        for i in range(input_list_length):
-            current_shape = inputs[i].shape
-            assert (
-                input_shape == current_shape
-            ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
-                current_shape
-            )
-            unsqueezed.append(inputs[i].unsqueeze(dim=self.dim))
-        return flow.cat(unsqueezed, dim=self.dim)
+        return flow.F.stack(inputs, dim=dim)
 
 
 @register_tensor_op("stack")
@@ -73,7 +57,7 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
         >>> out.shape
         flow.Size([1, 3, 5, 2])
     """
-    return Stack(dim)(inputs)
+    return flow.F.stack(inputs, dim=dim)
 
 
 if __name__ == "__main__":

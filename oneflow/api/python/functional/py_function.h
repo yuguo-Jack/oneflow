@@ -32,7 +32,7 @@ static PyObject* PyFunction(PyObject* self, PyObject* args) {
   OF_PROFILER_RANGE_PUSH("PyFunction");
 
   // TODO(): Support multiple function signatures.
-  size_t nargs = PyTuple_Size(args);
+  size_t nargs = args ? PyTuple_Size(args) : 0;
   CHECK_LE_OR_THROW(nargs, SchemaT::max_positionals)
       << "The maximum count of positional arguments is " << SchemaT::max_positionals;
 
@@ -63,10 +63,10 @@ static PyObject* PyFunctionWithKeywords(PyObject* self, PyObject* args, PyObject
   OF_PROFILER_RANGE_PUSH("PyFunction");
 
   // TODO(): Support multiple function signatures.
-  size_t nargs = PyTuple_Size(args);
+  size_t nargs = args ? PyTuple_Size(args) : 0;
   CHECK_LE_OR_THROW(nargs, SchemaT::max_positionals)
       << "The maximum count of positional arguments is " << SchemaT::max_positionals;
-  size_t nkwargs = PyDict_Size(kwargs);
+  size_t nkwargs = kwargs ? PyDict_Size(kwargs) : 0;
   CHECK_LE_OR_THROW(nkwargs, SchemaT::max_keywords)
       << "The maximum count of keyword arguments is " << SchemaT::max_keywords;
 

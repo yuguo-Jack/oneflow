@@ -28,8 +28,22 @@ class EitherPtr final {
   EitherPtr() : type_(UnionType<Void>::value) {}
   EitherPtr(const std::shared_ptr<X>& ptr) { Set(ptr); }
   EitherPtr(const std::shared_ptr<Y>& ptr) { Set(ptr); }
+
+  EitherPtr(std::shared_ptr<X>&& ptr) { Set(std::move(ptr)); }
+  EitherPtr(std::shared_ptr<Y>&& ptr) { Set(std::move(ptr)); }
+
   EitherPtr(const EitherPtr<X, Y>& either_ptr) { CopyFrom(either_ptr); }
+  EitherPtr(EitherPtr<X, Y>&& either_ptr) {
+    union_ = std::move(either_ptr.union_);
+    type_ = std::move(either_ptr.type_);
+  }
   ~EitherPtr() { Reset(); }
+
+  EitherPtr& operator=(EitherPtr<X, Y>&& either_ptr) {
+    union_ = std::move(either_ptr.union_);
+    type_ = std::move(either_ptr.type_);
+    return *this;
+  }
 
   template<typename T>
   bool Has() const {
@@ -40,6 +54,7 @@ class EitherPtr final {
     CHECK(this->template Has<T>());
     return Cast<T>();
   }
+
   void Reset(const std::shared_ptr<X>& ptr) {
     Reset();
     Set(ptr);
@@ -96,6 +111,18 @@ class EitherPtr final {
     *MutCast<Y>() = ptr;
     type_ = UnionType<Y>::value;
   }
+
+  void Set(std::shared_ptr<X>&& ptr) {
+    CHECK(union_.get() == nullptr);
+    *MutCast<X>() = std::move(ptr);
+    type_ = UnionType<X>::value;
+  }
+  void Set(std::shared_ptr<Y>&& ptr) {
+    CHECK(union_.get() == nullptr);
+    *MutCast<Y>() = std::move(ptr);
+    type_ = UnionType<Y>::value;
+  }
+
   template<typename T>
   std::shared_ptr<T>* MutCast() {
     std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =

@@ -292,7 +292,6 @@ class Argument:
         self._name = None
         self._default_value = None
 
-        fmt = _normalize(fmt)
         sp = fmt.rfind(" ")
         if sp == -1:
             raise ValueError("Missing argument type or name for argument def: " + fmt)
@@ -359,6 +358,9 @@ class FunctionSignature:
         for arg in self._params[1:]:
             if arg == "*":
                 keyword_allowed = True
+                continue
+            arg = _normalize(arg)
+            if arg is "":
                 continue
             self._args.append(Argument(arg, keyword_allowed=keyword_allowed))
 
@@ -432,11 +434,14 @@ class FunctionalGenerator:
             fmt += '  static thread_local const auto& op = CHECK_JUST(FunctionLibrary::Global()->find("{0}"));\n'.format(
                 signature._name
             )
-            fmt += "  return op->call<{0}, {1}>({2});\n".format(
-                signature._ret._cpp_type,
-                ", ".join([arg._cpp_type for arg in signature._args]),
-                ", ".join([arg._name for arg in signature._args]),
-            )
+            if len(signature._args) != 0:
+                fmt += "  return op->call<{0}, {1}>({2});\n".format(
+                    signature._ret._cpp_type,
+                    ", ".join([arg._cpp_type for arg in signature._args]),
+                    ", ".join([arg._name for arg in signature._args]),
+                )
+            else:
+                fmt += "  return op->call<{0}>();\n".format(signature._ret._cpp_type)
             fmt += "}\n"
 
         render_file_if_different(
@@ -518,7 +523,7 @@ class FunctionalGenerator:
             elif signature._max_keyword_args_count == 0:
                 module_fmt += '    {{"{0}", functional::PyFunction<functional::{1}Schema>, METH_VARARGS, NULL}},\n'.format(
                     name, signature._name
-                )              
+                )
             else:
                 module_fmt += '    {{"{0}", (PyCFunction)functional::PyFunctionWithKeywords<functional::{1}Schema>, METH_VARARGS | METH_KEYWORDS, NULL}},\n'.format(
                     name, signature._name
