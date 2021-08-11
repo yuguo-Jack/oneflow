@@ -56,12 +56,16 @@ class SharedOrScalar final {
     }
   }
 
-  // SharedOrScalar& operator=(const SharedOrScalar& rhs);
-
   bool IsScalar() const { return is_scalar_; }
-  const ScalarT& scalar_value() const { return scalar_value_; }
+  const ScalarT& scalar_value() const {
+    CHECK(is_scalar_);
+    return scalar_value_;
+  }
 
-  const std::shared_ptr<StructT>& shared_ptr() const { return getSharedStorage()->data; }
+  const std::shared_ptr<StructT>& shared_ptr() const {
+    CHECK(!is_scalar_);
+    return getSharedStorage()->data;
+  }
 
   const ScalarT& operator*() const { return scalar_value(); }
 
@@ -76,12 +80,10 @@ class SharedOrScalar final {
   };
 
   Shared* getSharedStorage() { return reinterpret_cast<Shared*>(&shared_value_); }
+
   const Shared* getSharedStorage() const { return reinterpret_cast<const Shared*>(&shared_value_); }
 
   union {
-    // ScalarT scalar_value_;
-    // std::shared_ptr<StructT> shared_value_;
-    // AlignedCharArrayUnion<ScalarT> scalar_value_;
     ScalarT scalar_value_;
     AlignedCharArrayUnion<Shared> shared_value_;
   };
