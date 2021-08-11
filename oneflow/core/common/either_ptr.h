@@ -26,22 +26,21 @@ class EitherPtr final {
  public:
   static_assert(!std::is_same<X, Y>::value, "X should not be Y");
   EitherPtr() : type_(UnionType<Void>::value) {}
-  EitherPtr(const std::shared_ptr<X>& ptr) { Set(ptr); }
+  EitherPtr(const std::shared_ptr<X>& ptr) : union_(ptr), type_(UnionType<X>::value) {}
   EitherPtr(const std::shared_ptr<Y>& ptr) { Set(ptr); }
 
-  EitherPtr(std::shared_ptr<X>&& ptr) { Set(std::move(ptr)); }
+  EitherPtr(std::shared_ptr<X>&& ptr) : union_(std::move(ptr)), type_(UnionType<X>::value) {}
   EitherPtr(std::shared_ptr<Y>&& ptr) { Set(std::move(ptr)); }
 
   EitherPtr(const EitherPtr<X, Y>& either_ptr) { CopyFrom(either_ptr); }
-  EitherPtr(EitherPtr<X, Y>&& either_ptr) {
-    union_ = std::move(either_ptr.union_);
-    type_ = std::move(either_ptr.type_);
-  }
+  EitherPtr(EitherPtr<X, Y>&& either_ptr)
+      : union_(std::move(either_ptr.union_)), type_(either_ptr.type_) {}
+
   ~EitherPtr() { Reset(); }
 
   EitherPtr& operator=(EitherPtr<X, Y>&& either_ptr) {
     union_ = std::move(either_ptr.union_);
-    type_ = std::move(either_ptr.type_);
+    type_ = either_ptr.type_;
     return *this;
   }
 
@@ -49,6 +48,12 @@ class EitherPtr final {
   bool Has() const {
     return type_ == UnionType<T>::value;
   }
+
+  const std::shared_ptr<X>& Get() const {
+    CHECK(this->template Has<X>());
+    return union_;
+  }
+
   template<typename T>
   const std::shared_ptr<T>& Get() const {
     CHECK(this->template Has<T>());
@@ -66,9 +71,9 @@ class EitherPtr final {
 
   void Reset() {
     if (type_ == UnionType<Void>::value) {
-      union_.reset();
+      MutCast<Void>()->reset();
     } else if (type_ == UnionType<X>::value) {
-      MutCast<X>()->reset();
+      union_.reset();
     } else if (type_ == UnionType<Y>::value) {
       MutCast<Y>()->reset();
     } else {
@@ -103,7 +108,7 @@ class EitherPtr final {
   }
   void Set(const std::shared_ptr<X>& ptr) {
     CHECK(union_.get() == nullptr);
-    *MutCast<X>() = ptr;
+    union_ = ptr;
     type_ = UnionType<X>::value;
   }
   void Set(const std::shared_ptr<Y>& ptr) {
@@ -114,7 +119,7 @@ class EitherPtr final {
 
   void Set(std::shared_ptr<X>&& ptr) {
     CHECK(union_.get() == nullptr);
-    *MutCast<X>() = std::move(ptr);
+    union_ = std::move(ptr);
     type_ = UnionType<X>::value;
   }
   void Set(std::shared_ptr<Y>&& ptr) {
@@ -136,7 +141,7 @@ class EitherPtr final {
     return *ptr;
   }
 
-  std::shared_ptr<Void> union_;
+  std::shared_ptr<X> union_;
   int8_t type_;
 };
 
