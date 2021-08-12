@@ -20,6 +20,7 @@ import numpy as np
 from google.protobuf import text_format
 
 import oneflow
+import oneflow as flow
 import oneflow._oneflow_internal
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
@@ -126,23 +127,35 @@ def _ElemCnt(shape):
     return np.prod(shape).astype(int).item()
 
 
-def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:
+def _LoadSingleVariable(path: str, consistent_src_rank: Optional[int] = None) -> Optional[FileBackendVariableBlob]:
     if os.path.isfile(os.path.join(path, DATA_FILENAME)):
+        if consistent_src_rank is not None:
+            rank = flow.framework.distribute.get_rank()
+            if rank == consistent_src_rank:
+                file_backed_blob = FileBackendVariableBlob(path)
+                loaded = flow.tensor(file_backed_blob.numpy(), dtype=file_backed_blob.dtype).to('cuda')
+            else:
+                loaded = flow.tensor([]).to('cuda')
+            loaded = loaded.to_consistent(flow.placement('cuda', {0: [0]}), flow.sbp.broadcast)
+            return loaded
+
+        assert NotImplementedError()
         return FileBackendVariableBlob(path)
     return None
 
 
 def _GetCheckpoint(
     path: str,
+    consistent_src_rank: Optional[int]=None,
 ) -> Union[Dict[str, FileBackendVariableBlob], FileBackendVariableBlob]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
-    single_var = _LoadSingleVariable(path)
+    single_var = _LoadSingleVariable(path, consistent_src_rank)
     if single_var is not None:
         return single_var
     var_dict = {}
     for f in os.listdir(path):
         var_dir = os.path.join(path, f)
-        var = _LoadSingleVariable(var_dir)
+        var = _LoadSingleVariable(var_dir, consistent_src_rank)
         if var is not None:
             var_dict[f] = var
     return var_dict
@@ -160,8 +173,9 @@ def GetCheckpoint(
 
 def Load(
     path: str,
-) -> Union[Dict[str, FileBackendVariableBlob], FileBackendVariableBlob]:
-    return _GetCheckpoint(path)
+    consistent_src_rank: Optional[int]=None,
+) -> Union[Dict[str, "flow.Tensor"], "flow.Tensor"]:
+    return _GetCheckpoint(path, consistent_src_rank)
 
 
 def _GetOpNameFromLbn(lbn):

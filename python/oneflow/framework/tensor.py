@@ -301,13 +301,20 @@ def _placement_scope(self):
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
-    if isinstance(other, (Tensor, check_point_v2.FileBackendVariableBlob)):
-        src_np = other.numpy()
+    if self.is_consistent:
+        assert isinstance(other, Tensor)
+        assert other.is_consistent
+        # TODO: move it in __setitem__
+        other = other.to_consistent(self.placement, flow.sbp.broadcast)
+        self[:] = other
     else:
-        assert isinstance(other, np.ndarray)
-        src_np = other
+        if isinstance(other, (Tensor, check_point_v2.FileBackendVariableBlob)):
+            src_np = other.numpy()
+        else:
+            assert isinstance(other, np.ndarray)
+            src_np = other
 
-    _copy_from_numpy_to_eager_local_tensor(self, src_np)
+        _copy_from_numpy_to_eager_local_tensor(self, src_np)
 
 
 def _get_device(self):
