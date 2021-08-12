@@ -220,8 +220,7 @@ Maybe<one::ConsistentToConsistentOpExpr> FindOrCreatConsistentToConsistentOpExpr
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,
                                      const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
+  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
   const auto& op_expr = JUST(FindOrCreatConsistentToConsistentOpExpr(sbp_parallels));
   const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
