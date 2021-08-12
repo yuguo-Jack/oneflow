@@ -308,7 +308,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
         if (placement) {
           // LocalTensor -> ConsistentTensor
           tensor =
-              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, Optional<Shape>()));
+              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple));
         } else {
           // LocalTensor -> LocalTensor
           if (!device) { device = JUST(Device::New("cpu")); }
@@ -318,7 +318,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
         if (placement) {
           // ConsistentTensor -> ConsistentTensor
           tensor =
-              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, Optional<Shape>()));
+              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple));
         } else {
           // ConsistentTensor -> LocalTensor
           tensor = JUST(functional::ConsistentToLocal(other_tensor));
