@@ -250,13 +250,9 @@ def _ReadSlice(
 
 def _SaveVarDict(
     path: str,
-    var_dict: Optional[
-        Dict[str, Union[FileBackendVariableBlob, EagerBlobTrait]]
-    ] = None,
+    var_dict: Dict[str, "oneflow.Tensor"],
+    consistent_dst_rank: Optional[int]=None,
 ) -> None:
-    if var_dict is None:
-        var_dict = GetAllVariables()
-
     def IsFileOrNonEmptyDir(path):
         if os.path.isfile(path):
             return True
@@ -269,6 +265,9 @@ def _SaveVarDict(
     ), "{} is a file or non-empty directory! Note that flow.save is different from torch.save. It saves each weight as a separated file so that a directory instead of a file should be given.".format(
         path
     )
+    consistent_mode = consistent_dst_rank is not None
+    for (name, var) in var_dict.items():
+        assert var.is_consistent == consistent_mode, "`consistent_dst_rank` is {'not' if consistent_mode else ''} None, {'consistent' if consistent_mode else 'local'} tensor is needed, but {name} is a {'local' if consistent_mode else 'consistent'} tensor"
     os.makedirs(path, exist_ok=True)
     for (name, var) in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
@@ -280,8 +279,17 @@ def _SaveVarDict(
         param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))
         with open(param_path, "wb") as f:
-            for (_, _, slice) in _ReadSlice(var):
-                f.write(slice.tobytes())
+            if consistent_dst_rank is not None:
+                rank = flow.framework.distribute.get_rank()
+                if rank == consistent_dst_rank:
+                    f.write(var.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy().tobytes())
+                else:
+                    # do nothing
+                    pass
+            else:
+                assert not var.is_consistent
+                f.write(var.numpy().tobytes())
+
         with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
             f.write(text_format.MessageToString(meta_info))
     with open(os.path.join(path, "snapshot_done"), "w"):
@@ -302,8 +310,8 @@ def SaveVarDict(
     return _SaveVarDict(path, var_dict)
 
 
-def save(obj, save_dir):
-    return _SaveVarDict(save_dir, obj)
+def save(obj, save_dir: str, consistent_dst_rank: Optional[int]=None):
+    return _SaveVarDict(save_dir, obj, consistent_dst_rank=consistent_dst_rank)
 
 
 def _LogicalSlice(
