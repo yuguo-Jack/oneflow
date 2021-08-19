@@ -207,6 +207,8 @@ double SbpGraph<SbpSignature>::ComputeCost() {
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature> *this_node) {
   if (this_node->EdgesIn.size() + this_node->EdgesOut.size() == 2) {
+    // test debug
+    std::cout << "Node Elimination." << std::endl;
     std::vector<SbpNode<SbpSignature> *> TwoNode;
     for (auto &one_edge : this_node->EdgesIn) TwoNode.emplace_back(one_edge->StartNode);
     for (auto &one_edge : this_node->EdgesOut) TwoNode.emplace_back(one_edge->EndNode);
@@ -338,6 +340,9 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature> *this_node
     EliminationsNumber +=
         LookForParallelEdge<SbpSignature>(e, this_node->EdgesOut[i]->EndNode, this_node, true, -1);
     if (e) {
+      // test debug
+      std::cout << "Edge Elimination." << std::endl;
+
       // Delete Parallel Edges from EdgesIn
       RemoveFromEdgesIn<SbpSignature>(this_node, e->EndNode);
       RemoveFromEdgesIn<SbpSignature>(e->EndNode, this_node);
@@ -354,6 +359,9 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature> *this_node
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::ChildElimination(SbpNode<SbpSignature> *this_node) {
   if (this_node->EdgesIn.size() + this_node->EdgesOut.size() == 1) {
+    // test debug
+    std::cout << "Child Elimination." << std::endl;
+
     if (this_node->EdgesIn.size()) {
       // edge in graph: father -> this_node
       SbpNode<SbpSignature> *father = this_node->EdgesIn[0]->StartNode;
@@ -382,6 +390,13 @@ int32_t SbpGraph<SbpSignature>::ChildElimination(SbpNode<SbpSignature> *this_nod
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::NodeMerging(SbpNode<SbpSignature> *first,
                                             SbpNode<SbpSignature> *second) {
+                                              
+  // test debug
+  std::cout << "Node Merging id:" << NextId << std::endl;
+  if(NextId==2154 || NextId==1629){
+    std::cout << "Start from here, first: " << first->id << ", second: " << second->id << std::endl;
+  }
+
   SbpNode<SbpSignature> *new_node = new SbpNode<SbpSignature>(first, second);
 
   // Adjust NodeList

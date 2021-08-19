@@ -182,13 +182,80 @@ void SbpEdge<SbpSignature>::SummerizeCost() {
       for (int32_t sbp_end = 0; sbp_end < EndNodeSbpSize; sbp_end++) {
         Cost[sbp_start][sbp_end] = 0;
         for (int32_t edge_num = 0; edge_num < EdgeList.size(); edge_num++) {
-          if (EdgeList[edge_num]->StartNode == StartNode)
+          if (EdgeList[edge_num]->StartNode == StartNode){
+            // test debug
+            if(EdgeList[edge_num]->Cost[sbp_start][sbp_end]<0){
+              std::cout << "edge num:" << edge_num << ", start id:" << sbp_start << ", end id:" << sbp_end  << "Cost" << EdgeList[edge_num]->Cost[sbp_start][sbp_end] << std::endl;
+              std::cout << "first id: " << EdgeList[edge_num]->StartNode->id << std::endl;
+              if(EdgeList[edge_num]->MidNode){
+                std::cout << "Has mid node" << std::endl;
+              }else if(EdgeList[edge_num]->EdgeList.size()>0){
+                std::cout << "Merged edges" << std::endl;
+              }else{
+                if(EdgeList[edge_num]->StartNode->op_node){
+                  std::cout << "Start node name: " << EdgeList[edge_num]->StartNode->op_node->op().op_name() << std::endl;
+                }
+                if(EdgeList[edge_num]->EndNode->op_node){
+                  std::cout << "End node name: " << EdgeList[edge_num]->EndNode->op_node->op().op_name() << std::endl;
+                }
+              }
+            }
             Cost[sbp_start][sbp_end] += EdgeList[edge_num]->Cost[sbp_start][sbp_end];
-          else
+            if(Cost[sbp_start][sbp_end]<0){
+              std::cout << "start id:" << sbp_start << ", end id:" << sbp_end << std::endl;
+              // test debug
+  if(EndNode->NodeListId == 2154){
+    std::cout << "2154: " << EdgeList[edge_num]->Cost[sbp_start][sbp_end] << std::endl;
+  }
+  if(StartNode->NodeListId == 2154){
+    std::cout << "2154: " << EdgeList[edge_num]->Cost[sbp_start][sbp_end] << std::endl;
+  }
+            }
+          }else{
+            if(EdgeList[edge_num]->Cost[sbp_end][sbp_start]<0){
+              std::cout << "Reverse edge num:" << edge_num << ", start id:" << sbp_start << ", end id:" << sbp_end << std::endl;
+            }
             Cost[sbp_start][sbp_end] += EdgeList[edge_num]->Cost[sbp_end][sbp_start];
+            if(Cost[sbp_start][sbp_end]<0){
+              std::cout << "Reverse start id:" << sbp_start << ", end id:" << sbp_end << std::endl;
+            }
+          }
         }
       }
     }
+  }
+
+  // test debug
+  if(EndNode->NodeListId == 2154){
+    std::cout << "2154: " << Cost[7][19] << std::endl;
+  }
+  if(StartNode->NodeListId == 2154){
+    std::cout << "2154: " << Cost[7][19] << std::endl;
+  }
+
+  // test debug
+  if(Cost.size()<=0 || Cost[0].size()<=0){
+    if(MidNode){
+      std::cout << "0 size of Cost in Node Elimination" << std::endl;
+    }else{
+      std::cout << "0 size of Cost in Edge Elimination" << std::endl;
+    }
+    if(MidNode){
+          std::cout << "Mid Node elimination: " << std::endl;
+          if(MidNode->op_node) std::cout << "MidNode is " << MidNode->op_node->op().op_name() << std::endl;
+          else std::cout << "MidNode is proxy" << std::endl;
+        } 
+        else std::cout << "Edges elimination: " << std::endl;
+        if (StartNode->op_node)
+          std::cout << "Start node is " << StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (EndNode->op_node)
+          std::cout << EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
   }
 
   // test debug
@@ -221,6 +288,13 @@ template<class SbpSignature>
 void SbpEdge<SbpSignature>::DuplicateCost(
     bool ifStart, bool ifFirst,
     const std::vector<std::pair<int32_t, int32_t>> &mergedSigId2ChildrenSigId) {
+      if(StartNode->id==1629){
+        std::cout << "Found this edge" << std::endl;
+      }
+      std::cout << "Merge sig child num: " << mergedSigId2ChildrenSigId.size() << ", origin Cost size: " << Cost.size() << std::endl;
+      if(Cost.size()==0){
+        std::cout << "0 size edge start: " << StartNode->id << ", end: " << EndNode->id << std::endl;
+      }
   const int32_t num_sig = mergedSigId2ChildrenSigId.size();
   std::vector<std::vector<double>> tmpCost;
   std::vector<std::vector<int32_t>> tmpMidNodeSbpSig;
@@ -253,6 +327,25 @@ void SbpEdge<SbpSignature>::DuplicateCost(
   if (MidNode) MidNodeSbpSig = tmpMidNodeSbpSig;
 
   // test debug
+  if(Cost.size()<=0 || Cost[0].size()<=0){
+    std::cout << "0 size of Cost in Node Merging" << std::endl;
+    std::cout << "Duplicate Cost: " << std::endl;
+        if (StartNode->op_node)
+          std::cout << "Start node is " << StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (EndNode->op_node)
+          std::cout << EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+  }
+
+  // test debug
+  std::cout << "Cost size: " << Cost.size() << ", tmpCost size: " << tmpCost.size() << std::endl;
+
+  // test debug
   for (const auto &v : Cost) {
     for (const auto &c : v) {
       if (c < 0) {
@@ -267,6 +360,24 @@ void SbpEdge<SbpSignature>::DuplicateCost(
         else
           std::cout << "proxy";
         std::cout << std::endl;
+      }
+    }
+  }
+  // test debug
+  if(StartNode->id==1629){
+    std::cout << "2154: " << Cost[7][19] << ", <0? " << (Cost[7][19]<0) << std::endl;
+    if(Cost[7][19]<0){
+      // test debug
+      for (int i = 0; i<Cost.size(); i++) {
+        std::cout << "Cost " << i << " size: " << Cost[i].size() << std::endl;
+        for (int j= 0; j<Cost[i].size(); j++){
+          if(Cost[i][j]<0){
+            std::cout << "Cost: " << i << ", " << j << std::endl;
+          }
+          if(tmpCost[i][j]<0){
+            std::cout << "tmpCost: " << i << ", " << j << std::endl;
+          }
+        }
       }
     }
   }

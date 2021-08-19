@@ -210,7 +210,7 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignatur
     double edge_threshold = 3e38;
     double min_cost = 1e100;
     for (const auto &row : common_edge->Cost) {
-      for (const double &c : row) std::min(min_cost, c);
+      for (const double &c : row) min_cost = std::min(min_cost, c);
     }
     // If there is no one case can choose, we will choose pairs whose cost in [min_cost,
     // min_cost*10]
@@ -224,6 +224,9 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignatur
           Cost.emplace_back(edge_cost + first->Cost[i] + second->Cost[j]);
         }
       }
+    }
+    if(MergedSigId2ChildrenSigId.size()<=0){
+      std::cout << "0 size for merge child edge, min cost: " << min_cost << std::endl;
     }
   } else {
     for (int32_t i = 0; i < first->Cost.size(); i++) {
@@ -246,18 +249,147 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignatur
   for (SbpEdge<SbpSignature> *&this_edge : first->EdgesIn) {
     this_edge->DuplicateCost(false, true, MergedSigId2ChildrenSigId);
     this_edge->EndNode = this;
+    // test debug
+    if(this_edge->Cost.size()<=0 || this_edge->Cost[0].size()<=0){
+      std::cout << "0 size of Cost after Duplicate cost: ";
+      if (this_edge->StartNode->op_node)
+          std::cout << "Start node is " << this_edge->StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (this_edge->EndNode->op_node)
+          std::cout << this_edge->EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+    }
+    // test debug
+  for (const auto &v : this_edge->Cost) {
+    for (const auto &c : v) {
+      if (c < 0) {
+        std::cout << "After Duplicate Cost: " << std::endl;
+        if (this_edge->StartNode->op_node)
+          std::cout << "Start node is " << this_edge->StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (this_edge->EndNode->op_node)
+          std::cout << this_edge->EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+      }
+    }
+  }
   }
   for (SbpEdge<SbpSignature> *&this_edge : first->EdgesOut) {
     this_edge->DuplicateCost(true, true, MergedSigId2ChildrenSigId);
     this_edge->StartNode = this;
+
+    // test debug
+    if(this_edge->Cost.size()<=0 || this_edge->Cost[0].size()<=0){
+      std::cout << "0 size of Cost after Duplicate cost: ";
+      if (this_edge->StartNode->op_node)
+          std::cout << "Start node is " << this_edge->StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (this_edge->EndNode->op_node)
+          std::cout << this_edge->EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+    }
+    // test debug
+  for (const auto &v : this_edge->Cost) {
+    for (const auto &c : v) {
+      if (c < 0) {
+        std::cout << "After Duplicate Cost: " << std::endl;
+        if (this_edge->StartNode->op_node)
+          std::cout << "Start node is " << this_edge->StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (this_edge->EndNode->op_node)
+          std::cout << this_edge->EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+      }
+    }
+  }
   }
   for (SbpEdge<SbpSignature> *&this_edge : second->EdgesIn) {
     this_edge->DuplicateCost(false, false, MergedSigId2ChildrenSigId);
     this_edge->EndNode = this;
+    // test debug
+    if(this_edge->Cost.size()<=0 || this_edge->Cost[0].size()<=0){
+      std::cout << "0 size of Cost after Duplicate cost: ";
+      if (this_edge->StartNode->op_node)
+          std::cout << "Start node is " << this_edge->StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (this_edge->EndNode->op_node)
+          std::cout << this_edge->EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+    }
+    // test debug
+  for (const auto &v : this_edge->Cost) {
+    for (const auto &c : v) {
+      if (c < 0) {
+        std::cout << "After Duplicate Cost: " << std::endl;
+        if (this_edge->StartNode->op_node)
+          std::cout << "Start node is " << this_edge->StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (this_edge->EndNode->op_node)
+          std::cout << this_edge->EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+      }
+    }
+  }
   }
   for (SbpEdge<SbpSignature> *&this_edge : second->EdgesOut) {
     this_edge->DuplicateCost(true, false, MergedSigId2ChildrenSigId);
     this_edge->StartNode = this;
+    // test debug
+    if(this_edge->Cost.size()<=0 || this_edge->Cost[0].size()<=0){
+      std::cout << "0 size of Cost after Duplicate cost: ";
+      if (this_edge->StartNode->op_node)
+          std::cout << "Start node is " << this_edge->StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (this_edge->EndNode->op_node)
+          std::cout << this_edge->EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+    }
+    // test debug
+  for (const auto &v : this_edge->Cost) {
+    for (const auto &c : v) {
+      if (c < 0) {
+        std::cout << "After Duplicate Cost: " << std::endl;
+        if (this_edge->StartNode->op_node)
+          std::cout << "Start node is " << this_edge->StartNode->op_node->op().op_name();
+        else
+          std::cout << "Start node is proxy ";
+        std::cout << std::endl << "End node is ";
+        if (this_edge->EndNode->op_node)
+          std::cout << this_edge->EndNode->op_node->op().op_name();
+        else
+          std::cout << "proxy";
+        std::cout << std::endl;
+      }
+    }
+  }
   }
   // Remove edges from original nodes
   first->EdgesIn.clear();
@@ -279,6 +411,21 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignatur
   // Initialize default sbp choice
   FinalSbpSignatureId = 0;
 
+  // test debug
+    if(Cost.size()<=0){
+      std::cout << "0 size of Cost at ";
+      std::cout << "Node edge elimination: " << std::endl;
+      if (first->op_node)
+        std::cout << "First half node is " << first->op_node->op().op_name();
+      else
+        std::cout << "First half node is proxy ";
+      std::cout << std::endl << "Second half node is ";
+      if (second->op_node)
+        std::cout << second->op_node->op().op_name();
+      else
+        std::cout << "proxy";
+      std::cout << std::endl;
+    }
   // test debug
   for (const auto &c : Cost) {
     if (c < 0) {
@@ -399,6 +546,15 @@ void SbpNode<SbpSignature>::SummerizeCost() {
     }
   }
 
+    // test debug
+    if(Cost.size()<=0){
+      std::cout << "0 size of Cost after child elimination. ";
+      if (op_node)
+        std::cout << "Node is " << op_node->op().op_name();
+      else
+        std::cout << "Node is proxy ";
+      std::cout << std::endl;
+    }
   // test debug
   for (const auto &c : Cost) {
     if (c < 0) {
