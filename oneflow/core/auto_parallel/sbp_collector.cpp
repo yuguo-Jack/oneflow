@@ -120,10 +120,6 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<SbpSignature>* sbp_p
         // compute copy cost for a specific logical blob
         sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
             sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, false);
-        // test debug
-        if(sbp_edge->Cost[sbp_id_producer][sbp_id_consumer]<0){
-          std::cout << "Less than 0, producer to proxy!" << std::endl;
-        }
       }
       // test debug
       std::cout << sbp_id_producer << ", " << sbp_id_consumer << ", " << sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] << std::endl;
@@ -161,9 +157,6 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
     sbp_edge->Cost.resize(sbp_proxy->ParallelCandidates.size());
     int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
 
-    // test debug
-    std::cout << "copy cost from proxy to consumer " << std::endl; 
-
     // look through sbp parallel set in proxy
     for (int32_t sbp_id_producer = 0; sbp_id_producer < sbp_proxy->ParallelCandidates.size();
          sbp_id_producer++) {
@@ -181,11 +174,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
 
         if (!parallel_candidate.CheckExistency(SbpParallelUniverse[sbp_consumer]))
           sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] = GetMaxVal<float>();
-        
-        // test debug
-        if(sbp_edge->Cost[sbp_id_producer][sbp_id_consumer]<0){
-          std::cout << "Less than 0, proxy to consumer!" << std::endl;
-        }
+
         std::cout << sbp_id_producer << ", " << sbp_id_consumer << ", " << sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] << std::endl;
       }
     }

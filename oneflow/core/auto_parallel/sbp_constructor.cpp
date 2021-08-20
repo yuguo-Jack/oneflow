@@ -93,66 +93,6 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
   sbp_graph.RandomSbpSignature();
   StealSbpFromOpGraph(op_graph, op_name2sbp_node, op_name2is_fixed);
 
-  // test debug
-  for(auto* this_node: sbp_graph.NodeList){
-    // test debug
-  if(this_node->Cost.size()<=0){
-    std::cout << "0 size of Cost after node initialization." << std::endl;
-  }
-    for(auto c: this_node->Cost){
-      if(c<0){
-        std::cout << "Computation cost <0 in ";
-        if(this_node->op_node){
-          std::cout << this_node->op_node->op().op_name();
-        }else std::cout << "proxy";
-      }
-    }
-
-    for(auto* e: this_node->EdgesIn){
-      // test debug
-      if(e->Cost.size()<=0 || e->Cost[0].size()<=0){
-        std::cout << "0 size of Cost after edge initialization." << std::endl;
-      }
-      for(auto& v: e->Cost){
-        for(auto c: v){
-          if(c<0){
-            if (e->StartNode->op_node)
-          std::cout << "Start node is " << e->StartNode->op_node->op().op_name();
-        else
-          std::cout << "Start node is proxy ";
-        std::cout << std::endl << "End node is ";
-        if (e->EndNode->op_node)
-          std::cout << e->EndNode->op_node->op().op_name();
-        else
-          std::cout << "proxy";
-        std::cout << std::endl;
-        break;
-          }
-        }
-      }
-    }
-
-    for(auto* e: this_node->EdgesOut){
-      for(auto& v: e->Cost){
-        for(auto c: v){
-          if(c<0){
-            if (e->StartNode->op_node)
-          std::cout << "Start node is " << e->StartNode->op_node->op().op_name();
-        else
-          std::cout << "Start node is proxy ";
-        std::cout << std::endl << "End node is ";
-        if (e->EndNode->op_node)
-          std::cout << e->EndNode->op_node->op().op_name();
-        else
-          std::cout << "proxy";
-        std::cout << std::endl;
-        break;
-          }
-        }
-      }
-    }
-  }
-
   // Find proper sbp strategy
   double OrgCost = sbp_graph.ComputeCost();
   std::cout << "Initial Cost: " << OrgCost << std::endl;
@@ -371,7 +311,7 @@ void SbpConstructor::InitializeCopyCost(
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
       // Edge is clipped. Skip it.
       if (edge_found == NULL) {
-        std::cout << "SbpEdge not found while computing copy cost!" << std::endl;
+        // std::cout << "SbpEdge not found while computing copy cost from " << sbp_node_producer->id << " to " << sbp_node_consumer->id  << std::endl;
         continue;
       }
 
@@ -410,18 +350,6 @@ void SbpConstructor::InitializeCopyCost(
           edge_found->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
               sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
 
-#ifdef TEST_DEBUG_
-          // test debug
-          if(edge_found->Cost.size()<=0 || edge_found->Cost[0].size()<=0){
-            std::cout << "0 size for edge found while initializing copy cost" << std::endl;
-          }
-          // test debug
-          if(edge_found->Cost[sbp_id_producer][sbp_id_consumer]<0){
-          std::cout << "Less than 0! Pre Op:" << producer->op().op_name() << ": " << ibn;
-          std::cout << sbp_producer.DebugString() << "->" << sbp_consumer.DebugString()
-                    << " Cost:" << edge_found->Cost[sbp_id_producer][sbp_id_consumer] << std::endl;
-          }
-#endif
         }
       }
     }
