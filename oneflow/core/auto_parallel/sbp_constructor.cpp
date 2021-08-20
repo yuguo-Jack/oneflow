@@ -327,7 +327,7 @@ double SbpConstructor::ComputeComputationCost(const SbpParallel& sbp_parallel_,
     return total_cost;
 }
 
-// Compute copy cost.
+// Compute copy cost between nodes and nodes. Skip those proxies.
 void SbpConstructor::InitializeCopyCost(
     OpGraph& op_graph, HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
     HashMap<std::string, bool>& op_name2is_fixed) {
@@ -344,6 +344,8 @@ void SbpConstructor::InitializeCopyCost(
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // producer sbp node
       const auto* sbp_node_producer = sbp_edge->StartNode;
+      // skip it if proxy
+      if(!sbp_node_producer->op_node) continue;
       sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
       int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
       // look through sbp signature in producer
