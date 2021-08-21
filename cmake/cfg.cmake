@@ -39,12 +39,17 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/common/shape.proto
       oneflow/core/record/record.proto
       oneflow/core/job/resource.proto
+      oneflow/core/job/lbi_diff_watcher_info.proto
       oneflow/core/register/logical_blob_id.proto
       oneflow/core/register/tensor_slice_view.proto
+      oneflow/core/register/op_blob_arg.proto
       oneflow/core/common/range.proto
       oneflow/core/framework/user_op_conf.proto
       oneflow/core/framework/user_op_attr.proto
       oneflow/core/job/sbp_parallel.proto
+      oneflow/core/job/dlnet_conf.proto
+      oneflow/core/job/job.proto
+      oneflow/core/operator/op_attribute.proto
       oneflow/core/graph/boxing/collective_boxing.proto
       oneflow/core/register/blob_desc.proto
       oneflow/core/register/pod.proto
@@ -105,6 +110,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/placement.proto
       oneflow/core/framework/user_op_attr.proto
       oneflow/core/framework/user_op_conf.proto
+      oneflow/core/job/job.proto
       oneflow/core/job/sbp_parallel.proto
       oneflow/core/job/scope.proto
       oneflow/core/job/mirrored_parallel.proto

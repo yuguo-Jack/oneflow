@@ -1121,6 +1121,40 @@ std::shared_ptr<OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const
   return op_attribute;
 }
 
+
+
+// Compute time complexity for given blob description and sbp signature.
+// Use function to repalce the HashMap from logical blob id to blob description pointer.
+Maybe<double> Operator::GetComputeComplexity(
+    cfg::SbpSignature* sbp_signature,
+    std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+    const ParallelDesc& parallel_desc) const {
+  // Can we remove mutable here without introducing any compiling bug?
+  auto sbp_bn_in_op2sbp_parallel = sbp_signature->mutable_bn_in_op2sbp_parallel();
+  double complexity_ = 0;
+  auto ComputeComplexity4Blobs = [&](const PbRpf<std::string>& bns) {
+    for (const auto& bn : bns) {
+      const BlobDesc& logical_blob_desc = logical_blob_desc4bn(bn);
+      const cfg::SbpParallel& sbp = (*sbp_bn_in_op2sbp_parallel)[bn];
+
+      double total_cost = logical_blob_desc.shape().elem_cnt();
+      if (sbp.has_split_parallel()) {
+        const int32_t axis = sbp.split_parallel().axis();
+        if (axis >= logical_blob_desc.shape().NumAxes()
+            || logical_blob_desc.shape().At(axis) < parallel_desc.parallel_num())
+          complexity_ += GetMaxVal<float>();
+        else
+          complexity_ += total_cost / parallel_desc.parallel_num();
+      } else
+        complexity_ += total_cost;
+    }
+  };
+  ComputeComplexity4Blobs(input_bns());
+  ComputeComplexity4Blobs(output_bns());
+  return complexity_;
+}
+
+
 Maybe<int32_t> Operator::GetInputIndex(const std::string& ibn) const {
   auto it = bn2index_pair_.find(ibn);
   CHECK_OR_RETURN(it != bn2index_pair_.end());

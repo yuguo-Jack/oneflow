@@ -49,28 +49,54 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const cfg::ParallelDistribution& ParallelDistribution4Lbi(const LogicalBlobId& lbi) const;
   const cfg::ParallelDistribution& ParallelDistribution4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
+
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
+  const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
+
 
   std::string VisualStr() const override;
+  // Update Lbi2SbpParallel here. Might need to adjust access modifiers
+  void UpdateLbi2SbpParallel();
+
 
  private:
   friend class OpGraph;
   friend class OpEdge;
+  friend class SbpConstructor;
 
   // Setters
   Operator* mut_op() { return op_.get(); }
+  cfg::SbpSignature* mut_sbp_signature() { return mut_op()->mut_sbp_signature(); }
   OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
+
+  void ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
+                      const std::vector<std::shared_ptr<BlobDesc>>& blob_descs,
+                      const cfg::SbpParallel& sbp_parallel, BlobDesc* concatenated_blob_desc) const;
+
+  BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
+  void ForEachSplitOrBroadcastBlobDesc(const BlobDesc& blob_desc, const cfg::SbpParallel& sbp_parallel,
+                                       const std::function<void(const BlobDesc&)>& Handler) const;
+
+  void ConcatLogicalOutputBlobDesc();
+
+  void InferBlobParallelDesc();
   void InitLbi2SourceNode();
   void InitLbi2ParallelDistribution();
-
+  HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
+    return &bn2parallel_id2blob_desc_;
+  }
   std::shared_ptr<const ParallelDesc> parallel_desc_;
+  HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
   HashMap<LogicalBlobId, cfg::ParallelDistribution> lbi2parallel_distribution_;
   std::vector<std::pair<const OpNode*, int32_t>> input_index2producer_and_output_index_;
+  HashMap<LogicalBlobId, cfg::SbpParallel> lbi2sbp_parallel_;
+  HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
+  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {

@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/mirrored_parallel.pb.h"
 #include "oneflow/core/operator/op_conf_util.h"
+#include "oneflow/core/operator/op_attribute.cfg.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
@@ -166,18 +167,29 @@ class Operator {
   Maybe<const cfg::SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
   Maybe<const cfg::ParallelDistribution*> ParallelDistribution4BnInOp(
       const std::string& bn_in_op) const;
+  
   Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const;
 
+  virtual Maybe<void> UpdateOpconf() { return Maybe<void>::Ok(); };
+
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
+    // Compute time complexity for given blob description and sbp signature.
+  // Use OpNode to repalce the HashMap from logical blob id to blob description pointer.
+  virtual Maybe<double> GetComputeComplexity(
+      cfg::SbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+      const ParallelDesc& parallel_desc) const;
+
   Maybe<const cfg::SbpSignature*> sbp_signature() const;
+  ::oneflow::cfg::SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
   Maybe<const cfg::ParallelDistributionSignature*> parallel_distribution_signature() const;
   BlobLastUsedSignature* mut_blob_last_used_signature();
   BlobBackwardUsedSignature* mut_blob_backward_used_signature();
@@ -217,7 +229,7 @@ class Operator {
       cfg::ParallelDistributionSignature* parallel_distribution_signature,
       const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
-      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>  
           ParallelDistributionInferHint4Ibn) const;
   virtual Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
     OF_UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
@@ -291,6 +303,8 @@ class Operator {
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return arg_signature_.mutable_bn_in_op2lbi();
   }
+
+  cfg::OpAttribute op_attribute_;
 
   std::shared_ptr<const OperatorConf> op_conf_;
   std::shared_ptr<const ParallelDesc> op_parallel_desc_;

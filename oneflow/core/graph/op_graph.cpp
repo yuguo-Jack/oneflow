@@ -156,6 +156,20 @@ void OpNode::InitLbi2ParallelDistribution() {
   Update(op().output_bns());
 }
 
+
+void OpNode::UpdateLbi2SbpParallel() {
+  const auto Update = [&](const PbRpf<std::string>& bns) {
+    for (const auto& bn : bns) {
+      const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
+      const cfg::SbpParallel& sbp_parallel = SbpParallel4BnInOp(bn);
+      lbi2sbp_parallel_[lbi] = sbp_parallel;
+    }
+  };
+  Update(op().input_bns());
+  Update(op().output_bns());
+}
+
+
 Maybe<OpGraph> OpGraph::New(const Job& job) {
   const auto& op_graph = std::make_shared<OpGraph>();
   JUST(op_graph->Init(job));
@@ -276,6 +290,91 @@ void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
     }
   }
 }
+
+void OpNode::ConcatLogicalOutputBlobDesc() {
+  for (const std::string& obn : op().output_bns()) {
+    const ParallelDesc& blob_parallel_desc = BlobParallelDesc4Obn(obn);
+    const LogicalBlobId& lbi = op().BnInOp2Lbi(obn);
+    const cfg::SbpParallel& sbp_parallel = SbpParallel4BnInOp(obn);
+    std::vector<std::shared_ptr<BlobDesc>> paralleled_blob_descs;
+    for (const auto& blob_desc : bn2parallel_id2blob_desc_.at(obn)) {
+      if (blob_desc) { paralleled_blob_descs.push_back(blob_desc); }
+    }
+    ConcatBlobDesc(blob_parallel_desc, paralleled_blob_descs, sbp_parallel,
+                   MutLogicalBlobDesc4Lbi(lbi));
+  }
+}
+
+BlobDesc* OpNode::MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi) {
+  CHECK_EQ(lbi.op_name(), op().op_name());
+  if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
+    lbi2logical_blob_desc_[lbi].reset(new BlobDesc(GlobalJobDesc().DefaultDataType()));
+  }
+  return lbi2logical_blob_desc_.at(lbi).get();
+}
+
+void OpNode::ForEachSplitOrBroadcastBlobDesc(
+    const BlobDesc& blob_desc, const cfg::SbpParallel& sbp_parallel,
+    const std::function<void(const BlobDesc&)>& Handler) const {
+  if (sbp_parallel.has_split_parallel()) {
+    // split BlobDesc
+    int32_t axis = sbp_parallel.split_parallel().axis();
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, blob_desc.shape().NumAxes());
+    CHECK_GE(blob_desc.shape().At(axis), parallel_desc().parallel_num());
+    BalancedSplitter bs(blob_desc.shape().At(axis), parallel_desc().parallel_num());
+    BlobDesc sub_blob_desc(blob_desc);
+    FOR_RANGE(int64_t, axis_parallel_id, 0, parallel_desc().parallel_num()) {
+      sub_blob_desc.mut_shape().Set(axis, bs.At(axis_parallel_id).size());
+      Handler(sub_blob_desc);
+    }
+  } else {
+    CHECK(sbp_parallel.has_broadcast_parallel() || sbp_parallel.has_partial_sum_parallel());
+    // broadcast BlobDesc
+    FOR_RANGE(int64_t, axis_parallel_id, 0, parallel_desc().parallel_num()) { Handler(blob_desc); }
+  }
+}
+
+
+void OpNode::ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
+                            const std::vector<std::shared_ptr<BlobDesc>>& blob_descs,
+                            const cfg::SbpParallel& sbp_parallel,
+                            BlobDesc* concatenated_blob_desc) const {
+  CHECK_EQ(blob_descs.size(), blob_parallel_desc.parallel_num());
+  if (sbp_parallel.has_split_parallel()) {
+    int32_t axis = sbp_parallel.split_parallel().axis();
+    // concat BlobDesc
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, blob_descs.at(0)->shape().NumAxes());
+    int64_t logical_blob_axis_dim = 0;
+    for (const auto& blob_desc : blob_descs) {
+      logical_blob_axis_dim += blob_desc->shape().At(axis);
+    }
+    CHECK_GE(logical_blob_axis_dim, blob_parallel_desc.parallel_num());
+    BalancedSplitter bs(logical_blob_axis_dim, blob_parallel_desc.parallel_num());
+    std::vector<std::unique_ptr<BlobDesc>> same_blob_descs(blob_descs.size());
+    FOR_RANGE(int64_t, axis_parallel_id, 0, blob_parallel_desc.parallel_num()) {
+      CHECK_EQ(bs.At(axis_parallel_id).size(), blob_descs.at(axis_parallel_id)->shape().At(axis));
+      same_blob_descs.at(axis_parallel_id).reset(new BlobDesc(*blob_descs.at(axis_parallel_id)));
+      same_blob_descs.at(axis_parallel_id)->mut_shape().Set(axis, logical_blob_axis_dim);
+    }
+    FOR_RANGE(int64_t, i, 1, same_blob_descs.size()) {
+      CHECK(*same_blob_descs.at(i) == *same_blob_descs.at(0));
+    }
+    concatenated_blob_desc->CopyFrom(*same_blob_descs.at(0));
+  } else {
+    FOR_RANGE(int64_t, i, 1, blob_descs.size()) { CHECK(*blob_descs.at(i) == *blob_descs.at(0)); }
+    // select first BlobDesc
+    concatenated_blob_desc->CopyFrom(*blob_descs.at(0));
+  }
+}
+
+
+const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
+  return obn2blob_parallel_desc_.at(obn);
+}
+
+
 
 void OpGraph::InferBlobLastUsed() const {
   HashSet<LogicalBlobId> visisted_lbi;
