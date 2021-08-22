@@ -38,9 +38,14 @@ def _tensor_to(input, device=None, dtype=None, copy=False):
     return ret
 
 
-def _consistent_tensor_to(input, device):
+def _consistent_tensor_to_device(input, device):
     assert input.is_consistent
-    assert isinstance(device, str)
+    if device not in ("cuda", "cpu"):
+        raise TypeError(
+            "A consistent tensor can only call to() with device_str_without_id, "
+            'e.g. to("cuda") or to("cpu"), '
+            f"but device param {device} has been received."
+        )
 
     # the same device as input
     if device == input.placement.device_type:
@@ -60,6 +65,22 @@ def _consistent_tensor_to(input, device):
         local_input = input.to_local()
         local_output = _tensor_to(local_input, device, None, False)
         return local_output.to_consistent(out_placement, sbp)
+
+
+def _consistent_tensor_to_dtype(input, dtype=None):
+    ret = input
+    if (dtype != input.dtype):
+        ret = flow.F.cast(ret, dtype=dtype)
+    return ret
+
+
+def _consistent_tensor_to(input, device, dtype)
+    ret = input
+    if device is not None: 
+        ret = _consistent_tensor_to_device(ret, device)
+    if dtype is not None:
+        ret = _consistent_tensor_to_dtype(ret, dtype)
+    return ret
 
 
 def _safe_get(list, index, default):
@@ -149,22 +170,13 @@ def to_op(input, *args, **kwargs):
         raise TypeError("Invalid copy param received: {copy}")
 
     if input.is_consistent:
-        if device not in ("cuda", "cpu"):
-            raise TypeError(
-                "A consistent tensor can only call to() with device_str_without_id, "
-                'e.g. to("cuda") or to("cpu"), '
-                f"but device param {device} has been received."
-            )
-
-        if dtype is not None:
-            raise TypeError(
-                "Can not call to() for a consistent tensor with dtype param"
-            )
+        if copy:
+            raise ValueError("A consistent tensor cannot be copied.")
 
         if not input.is_lazy:
             input.check_meta_consistency()
 
-        return _consistent_tensor_to(input, device)
+        return _consistent_tensor_to(input, device, dtype)
     else:
         if isinstance(device, str):
             device = flow.device(device)
