@@ -84,8 +84,8 @@ Maybe<const std::string&> Device::of_type() const {
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
-      {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
-      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"}, {"nccl", "async.gpu.LocalCallOpKernel"},
+      {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "gpu.LocalCallOpKernel"},
+      {"cuda_d2h", "gpu.LocalCallOpKernel"}, {"nccl", "gpu.LocalCallOpKernel"},
   };
   return MapAt(type2instr_name, type);
 }
