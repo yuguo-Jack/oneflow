@@ -1,6 +1,18 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.14.0)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7)
+    message(FATAL_ERROR "GCC version must be at least 7")
+  endif()
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5)
+    message(FATAL_ERROR "Clang version must be at least 5")
+  endif()
+else()
+  message(FATAL_ERROR "This compiler is not yet supported by oneflow, please switch to GCC or Clang")
+endif()
+
 if (NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
