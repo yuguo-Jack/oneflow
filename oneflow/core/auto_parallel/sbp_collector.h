@@ -44,12 +44,7 @@ class SbpCollector {
   // A binary set buffer to indicate sets of downstream sbp
   BinarySet bs_buffer;
 
-  SbpCollector() {
-    // initialize Sbp Parallel Universe with broadcast.
-    SbpParallel sbp_broadcast;
-    sbp_broadcast.mutable_broadcast_parallel();
-    SbpParallelUniverse[sbp_broadcast] = 0;
-  }
+  SbpCollector();
 
   ~SbpCollector() {}
 

@@ -285,7 +285,7 @@ void SbpConstructor::InitializeCopyCost(
       // producer sbp node
       const auto* sbp_node_producer = sbp_edge->StartNode;
       // skip it if proxy
-      if(!sbp_node_producer->op_node) continue;
+      if (!sbp_node_producer->op_node) continue;
       sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
       int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
       // look through sbp signature in producer
@@ -311,7 +311,8 @@ void SbpConstructor::InitializeCopyCost(
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
       // Edge is clipped. Skip it.
       if (edge_found == NULL) {
-        // std::cout << "SbpEdge not found while computing copy cost from " << sbp_node_producer->id << " to " << sbp_node_consumer->id  << std::endl;
+        // std::cout << "SbpEdge not found while computing copy cost from " << sbp_node_producer->id
+        // << " to " << sbp_node_consumer->id  << std::endl;
         continue;
       }
 
@@ -349,7 +350,6 @@ void SbpConstructor::InitializeCopyCost(
           // compute copy cost for a specific logical blob
           edge_found->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
               sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
-
         }
       }
     }
@@ -384,13 +384,15 @@ void SbpConstructor::LoadLbi2SbpEdge(
       // should use assert or CHECK process here, skip for speeding up for now
       // TODO: print to error log
       // TODO: move copy cost to proxy
-      if(edge_found == NULL){
-        std::cout << "producer:" << producer->op().op_name() << ", out size:" << sbp_node_producer->EdgesOut.size() << std::endl;
-        for(const auto* this_edge: sbp_node_producer->EdgesOut){
+      if (edge_found == NULL) {
+        std::cout << "producer:" << producer->op().op_name()
+                  << ", out size:" << sbp_node_producer->EdgesOut.size() << std::endl;
+        for (const auto* this_edge : sbp_node_producer->EdgesOut) {
           std::cout << "Out edges:" << this_edge->EndNode->op_node->op().op_name() << std::endl;
         }
-        std::cout << "consumer:" << op_node->op().op_name() << ", in size:" << sbp_node_consumer->EdgesIn.size() << std::endl;
-        for(const auto* this_edge: sbp_node_producer->EdgesIn){
+        std::cout << "consumer:" << op_node->op().op_name()
+                  << ", in size:" << sbp_node_consumer->EdgesIn.size() << std::endl;
+        for (const auto* this_edge : sbp_node_producer->EdgesIn) {
           std::cout << "In edges:" << this_edge->StartNode->op_node->op().op_name() << std::endl;
         }
       }
