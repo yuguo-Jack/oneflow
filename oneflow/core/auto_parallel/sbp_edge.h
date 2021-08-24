@@ -197,13 +197,6 @@ template<class SbpSignature>
 void SbpEdge<SbpSignature>::DuplicateCost(
     bool ifStart, bool ifFirst,
     const std::vector<std::pair<int32_t, int32_t>> &mergedSigId2ChildrenSigId) {
-      if(StartNode->id==1629){
-        std::cout << "Found this edge" << std::endl;
-      }
-      std::cout << "Merge sig child num: " << mergedSigId2ChildrenSigId.size() << ", origin Cost size: " << Cost.size() << std::endl;
-      if(Cost.size()==0){
-        std::cout << "0 size edge start: " << StartNode->id << ", end: " << EndNode->id << std::endl;
-      }
   const int32_t num_sig = mergedSigId2ChildrenSigId.size();
   std::vector<std::vector<double>> tmpCost;
   std::vector<std::vector<int32_t>> tmpMidNodeSbpSig;

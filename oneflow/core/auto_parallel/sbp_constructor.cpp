@@ -169,8 +169,10 @@ void SbpConstructor::InitializeSbpGraph(
     // generate sbp node in cost model and link it with corresponding op node
     if (!op_name2is_fixed[op_node->op().op_name()]) {
       Algorithm::SbpNode<SbpSignature>* sbp_node = sbp_graph.GenerateNode();
+#ifdef USE_SBP_COLLECTOR_
       // mapping from sbp_node to op_node
       sbp_node->op_node = op_node;
+#endif  // USE_SBP_COLLECTOR_
       op_name2sbp_node[op_node->op().op_name()] = sbp_node;
     }
   });
@@ -284,8 +286,10 @@ void SbpConstructor::InitializeCopyCost(
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // producer sbp node
       const auto* sbp_node_producer = sbp_edge->StartNode;
+#ifdef USE_SBP_COLLECTOR_
       // skip it if proxy
       if (!sbp_node_producer->op_node) continue;
+#endif  // USE_SBP_COLLECTOR_
       sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
       int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
       // look through sbp signature in producer
@@ -381,6 +385,7 @@ void SbpConstructor::LoadLbi2SbpEdge(
       // TODO: recode this
       SbpEdge<SbpSignature>* edge_found =
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
+#ifdef USE_SBP_COLLECTOR_
       // should use assert or CHECK process here, skip for speeding up for now
       // TODO: print to error log
       // TODO: move copy cost to proxy
@@ -396,11 +401,14 @@ void SbpConstructor::LoadLbi2SbpEdge(
           std::cout << "In edges:" << this_edge->StartNode->op_node->op().op_name() << std::endl;
         }
       }
+#endif  // USE_SBP_COLLECTOR_
       CHECK(edge_found != NULL) << "SbpEdge not found while loading!" << std::endl;
 
+#ifdef USE_SBP_COLLECTOR_
       // Add copy cost for each blob
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
       edge_found->LoadLbi(lbi);
+#endif  // USE_SBP_COLLECTOR_
     }
   });
 }
@@ -505,7 +513,14 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
 #ifdef TEST_DEBUG_2
     // test debug
     // ===================================================
-    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
+    // get corresponding sbp node
+    if (op_name2is_fixed[op_node->op().op_name()]) {
+      std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
+    } else {
+      const Algorithm::SbpNode<SbpSignature>* sbp_node = op_name2sbp_node[op_node->op().op_name()];
+      std::cout << op_node->op().op_name()
+                << " (^_^):" << sbp_node->Cost[sbp_node->FinalSbpSignatureId] << std::endl;
+    }
     for (const auto& ibn : op_node->op().input_bns()) {
       auto producer_node = op_node->MutSrcNode4Ibn(ibn);
       std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;

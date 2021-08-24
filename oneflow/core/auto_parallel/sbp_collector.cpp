@@ -163,9 +163,9 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
             sbp_node_consumer->SbpSignatureList[sbp_id_consumer]->bn_in_op2sbp_parallel();
         const SbpParallel& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
-        if (!parallel_candidate.CheckExistency(SbpParallelUniverse[sbp_consumer]))
+        if ((!parallel_candidate.CheckExistency(SbpParallelUniverse[sbp_consumer]))
+            && (sbp_consumer.has_partial_sum_parallel() || !parallel_candidate.CheckExistency(0)))
           sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] = GetMaxVal<float>();
-
       }
     }
   }
