@@ -310,6 +310,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     )
     assert np_arr.shape == tuple(eager_local_tensor.shape)
     copy_from_numpy(np_arr)
+    print("copy from float32")
 
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):

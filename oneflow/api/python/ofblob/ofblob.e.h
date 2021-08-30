@@ -34,6 +34,7 @@ namespace oneflow {
     return Global<ForeignLockHelper>::Get()->WithScopedAcquire(                            \
         [&of_blob_ptr, &array]() -> Maybe<void> {                                          \
           py::buffer_info buf = array.request();                                           \
+          std::cout << buf.itemsize << " " << buf.format << " " << buf.ndim << " " << std::endl;\
           T* buf_ptr = (T*)buf.ptr;                                                        \
           size_t size = buf.size;                                                          \
           using namespace oneflow;                                                         \
