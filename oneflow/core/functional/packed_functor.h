@@ -32,8 +32,19 @@ template<typename T>
 using remove_cvref_t = oneflow::detail::remove_cvref_t<T>;
 
 struct FunctionBody {
-  virtual operator void*() = 0;
+  virtual operator const void*() const = 0;
+  virtual std::type_index signature() const = 0;
   virtual ~FunctionBody() = default;
+
+  template<typename R, typename... Args>
+  R call(const remove_cvref_t<Args>&... args) const {
+    if (signature() != typeid(R(const remove_cvref_t<Args>&...))) {
+      LOG(FATAL) << "The function was called with wrong arguments.";
+    }
+    using FuncType = std::function<R(const remove_cvref_t<Args>&...)>;
+    auto* func = reinterpret_cast<const FuncType*>(this->operator const void*());
+    return (*func)(std::forward<const remove_cvref_t<Args>&>(args)...);
+  }
 };
 
 template<typename T>
@@ -46,35 +57,29 @@ class FunctionBodyImpl<R(Args...)> : public FunctionBody {
            typename std::enable_if<
                std::is_same<typename function_traits<Func>::func_type, R(Args...)>::value,
                int>::type = 0>
-  FunctionBodyImpl(const Func& func) {
-    func_ = [func](const remove_cvref_t<Args>&... args) {
+  FunctionBodyImpl(const Func& func) : func_([func](const remove_cvref_t<Args>&... args) {
       return func(std::forward<const remove_cvref_t<Args>&>(args)...);
-    };
-  }
+    }), sig_(typeid(R(const remove_cvref_t<Args>&...))) {}
 
-  operator void*() override { return &func_; }
+  operator const void*() const override { return &func_; }
+  std::type_index signature() const override { return sig_; }
 
  private:
   std::function<R(const remove_cvref_t<Args>&...)> func_;
+  std::type_index sig_;
 };
 
 class Functor {
  public:
-  Functor(const std::shared_ptr<FunctionBody>& body, const FunctionSignature& signatrue)
-      : signatrue_(signatrue), body_(body) {}
+  Functor(const std::shared_ptr<FunctionBody>& body)
+      : body_(body) {}
 
   template<typename R, typename... Args>
   R call(const remove_cvref_t<Args>&... args) const {
-    if (!detail::CheckSignature<R(Args...)>(signatrue_).Ok()) {
-      LOG(FATAL) << "The function was called with wrong arguments.";
-    }
-    using FuncType = std::function<R(const remove_cvref_t<Args>&...)>;
-    auto* func = reinterpret_cast<FuncType*>(body_->operator void*());
-    return (*func)(std::forward<const remove_cvref_t<Args>&>(args)...);
+    return body_->call<R, Args...>(std::forward<const remove_cvref_t<Args>&>(args)...);
   }
 
  private:
-  FunctionSignature signatrue_;
   std::shared_ptr<FunctionBody> body_;
 };
 
@@ -101,9 +106,7 @@ class PackedFunctor {
 template<typename Func>
 PackedFunctor PackedFunctor::Make(const std::string& func_name, const Func& func) {
   using func_type = typename function_traits<Func>::func_type;
-  auto body = std::make_shared<FunctionBodyImpl<func_type>>(func);
-  FunctionSignature signatute = detail::PackFunctionSignature<func_type>::pack();
-  Functor functor(body, signatute);
+  Functor functor(std::make_shared<FunctionBodyImpl<func_type>>(func));
   return PackedFunctor(func_name, std::move(functor));
 }
 
