@@ -89,7 +89,6 @@ class SbpEdge {
     for (auto &this_edge : EdgeList) { delete this_edge; }
   }
 
-#ifdef USE_SBP_COLLECTOR_
   // a set of ids of logical blobs carried/transferred on this sbp edge
   std::unordered_set<oneflow::LogicalBlobId> CarryLbis;
 
@@ -108,7 +107,6 @@ class SbpEdge {
 
   // Not carrying any blob
   bool EmptyLbi() const { return CarryLbis.empty(); }
-#endif  // USE_SBP_COLLECTOR_
 };
 }  // namespace Algorithm
 // function in cpp. Should be put in one file due to use of template

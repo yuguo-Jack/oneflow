@@ -169,10 +169,8 @@ void SbpConstructor::InitializeSbpGraph(
     // generate sbp node in cost model and link it with corresponding op node
     if (!op_name2is_fixed[op_node->op().op_name()]) {
       Algorithm::SbpNode<SbpSignature>* sbp_node = sbp_graph.GenerateNode();
-#ifdef USE_SBP_COLLECTOR_
       // mapping from sbp_node to op_node
       sbp_node->op_node = op_node;
-#endif  // USE_SBP_COLLECTOR_
       op_name2sbp_node[op_node->op().op_name()] = sbp_node;
     }
   });
@@ -529,6 +527,9 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
         std::cout << " S" << this_sbp_parallel.split_parallel().axis();
       if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " B";
       if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
+      const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
+      bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
+      if(is_same_sbp) std::cout << ", same SBP";
       std::cout << std::endl;
       /* auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0); */
       /* std::cout << " shape:" << blob_desc->shape().DebugStr() << std::endl; */

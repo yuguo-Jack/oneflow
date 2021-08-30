@@ -115,7 +115,6 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<SbpSignature>* sbp_p
         // compute copy cost for a specific logical blob
         sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
             sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, false);
-
       }
     }
   }
