@@ -195,8 +195,7 @@ void SbpCollector::ProxySbpCandidate(
       const auto input_blob_modifier_ = node->op().InputBlobModifier4Ibn(ibn);
       bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
       if (is_same_sbp) {
-        // TODO: Make it usable.
-        std::cout << "Enforcing same SBP. Can not use sbp_collector here." << std::endl;
+        // Enforcing same SBP. Can not collect sbp from this blob.
         continue;
       }
 

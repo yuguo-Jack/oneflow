@@ -23,7 +23,6 @@ limitations under the License.
 
 #define USE_SBP_COLLECTOR_
 #include "binary_set.h"
-
 #include "oneflow/core/graph/op_graph.h"
 
 namespace Algorithm {
