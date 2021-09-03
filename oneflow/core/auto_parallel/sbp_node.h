@@ -24,6 +24,7 @@ limitations under the License.
 #define USE_SBP_COLLECTOR_
 #include "binary_set.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "algorithm_util.h"
 
 namespace Algorithm {
 
@@ -41,9 +42,6 @@ class SbpNode {
   std::vector<SbpEdge<SbpSignature> *> EdgesOut;
   // Identity, use it to distinguish itself from node set
   int32_t id;
-  // Matrix Dimension
-  // Y = XW, X is MatDim[0]-by-MatDim[1], W is MatDim[1]-by-MatDim[2]
-  int32_t MatDim[3];
 
   // We should use Sbp-signature for edge with lowest OrderValue
   std::vector<int32_t> OrderValue;
@@ -95,14 +93,8 @@ class SbpNode {
   int32_t CurrDeg;
 #endif  // DEBUG_ALGORITHM_
 
-  // functions
+  // default constructor
   SbpNode() { FinalSbpSignatureId = 0; }
-
-  SbpNode(int32_t DataSize, int32_t InputParameterDim, int32_t OutputParameterDim) {
-    MatDim[0] = DataSize;
-    MatDim[1] = InputParameterDim;
-    MatDim[2] = OutputParameterDim;
-  }
 
   // This constructor is to merge two node into one
   SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignature> *second);
@@ -146,6 +138,16 @@ class SbpNode {
   double GreedyStrategy();
   // Evaluate summery of cost in 1-ring neighborhood.
   double EvalNbhCost();
+  // Evaluate summery of cost between neighborhood and outside nodes
+  double EvalOutNbhCost(std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id);
+  // Evaluate summery of cost within neighborhood
+  // We only accumulate the edge cost with a lower order.
+  double EvalInNbhCost(std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id,
+                       std::vector<int32_t> &nbh_id2order);
+  // Evaluate summery of cost within neighborhood
+  // We only accumulate the minimum edge cost with a higher order.
+  double EvalMinInNbhCost(std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id,
+                          std::vector<int32_t> &nbh_id2order);
 
 };  // class SbpNode
 }  // namespace Algorithm
@@ -153,26 +155,6 @@ class SbpNode {
 // function in cpp. Should be put in one file due to use of template
 // Otherwise we will need to declare specific template at the end of cpp file.
 namespace Algorithm {
-
-// this function is to remove the i-th element from a vector in Constant time.
-// the vector should not care about ordering.
-// Be more careful about this function. Make sure that the traveling order of
-// the vector goes from back to front.
-template<class T>
-void RemoveFrom(std::vector<T> &v, int32_t i) {
-  v[i] = v.back();
-  v.pop_back();
-}
-
-template<class T>
-void CheckAndRemoveFrom(std::vector<T> &v, T &t) {
-  for (int32_t i = v.size() - 1; i >= 0; i--) {
-    if (v[i] == t) {
-      RemoveFrom<T>(v, i);
-      break;
-    }
-  }
-}
 
 template<class SbpSignature>
 SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignature> *second) {
@@ -216,7 +198,7 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignatur
         }
       }
     }
-    if(MergedSigId2ChildrenSigId.size()<=0){
+    if (MergedSigId2ChildrenSigId.size() <= 0) {
       std::cout << "0 size for merge child edge, min cost: " << min_cost << std::endl;
     }
   } else {
@@ -272,7 +254,6 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignatur
 
   // Initialize default sbp choice
   FinalSbpSignatureId = 0;
-
 }
 
 template<class SbpSignature>
@@ -440,6 +421,86 @@ double SbpNode<SbpSignature>::EvalNbhCost() {
   }
   for (SbpEdge<SbpSignature> *this_edge : EdgesOut) {
     CurrCost += this_edge->Cost[FinalSbpSignatureId][this_edge->EndNode->FinalSbpSignatureId];
+  }
+  return CurrCost;
+}
+
+template<class SbpSignature>
+double SbpNode<SbpSignature>::EvalOutNbhCost(
+    std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id) {
+  // check if this node is in the node list
+  CHECK(NodeListId >= 0) << "Compute out cost for a node out of the node list" << std::endl;
+  // Cost with original sbp
+  double CurrCost = Cost[FinalSbpSignatureId];
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    // if the start node is not in the neighborhood
+    if (NodeListId2nbh_id.find(this_edge->StartNode->NodeListId) == NodeListId2nbh_id.end()) {
+      CurrCost += this_edge->Cost[this_edge->StartNode->FinalSbpSignatureId][FinalSbpSignatureId];
+    }
+  }
+  for (SbpEdge<SbpSignature> *this_edge : EdgesOut) {
+    // if the end node is not in the neighborhood
+    if (NodeListId2nbh_id.find(this_edge->EndNode->NodeListId) == NodeListId2nbh_id.end()) {
+      CurrCost += this_edge->Cost[FinalSbpSignatureId][this_edge->EndNode->FinalSbpSignatureId];
+    }
+  }
+  return CurrCost;
+}
+
+template<class SbpSignature>
+double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id,
+                                            std::vector<int32_t> &nbh_id2order) {
+  // check if this node is in the node list
+  CHECK(NodeListId >= 0) << "Compute out cost for a node out of the node list" << std::endl;
+  // check if the node is in the neighborhood
+  auto this_it = NodeListId2nbh_id.find(NodeListId);
+  CHECK(this_it != NodeListId2nbh_id.end())
+      << "Compute out cost for a node out of the neighborhood" << std::endl;
+  // Compute the minimum cost between this node and adjacent nodes with a lower order
+  int32_t order = nbh_id2order[this_it->second];
+  double CurrCost = 0;
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    auto it = NodeListId2nbh_id.find(this_edge->StartNode->NodeListId);
+    // if the start node is in the neighborhood
+    if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] < order) {
+      CurrCost += this_edge->Cost[this_edge->StartNode->FinalSbpSignatureId][FinalSbpSignatureId];
+    }
+  }
+  for (SbpEdge<SbpSignature> *this_edge : EdgesOut) {
+    auto it = NodeListId2nbh_id.find(this_edge->EndNode->NodeListId);
+    // if the end node is in the neighborhood
+    if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] < order) {
+      CurrCost += this_edge->Cost[FinalSbpSignatureId][this_edge->EndNode->FinalSbpSignatureId];
+    }
+  }
+  return CurrCost;
+}
+
+template<class SbpSignature>
+double SbpNode<SbpSignature>::EvalMinInNbhCost(
+    std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id, std::vector<int32_t> &nbh_id2order) {
+  // check if this node is in the node list
+  CHECK(NodeListId >= 0) << "Compute out cost for a node out of the node list" << std::endl;
+  // check if the node is in the neighborhood
+  auto this_it = NodeListId2nbh_id.find(NodeListId);
+  CHECK(this_it != NodeListId2nbh_id.end())
+      << "Compute out cost for a node out of the neighborhood" << std::endl;
+  // Compute the minimum cost between this node and adjacent nodes with a higher order
+  int32_t order = nbh_id2order[this_it->second];
+  double CurrCost = 0;
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    auto it = NodeListId2nbh_id.find(this_edge->StartNode->NodeListId);
+    // if the start node is in the neighborhood
+    if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] > order) {
+      CurrCost += this_edge->GetMinCost();
+    }
+  }
+  for (SbpEdge<SbpSignature> *this_edge : EdgesOut) {
+    auto it = NodeListId2nbh_id.find(this_edge->EndNode->NodeListId);
+    // if the end node is in the neighborhood
+    if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] > order) {
+      CurrCost += this_edge->GetMinCost();
+    }
   }
   return CurrCost;
 }

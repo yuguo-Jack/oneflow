@@ -19,6 +19,7 @@ limitations under the License.
 //#include "SbpGraph.h"
 #include "sbp_node.h"
 #include <assert.h>
+#include <algorithm>
 
 #ifdef USE_SBP_COLLECTOR_
 #include <unordered_set>
@@ -58,6 +59,12 @@ class SbpEdge {
   //        StartNode -> EndNode, EndNode -> StartNode, StartNode -> EndNode;
   std::vector<SbpEdge<SbpSignature> *> EdgeList;
 
+ private:
+  // Minimum cost in the 2D array Cost.
+  // Would be initialized after GetMinCost();
+  double min_cost = -1.0;
+
+ public:
   // Constructor for type 1 & 2
   SbpEdge(SbpNode<SbpSignature> *start_node, SbpNode<SbpSignature> *end_node)
       : StartNode(start_node), EndNode(end_node) {
@@ -107,6 +114,9 @@ class SbpEdge {
 
   // Not carrying any blob
   bool EmptyLbi() const { return CarryLbis.empty(); }
+
+  // Get the minimum element in Cost
+  double GetMinCost();
 };
 }  // namespace Algorithm
 // function in cpp. Should be put in one file due to use of template
@@ -180,9 +190,9 @@ void SbpEdge<SbpSignature>::SummerizeCost() {
       for (int32_t sbp_end = 0; sbp_end < EndNodeSbpSize; sbp_end++) {
         Cost[sbp_start][sbp_end] = 0;
         for (int32_t edge_num = 0; edge_num < EdgeList.size(); edge_num++) {
-          if (EdgeList[edge_num]->StartNode == StartNode){
+          if (EdgeList[edge_num]->StartNode == StartNode) {
             Cost[sbp_start][sbp_end] += EdgeList[edge_num]->Cost[sbp_start][sbp_end];
-          }else{
+          } else {
             Cost[sbp_start][sbp_end] += EdgeList[edge_num]->Cost[sbp_end][sbp_start];
           }
         }
@@ -225,7 +235,6 @@ void SbpEdge<SbpSignature>::DuplicateCost(
 
   Cost = tmpCost;
   if (MidNode) MidNodeSbpSig = tmpMidNodeSbpSig;
-  
 }
 
 template<class SbpSignature>
@@ -281,6 +290,22 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
   StartNode->FinalSbpSignatureId = MinSbpStart;
   EndNode->FinalSbpSignatureId = MinSbpEnd;
   return MinCost - OrgCost;
+}
+
+// Get the minimum element in Cost
+template<class SbpSignature>
+double SbpEdge<SbpSignature>::GetMinCost() {
+  // used the stored value if pre-computed.
+  if (min_cost >= 0) return min_cost;
+  // Check the size of Cost
+  CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
+  // Compute the min_cost
+  min_cost = *std::min_element(Cost[0].begin(), Cost[0].end());
+  for (int32_t i = 1; i < Cost.size(); i++) {
+    double min_cost_row = *std::min_element(Cost[i].begin(), Cost[i].end());
+    if (min_cost_row < min_cost) min_cost = min_cost_row;
+  }
+  return min_cost;
 }
 
 }  // namespace Algorithm
