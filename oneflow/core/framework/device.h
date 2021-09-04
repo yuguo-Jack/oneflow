@@ -61,8 +61,6 @@ class Device final {
 
   static std::string Type4DeviceTag(const std::string& device_tag);
   static Maybe<Symbol<ParallelDesc>> (*GetPlacement)(const Device& device);
-  Maybe<const Optional<std::string>&> GetSharedTransportDeviceType() const;
-  Maybe<const std::string&> GetSharedScheduleDeviceType() const;
 
   Maybe<const std::string&> local_call_instruction_name() const;
   const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {

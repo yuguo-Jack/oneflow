@@ -48,14 +48,15 @@ Device::Device(const std::string& type, int64_t device_id)
 Maybe<void> Device::Init() {
   DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
-  const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
-  if (opt_device_transport_tag.has_value()) {
-    const auto& device_transport_tag = *JUST(opt_device_transport_tag.value());
-    transport_local_dep_object_ = JUST(GetLocalDepObject4Device(Device(device_transport_tag, 0)));
-  }
-  const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
+  // const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
+  // if (opt_device_transport_tag.has_value()) {
+  //   const auto& device_transport_tag = *JUST(opt_device_transport_tag.value());
+  //   transport_local_dep_object_ = JUST(GetLocalDepObject4Device(Device(device_transport_tag, 0)));
+  // }
+  // const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
   schedule_local_dep_object_ =
-      JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
+      JUST(GetLocalDepObject4Device(*this));
+      // JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
   return Maybe<void>::Ok();
 }
 
@@ -95,36 +96,6 @@ Maybe<const std::string&> Device::of_type() const {
   return MapAt(type2device_tag, type());
 }
 
-Maybe<const Optional<std::string>&> Device::GetSharedTransportDeviceType() const {
-  // share LocalDepObject between sync_launched_nccl and async_launched_nccl
-  static const HashMap<std::string, Optional<std::string>> type2type_for_shared_local_dep_object{
-      {"cpu", Optional<std::string>()},
-      {"gpu", Optional<std::string>()},
-      {"cuda", Optional<std::string>()},
-      {"cuda_h2d", Optional<std::string>()},
-      {"cuda_d2h", Optional<std::string>()},
-      {"comm_net", Optional<std::string>()},
-      {"sync_launched_nccl", Optional<std::string>("async_launched_nccl")},
-      {"async_launched_nccl", Optional<std::string>("async_launched_nccl")},
-  };
-  return MapAt(type2type_for_shared_local_dep_object, type());
-}
-
-Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
-  // share LocalDepObject between comm_net and sync_launched_nccl
-  static const HashMap<std::string, std::string> type2type_for_shared_local_dep_object{
-      {"cpu", "cpu"},
-      {"gpu", "cuda"},
-      {"cuda", "cuda"},
-      {"cuda_h2d", "cuda_h2d"},
-      {"cuda_d2h", "cuda_d2h"},
-      {"comm_net", "comm_net"},
-      {"sync_launched_nccl", "comm_net"},
-      {"async_launched_nccl", "async_launched_nccl"},
-  };
-  return MapAt(type2type_for_shared_local_dep_object, type());
-}
-
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   // gpu.LocalCallOpKernel is shared between device `cuda` and device `cuda_h2d`.
   static const HashMap<std::string, std::string> type2instr_name{
@@ -150,7 +121,7 @@ Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
       {"cuda_d2h", kDoubleBufferPoolSize},
       {"comm_net", GetInstructionHighWaterMark()},
       {"sync_launched_nccl", GetInstructionHighWaterMark()},
-      {"async_launched_nccl", GetInstructionHighWaterMark()},
+      {"async_launched_nccl", kDoubleBufferPoolSize},
   };
   return MapAt(type2pool_size, type());
 }
