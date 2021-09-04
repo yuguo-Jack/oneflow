@@ -15,12 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/user/ops/comm_net_device_infer_util.h"
 
 namespace oneflow {
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
     .Input("in")
     .Output("out")
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
@@ -56,6 +58,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
     .Input("in")
     .Output("out")
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
@@ -91,6 +94,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
     .Input("in")
     .Output("out")
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
@@ -128,6 +132,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
     .Input("in")
     .Output("out")
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .Attr<int64_t>("in_dim1_split_axis", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
@@ -168,6 +173,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all2all")
     .Input("in")
     .Output("out")
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .Attr<int64_t>("in_dim1_split_axis", -1)
     .Attr<int64_t>("out_dim1_split_axis", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

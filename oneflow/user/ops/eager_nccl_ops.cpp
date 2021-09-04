@@ -16,31 +16,20 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/user/ops/comm_net_device_infer_util.h"
 
 namespace oneflow {
-
-Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
-  const auto& input_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = input_device;
-  if (input_device->type() == "cuda" || input_device->type() == "gpu") {
-    static thread_local const auto& nccl_device = Device::New("nccl");
-    return nccl_device;
-  } else if (input_device->type() == "cpu") {
-    return input_device;
-  } else {
-    UNIMPLEMENTED_THEN_RETURN();
-  }
-}
 
 REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")
+    .Attr<bool>("async_launch", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn)
+    .SetDeviceInferFn(CommDeviceInferFn<&IsAsyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
@@ -62,7 +51,7 @@ REGISTER_USER_OP("eager_nccl_broadcast")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn)
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
@@ -92,7 +81,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn)
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
     })
@@ -106,6 +95,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce_scatter")
     .Output("out")
     .Attr<std::string>("parallel_conf")
     .Attr<std::string>("op_type", "sum")
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
@@ -158,6 +148,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_gather")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
@@ -197,6 +188,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_s2s")
     .Attr<int64_t>("in_split_axis", -1)
     .Attr<int64_t>("out_split_axis", -1)
     .Attr<std::string>("parallel_conf")
+    .SetDeviceInferFn(CommDeviceInferFn<&SyncLaunched>)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);

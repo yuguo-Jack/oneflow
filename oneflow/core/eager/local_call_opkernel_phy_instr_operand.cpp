@@ -33,8 +33,11 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
 void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
+  if (opkernel().device()->mut_transport_local_dep_object().has_value()) {
+    DoEach(nullptr, CHECK_JUST(opkernel().device()->mut_transport_local_dep_object().value())->mut_mirrored_object());
+  }
   auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
-  if (opkernel().device()->type() == "nccl") {
+  if (opkernel().device()->type() == "async_launched_nccl") {
     // Sequantialize nccl instructions to avoid deadlock
     DoEach(nullptr, device_dep_object->mut_mirrored_object());
   } else {

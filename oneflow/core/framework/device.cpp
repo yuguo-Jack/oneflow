@@ -43,7 +43,17 @@ Device::Device(const std::string& type, int64_t device_id)
 Maybe<void> Device::Init() {
   DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
-  compute_local_dep_object_ = JUST(FindOrCreateComputeLocalDepObject(*this));
+  if (type_ == "sync_launched_nccl") {
+    compute_local_dep_object_ = JUST(FindOrCreateComputeLocalDepObject(Device("comm_net", 0)));
+  } else {
+    compute_local_dep_object_ = JUST(FindOrCreateComputeLocalDepObject(*this));
+  }
+  if (type_ == "sync_launched_nccl" || type_ == "async_launched_nccl") {
+    transport_local_dep_object_ = JUST(FindOrCreateComputeLocalDepObject(Device("async_launched_nccl", device_id_)));
+  } else {
+    transport_local_dep_object_ = Optional<LocalDepObject*>();
+  }
+
   return Maybe<void>::Ok();
 }
 
@@ -76,7 +86,10 @@ const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
 Maybe<const std::string&> Device::of_type() const {
   static const HashMap<std::string, std::string> type2device_tag{
       {"cpu", "cpu"},      {"cuda", "gpu"},     {"gpu", "gpu"},
-      {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"}, {"nccl", "gpu"},
+      {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"}, 
+      {"async_launched_nccl", "gpu"},
+      {"sync_launched_nccl", "gpu"},
+      {"comm_net", "cpu"},
   };
   return MapAt(type2device_tag, type());
 }
@@ -86,7 +99,10 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
       {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "gpu.LocalCallOpKernel"},
-      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"}, {"nccl", "async.gpu.LocalCallOpKernel"},
+      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"}, 
+      {"comm_net", "cpu.LocalCallOpKernel"},
+      {"sync_launched_nccl", "gpu.LocalCallOpKernel"},
+      {"async_launched_nccl", "async.gpu.LocalCallOpKernel"},
   };
   return MapAt(type2instr_name, type);
 }
@@ -96,7 +112,10 @@ Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
   static const HashMap<std::string, size_t> type2pool_size{
       {"cpu", GetInstructionHighWaterMark()}, {"cuda", GetInstructionHighWaterMark()},
       {"gpu", GetInstructionHighWaterMark()}, {"cuda_h2d", kDoubleBufferPoolSize},
-      {"cuda_d2h", kDoubleBufferPoolSize},    {"nccl", kDoubleBufferPoolSize},
+      {"cuda_d2h", kDoubleBufferPoolSize},    
+      {"comm_net", kDoubleBufferPoolSize},
+      {"sync_launched_nccl", kDoubleBufferPoolSize},
+      {"async_launched_nccl", kDoubleBufferPoolSize},
   };
   return MapAt(type2pool_size, type());
 }
