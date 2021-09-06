@@ -558,10 +558,8 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t> &nbh_id2No
                  order2AccMinInNbhCost, OutNbhCosts, nbh_id2order2sbp_id, MinSbpSignatureId,
                  MinCost, 0, 0);
   // Use the sbp strategy with minimum cost
-  if (MinCost < OrgCost) {
-    for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
-      NodeList[nbh_id2NodeListId[nbh_id]]->FinalSbpSignatureId = MinSbpSignatureId[nbh_id];
-    }
+  for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
+    NodeList[nbh_id2NodeListId[nbh_id]]->FinalSbpSignatureId = MinSbpSignatureId[nbh_id];
   }
 
   return MinCost - OrgCost;

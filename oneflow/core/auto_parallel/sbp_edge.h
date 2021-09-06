@@ -256,29 +256,34 @@ void SbpEdge<SbpSignature>::FinalizeSbp() {
 
 template<class SbpSignature>
 double SbpEdge<SbpSignature>::GreedyStrategy() {
-  // Current Cost, Minimum Cost, Cost with original sbp
-  double CurrCost, MinCost, OrgCost;
+  // Sbp combination of the minimum cost
   int32_t MinSbpStart = StartNode->FinalSbpSignatureId, MinSbpEnd = EndNode->FinalSbpSignatureId;
-  MinCost = StartNode->EvalNbhCost() + EndNode->EvalNbhCost() - Cost[MinSbpStart][MinSbpEnd];
-  OrgCost = MinCost;
-
+  // An unordered_map to evaluate cost between two edge nodes and other nodes.
+  std::unordered_map<int32_t, int32_t> EdgeNodeListIds = {{StartNode->NodeListId, 0},
+                                                          {EndNode->NodeListId, 1}};
   // pre-compute and store the Current Cost for EndNode.
   std::vector<double> EndNodeCurrCost(EndNode->Cost.size());
   for (int32_t sbp_end = 0; sbp_end < Cost[0].size(); sbp_end++) {
     EndNode->FinalSbpSignatureId = sbp_end;
-    EndNodeCurrCost[sbp_end] =
-        EndNode->EvalNbhCost() - Cost[StartNode->FinalSbpSignatureId][sbp_end];
+    EndNodeCurrCost[sbp_end] = EndNode->EvalOutNbhCost(EdgeNodeListIds);
   }
+  // pre-copmpute and store the Current Cost for StartNode.
+  std::vector<double> StartNodeCurrCost(StartNode->Cost.size());
+  for (int32_t sbp_start = 0; sbp_start < Cost.size(); sbp_start++) {
+    StartNode->FinalSbpSignatureId = sbp_start;
+    StartNodeCurrCost[sbp_start] =StartNode->EvalOutNbhCost(EdgeNodeListIds);
+  }
+  // Current Cost, Minimum Cost, Cost with original sbp
+  double CurrCost, MinCost, OrgCost;
+  MinCost =
+      StartNodeCurrCost[MinSbpStart] + EndNodeCurrCost[MinSbpEnd] + Cost[MinSbpStart][MinSbpEnd];
+  OrgCost = MinCost;
 
   for (int32_t sbp_start = 0; sbp_start < Cost.size(); sbp_start++) {
-    // pre-compute and store the Current Cost for StartNode.
-    StartNode->FinalSbpSignatureId = sbp_start;
-    double StartNodeCurrCost =
-        StartNode->EvalNbhCost() - Cost[sbp_start][EndNode->FinalSbpSignatureId];
     for (int32_t sbp_end = 0; sbp_end < Cost[0].size(); sbp_end++) {
       // compute Current Cost for Neighborhood of edge
       EndNode->FinalSbpSignatureId = sbp_end;
-      CurrCost = StartNodeCurrCost + EndNodeCurrCost[sbp_end] + Cost[sbp_start][sbp_end];
+      CurrCost = StartNodeCurrCost[sbp_start] + EndNodeCurrCost[sbp_end] + Cost[sbp_start][sbp_end];
       // Find the minimum current cost
       if (CurrCost < MinCost) {
         MinCost = CurrCost;
