@@ -98,7 +98,7 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
   std::cout << "Initial Cost: " << OrgCost << std::endl;
   std::cout << "Elimination Number: " << sbp_graph.NodeAndEdgeEliminations() << std::endl;
   // Use greedy strategy on the shrink graph
-  sbp_graph.GreedyStrategy();
+  sbp_graph.GreedyStrategy(5);
   sbp_graph.FinalizeSbp();
   std::cout << "After searching using greedy strategy: ";
   double FinalCost = sbp_graph.ComputeCost();

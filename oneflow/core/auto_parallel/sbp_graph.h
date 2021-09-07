@@ -94,7 +94,9 @@ class SbpGraph {
   // Use Greedy Strategy to decide Sbp for Nodes in NodeList. Should be used
   // after we have a initial strategy.
   // Set ForceNode to be true will only use GreedyStrategy on Nodes.
-  double GreedyStrategy(bool ForceNode = false);
+  double GreedyStrategy(bool ForceNode);
+  // Use greedy strategy on the one ring neighborhood with the maximum number of points nbh_num.
+  double GreedyStrategy(int32_t nbh_num = 4);
 
   // Use brute force to search for a strategy with minimum cost for a neighborhood
   double NbhGreedyStrategy(std::vector<int32_t> &nbh_id2NodeListId);
@@ -420,23 +422,71 @@ void SbpGraph<SbpSignature>::FinalizeSbp() {
 
 template<class SbpSignature>
 double SbpGraph<SbpSignature>::GreedyStrategy(bool ForceNode) {
+  // Overall, this function should be replaced by GreedyStrategy(nbh_num);
   // Total Cost Reduce & Cost Reduce for one loop
-  double TtlCostRdc, CostRdc;
+  double TtlCostRdc = 0, CostRdc;
   for (int32_t step = NodeList.size(); step >= 0; step--) {
     CostRdc = 0;
     for (SbpNode<SbpSignature> *this_node : NodeList) {
       // Use GreedyStrategy on Nodes if there is one node left for this
       // connected component. Otherwise, Use GreedyStrategy on Edges.
-      if (ForceNode || this_node->EdgesIn.size() + this_node->EdgesOut.size() == 0)
+      if (ForceNode || this_node->EdgesIn.size() + this_node->EdgesOut.size() == 0){
         CostRdc += this_node->GreedyStrategy();
-      else {
+      } else {
+        // GreedyStrategy on Edges.
         for (SbpEdge<SbpSignature> *this_edge : this_node->EdgesOut) {
-          std::vector<int32_t> edge_nodes{this_edge->StartNode->NodeListId,
-                                          this_edge->EndNode->NodeListId};
-          CostRdc += NbhGreedyStrategy(edge_nodes);
           double second_rdc = this_edge->GreedyStrategy();
-          if (second_rdc != 0) {
-            std::cout << "More to reduce for edges: " << second_rdc << std::endl;
+          CostRdc += second_rdc;
+        }
+      }
+    }
+    if (CostRdc == 0) break;
+    TtlCostRdc += CostRdc;
+  }
+  return TtlCostRdc;
+}
+
+template<class SbpSignature>
+double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
+  // nbh_num is the maximum number of neighborhood to adjust sbp strategy in each step
+  // Total Cost Reduce & Cost Reduce for one loop
+  double TtlCostRdc = 0, CostRdc;
+  // A global buffer to store part of the one ring neighborhood.
+  std::vector<int32_t> nbh_id2NodeListId;
+  if (nbh_num > 1)
+    nbh_id2NodeListId.resize(nbh_num);
+  else
+    nbh_id2NodeListId.resize(1);
+
+  for (int32_t step = NodeList.size(); step >= 0; step--) {
+    CostRdc = 0;
+    for (SbpNode<SbpSignature> *this_node : NodeList) {
+      if (nbh_num <= 1) {
+        // Greedy strategy on nodes
+        nbh_id2NodeListId[0] = this_node->NodeListId;
+        CostRdc += NbhGreedyStrategy(nbh_id2NodeListId);
+      } else {
+        // Use GreedyStrategy on the one ring neighborhood of this node.
+        std::vector<int32_t> nbh_1ring;
+        this_node->OneRingNeighborhood(nbh_1ring);
+        if (nbh_1ring.size() <= nbh_num) {
+          CostRdc += NbhGreedyStrategy(nbh_1ring);
+        } else {
+          // Use GreedyStrategy on part of the one ring neighborhood.
+          // Loop through the neighborhood. Each loop should contain the centroid.
+
+          // Initialize part of the one ring neighborhood
+          int32_t nbh_1ring_id = nbh_1ring.size() - nbh_num;
+          for (int32_t nbh_id = 1; nbh_id < nbh_num; ++nbh_id) {
+            nbh_id2NodeListId[nbh_id] = nbh_1ring[++nbh_1ring_id];
+          }
+          // loop through the one ring neighborhood
+          int32_t nbh_id = 0;
+          for (nbh_1ring_id = 0; nbh_1ring_id < nbh_1ring.size(); ++nbh_1ring_id) {
+            nbh_id2NodeListId[nbh_id] = nbh_1ring[nbh_1ring_id];
+            CostRdc += NbhGreedyStrategy(nbh_id2NodeListId);
+            // nbh_id for the next step
+            if (++nbh_id >= nbh_num) nbh_id = 1;
           }
         }
       }

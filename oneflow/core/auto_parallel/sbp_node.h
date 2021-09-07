@@ -148,6 +148,8 @@ class SbpNode {
   // We only accumulate the minimum edge cost with a higher order.
   double EvalMinInNbhCost(std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id,
                           std::vector<int32_t> &nbh_id2order);
+  // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
+  void OneRingNeighborhood(std::vector<int32_t> &nbh_1ring);
 
 };  // class SbpNode
 }  // namespace Algorithm
@@ -503,6 +505,21 @@ double SbpNode<SbpSignature>::EvalMinInNbhCost(
     }
   }
   return CurrCost;
+}
+
+template<class SbpSignature>
+void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t> &nbh_1ring) {
+  nbh_1ring.resize(EdgesIn.size() + EdgesOut.size() + 1);
+  int32_t nbh_id = 0;
+  nbh_1ring[nbh_id] = NodeListId;
+  for(SbpEdge<SbpSignature> *this_edge : EdgesIn){
+    nbh_id++;
+    nbh_1ring[nbh_id] = this_edge->StartNode->NodeListId;
+  }
+  for(SbpEdge<SbpSignature> *this_edge : EdgesOut){
+    nbh_id++;
+    nbh_1ring[nbh_id] = this_edge->EndNode->NodeListId;
+  }
 }
 
 }  // namespace Algorithm
