@@ -308,7 +308,7 @@ void SbpCollector::DFS_SBPset(
     // next iterator
     HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it_next =
         it;
-    it_next++;
+    ++it_next;
     // go through all the sbp parallel of different candidates
     for (int32_t SbpParallelNum : SbpParallelIDs) {
       if (++accumulator[SbpParallelNum] == 1) {
