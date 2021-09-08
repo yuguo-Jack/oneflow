@@ -136,7 +136,7 @@ def _get_ppm_and_opt():
             label = label.to_consistent(placement=P3, sbp=out0.sbp)
             out1 = self.linear(out0)
             loss = out1.sum()
-            return loss
+            return loss, out1
 
     class PipelineModule(flow.nn.Module):
         def __init__(self):
@@ -150,10 +150,10 @@ def _get_ppm_and_opt():
             out0, label, image = self.stage_0_m()
             out1 = self.stage_1_m(out0)
             out2 = self.stage_2_m(out1)
-            out3 = self.stage_3_m(out2, label)
+            out3, out3_orig = self.stage_3_m(out2, label)
             image = image.to_consistent(placement=P3, sbp=B)
             label = label.to_consistent(placement=P3, sbp=B)
-            return out3, image, label
+            return out3, image, label, out3_orig
 
     pp_m = PipelineModule()
     of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
@@ -178,35 +178,40 @@ def _test_graph_pipeline(test_case):
 
             def build(self):
                 pp_m.train()
-                out, image, label = self.pp_m()
+                out, image, label, out_orig = self.pp_m()
                 out.backward()
-                return out, image, label
+                #return out, image, label
+                return image
 
         pp_g = PipelineGraph()
         pp_g.debug()
 
         def one_iter(iter_idx):
-            of_graph_out, image, label = pp_g()
-            if rank == 3:
-                #if iter_idx == 0:
-                #    print(pp_g)
-                of_graph_out = of_graph_out.to_local()
-                of_graph_out_np = of_graph_out.numpy()
-                print("out numpy \n", of_graph_out_np)
-                label = label.to_local()
-                print(f"label numpy \n shape {label.shape} data {label.numpy()}")
-                image = image.to_local()
-                print(f"image numpy \n shape {image.shape} data {image}")
-                return of_graph_out_np, image.numpy(), label.numpy()
+            #of_graph_out, image, label = pp_g()
+            of_graph_out = pp_g()
+            of_graph_out = of_graph_out.to_local()
+            print("out numpy \n", of_graph_out)
+            #if rank == 3:
+            #    of_graph_out = of_graph_out.to_local()
+            #    #of_graph_out_np = of_graph_out.numpy()
+            #    print("out numpy \n", of_graph_out)
+                #of_graph_out_orig = of_graph_out_orig.to_local()
+                #of_graph_out_np_orig = of_graph_out_orig.numpy()
+                #print("out_orig numpy \n", of_graph_out_np_orig)
+                #label = label.to_local()
+                #print(f"label numpy \n shape {label.shape} data {label.numpy()}")
+                #image = image.to_local()
+                #print(f"image numpy \n shape {image.shape} data {image}")
+                #return of_graph_out_np, image.numpy(), label.numpy()
 
-        check_list = []
-        data_list = []
+        #check_list = []
+        #data_list = []
         for i in range(iter_num):
             out = one_iter(i)
-            if rank == 3:
-                check_list.append(out[0])
-                data_list.append((out[1], out[2]))
-        return check_list, data_list
+        #    if rank == 3:
+        #        check_list.append(out[0])
+        #        data_list.append((out[1], out[2]))
+        #return check_list, data_list
 
     def train_with_module(iter_num=3, data=None):
         class DataModule(flow.nn.Module):
@@ -284,16 +289,17 @@ def _test_graph_pipeline(test_case):
             return check_list
 
 
-    iter_num = 1
-    graph_check_list, data = train_with_graph(iter_num)
-    module_check_list = train_with_module(iter_num * 4, data)
+    iter_num = 2
+    train_with_graph(iter_num)
+    #graph_check_list, data = train_with_graph(iter_num)
+    #module_check_list = train_with_module(iter_num * 4, data)
 
-    if (rank == 3):
-        for i in range(iter_num*4):
-            # check equal on loss
-            test_case.assertTrue(
-                np.array_equal(module_check_list[i], graph_check_list[i//4][i%4])
-            )
+    #if (rank == 3):
+    #    for i in range(iter_num*4):
+    #        # check equal on loss
+    #        test_case.assertTrue(
+    #            np.array_equal(module_check_list[i], graph_check_list[i//4][i%4])
+    #        )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
