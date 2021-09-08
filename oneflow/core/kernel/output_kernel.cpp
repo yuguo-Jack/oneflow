@@ -42,6 +42,7 @@ void OutputKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
     auto* buffer = buffer_mgr->Get(GetOutputBufferName(job_name, op_name));
     std::shared_ptr<JobInstance> job_instance;
     BufferStatus buffer_status = buffer->TryReceive(&job_instance);
+    LOG(ERROR) << "buffer recv job_name " << job_name << " op_name " << op_name;
     CHECK_NE(buffer_status, kBufferStatusEmpty);
     if (buffer_status == kBufferStatusSuccess) {
       OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("in"));

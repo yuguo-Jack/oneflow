@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/eager/lazy_job_stream_type.h"
 #include "oneflow/core/eager/lazy_job_device_context.h"
 #include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
@@ -105,6 +106,7 @@ class RunLazyJobInstructionType final : public InstructionType {
       }
       for (const auto& op_name : cur_nn_graph->outputs_op_names()) {
         buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
+        LOG(ERROR) << "buffer send job_name " << job_name << " op_name " << op_name;
       }
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
@@ -158,6 +160,8 @@ class RunLazyJobInstructionType final : public InstructionType {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
         mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
         mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+        // OF_CUDA_CHECK(cudaStreamSynchronize(of_blob->mut_device_ctx()->cuda_stream())); 
+        // OF_CUDA_CHECK(cudaDeviceSynchronize());
       };
       CHECK(pull_cbs.emplace(op_name, PullCb).second);
     }

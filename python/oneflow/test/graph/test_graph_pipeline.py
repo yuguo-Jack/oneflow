@@ -13,6 +13,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+import time
 
 class OFRecordDataLoader(flow.nn.Module):
     def __init__(
@@ -95,10 +96,11 @@ def _get_ppm_and_opt():
 
         def forward(self):
             image, label = self.train_data_loader()
+            image_h = image
             image = image.to(D)
             label = label.to(D)
             out0 = self.linear(image)
-            return out0, label, image
+            return out0, label, image, image_h
 
     class Stage1Module(flow.nn.Module):
         def __init__(self):
@@ -147,13 +149,13 @@ def _get_ppm_and_opt():
             self.stage_3_m = Stage3Module()
 
         def forward(self):
-            out0, label, image = self.stage_0_m()
+            out0, label, image, image_h = self.stage_0_m()
             out1 = self.stage_1_m(out0)
             out2 = self.stage_2_m(out1)
             out3, out3_orig = self.stage_3_m(out2, label)
             image = image.to_consistent(placement=P3, sbp=B)
             label = label.to_consistent(placement=P3, sbp=B)
-            return out3, image, label, out3_orig
+            return out3, image, label, out3_orig, image_h
 
     pp_m = PipelineModule()
     of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
@@ -178,7 +180,7 @@ def _test_graph_pipeline(test_case):
 
             def build(self):
                 pp_m.train()
-                out, image, label, out_orig = self.pp_m()
+                out, image, label, out_orig, image_h = self.pp_m()
                 out.backward()
                 #return out, image, label
                 return image
@@ -207,6 +209,8 @@ def _test_graph_pipeline(test_case):
         #check_list = []
         #data_list = []
         for i in range(iter_num):
+            #if rank != 3:
+            #    time.sleep(2)
             out = one_iter(i)
         #    if rank == 3:
         #        check_list.append(out[0])
