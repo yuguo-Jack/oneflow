@@ -151,6 +151,11 @@ class SbpNode {
   // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
   void OneRingNeighborhood(std::vector<int32_t> &nbh_1ring);
 
+  // Detect and spread overlaps for EdgesIn.
+  void DetectSpreadOverlap();
+  // Detect and spread overlaps for sbp proxy.
+  void DetectSpreadOverlap(double overlap_ratio);
+
 };  // class SbpNode
 }  // namespace Algorithm
 
@@ -512,13 +517,41 @@ void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t> &nbh_1ring)
   nbh_1ring.resize(EdgesIn.size() + EdgesOut.size() + 1);
   int32_t nbh_id = 0;
   nbh_1ring[nbh_id] = NodeListId;
-  for(SbpEdge<SbpSignature> *this_edge : EdgesIn){
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
     nbh_id++;
     nbh_1ring[nbh_id] = this_edge->StartNode->NodeListId;
   }
-  for(SbpEdge<SbpSignature> *this_edge : EdgesOut){
+  for (SbpEdge<SbpSignature> *this_edge : EdgesOut) {
     nbh_id++;
     nbh_1ring[nbh_id] = this_edge->EndNode->NodeListId;
+  }
+}
+
+// Detect and spread overlaps for EdgesIn.
+template<class SbpSignature>
+void SbpNode<SbpSignature>::DetectSpreadOverlap() {
+  // We need to skip sbp proxy, but actually, using
+  // if(op_node){} is unnecessary. Sbp proxy will not have multiple EdgesIn.
+
+  // If a node have multiple incoming edges, the overlap occurs
+  if (EdgesIn.size() >= 2) {
+    for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+      // overlap ratio for EdgesIn: 0.25
+      // Some other values including 1/N for N devices, or a value from an algorithm.
+      this_edge->DetectSpreadOverlap(0.25);
+    }
+  }
+}
+// Detect and spread overlaps for sbp proxy.
+template<class SbpSignature>
+void SbpNode<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
+  if (op_node) return;
+  if (overlap_ratio < 1.0) {
+    // overlap ratio should be non-negative
+    if (overlap_ratio < 0.0) overlap_ratio = 0.0;
+    // double check for sbp proxy
+    CHECK(EdgesIn.size() == 1) << "Multiple incoming edges for sbp proxy" << std::endl;
+    EdgesIn[0]->DetectSpreadOverlap(overlap_ratio);
   }
 }
 

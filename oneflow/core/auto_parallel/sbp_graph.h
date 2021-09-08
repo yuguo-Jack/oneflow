@@ -110,6 +110,9 @@ class SbpGraph {
   // recommanded. We should carefully think about it before any clipping.
   void ClipEdge(SbpEdge<SbpSignature> *this_edge);
 
+  // Detect all the overlaps and then adjust copy cost correspondingly.
+  void DetectAdjustOverlap();
+
  private:
   void DFS_AddNbhCost(std::vector<int32_t> &nbh_id2NodeListId,
                       std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id,
@@ -430,7 +433,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(bool ForceNode) {
     for (SbpNode<SbpSignature> *this_node : NodeList) {
       // Use GreedyStrategy on Nodes if there is one node left for this
       // connected component. Otherwise, Use GreedyStrategy on Edges.
-      if (ForceNode || this_node->EdgesIn.size() + this_node->EdgesOut.size() == 0){
+      if (ForceNode || this_node->EdgesIn.size() + this_node->EdgesOut.size() == 0) {
         CostRdc += this_node->GreedyStrategy();
       } else {
         // GreedyStrategy on Edges.
@@ -667,6 +670,17 @@ void SbpGraph<SbpSignature>::ClipEdge(SbpEdge<SbpSignature> *this_edge) {
   CheckAndRemoveFrom<SbpEdge<SbpSignature> *>(this_edge->EndNode->EdgesIn, this_edge);
   CheckAndRemoveFrom<SbpEdge<SbpSignature> *>(this_edge->StartNode->EdgesOut, this_edge);
   delete this_edge;
+}
+
+// Detect all the overlaps and then adjust copy cost correspondingly.
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::DetectAdjustOverlap() {
+  // Detect all the overlaps
+  for (const auto &this_node : NodeList) { this_node->DetectSpreadOverlap(); }
+  // adjust copy cost correspondingly.
+  for (const auto &this_node : NodeList) {
+    for (auto this_edge : this_node->EdgesIn) { this_edge->AdjustOverlapCost(); }
+  }
 }
 
 #ifdef RANDOM_GENERATOR_

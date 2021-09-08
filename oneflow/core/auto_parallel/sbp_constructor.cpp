@@ -89,6 +89,8 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
   // Initialize copy cost
   InitializeCopyCost(op_graph, op_name2sbp_node, op_name2is_fixed);
 
+  sbp_graph.DetectAdjustOverlap();
+
   // Random Initial Sbp Signatures
   sbp_graph.RandomSbpSignature();
   StealSbpFromOpGraph(op_graph, op_name2sbp_node, op_name2is_fixed);
@@ -256,6 +258,7 @@ SbpEdge<SbpSignature>* FindEdgeBetweenNodes(const SbpNode<SbpSignature>* sbp_nod
 
 // Should customize a function to compute computation cost for each kind of op
 // compute computation cost
+// deprecated
 double SbpConstructor::ComputeComputationCost(const SbpParallel& sbp_parallel_,
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& parallel_desc) {

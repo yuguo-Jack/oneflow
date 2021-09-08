@@ -63,6 +63,8 @@ class SbpEdge {
   // Minimum cost in the 2D array Cost.
   // Would be initialized after GetMinCost();
   double min_cost = -1.0;
+  // overlap ratio. Applied in copy cost.
+  double overlap_ratio = 1.0;
 
  public:
   // Constructor for type 1 & 2
@@ -117,6 +119,12 @@ class SbpEdge {
 
   // Get the minimum element in Cost
   double GetMinCost();
+
+  // Detect and spread overlaps for this edge and StartNode if it is a proxy of lbi.
+  void DetectSpreadOverlap(double overlap_ratio_);
+
+  // Adjust cost with overlaps
+  void AdjustOverlapCost();
 };
 }  // namespace Algorithm
 // function in cpp. Should be put in one file due to use of template
@@ -271,7 +279,7 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
   std::vector<double> StartNodeCurrCost(StartNode->Cost.size());
   for (int32_t sbp_start = 0; sbp_start < Cost.size(); sbp_start++) {
     StartNode->FinalSbpSignatureId = sbp_start;
-    StartNodeCurrCost[sbp_start] =StartNode->EvalOutNbhCost(EdgeNodeListIds);
+    StartNodeCurrCost[sbp_start] = StartNode->EvalOutNbhCost(EdgeNodeListIds);
   }
   // Current Cost, Minimum Cost, Cost with original sbp
   double CurrCost, MinCost, OrgCost;
@@ -311,6 +319,38 @@ double SbpEdge<SbpSignature>::GetMinCost() {
     if (min_cost_row < min_cost) min_cost = min_cost_row;
   }
   return min_cost;
+}
+
+// Detect and spread overlaps for this edge and StartNode if it is a proxy of lbi.
+template<class SbpSignature>
+void SbpEdge<SbpSignature>::DetectSpreadOverlap(double overlap_ratio_) {
+  if (overlap_ratio_ < 1.0) {
+    if (overlap_ratio_ < 0.0) overlap_ratio_ = 0.0;
+
+    if (StartNode->op_node) {
+      // change overlap ratio for a normal edge
+      // We could use the minimum or multiplication here.
+      // To be noted that sbp_proxy may have multiple outcoming edges, we can not adjust overlap
+      // cost right away.
+      if (overlap_ratio_ < overlap_ratio) overlap_ratio = overlap_ratio_;
+    } else {
+      // For an edge with a proxy start node, do not change the overlap ratio since the cost only
+      // contains 0 and 3e38. Change the overlap ratio for the previous edge.
+      StartNode->DetectSpreadOverlap(overlap_ratio_);
+    }
+  }
+}
+
+// Adjust cost with overlaps
+template<class SbpSignature>
+void SbpEdge<SbpSignature>::AdjustOverlapCost() {
+  if (overlap_ratio >= 1.0) return;
+  if (overlap_ratio < 0.0) overlap_ratio = 0.0;
+  for (int32_t i = 0; i < Cost.size(); i++) {
+    for (int32_t j = 0; j < Cost[i].size(); j++) {
+      if (Cost[i][j] > 0.0 && Cost[i][j] < 1e38) { Cost[i][j] = overlap_ratio * Cost[i][j]; }
+    }
+  }
 }
 
 }  // namespace Algorithm
