@@ -78,6 +78,12 @@ class SbpNode {
 
   oneflow::OpNode *op_node = nullptr;
 
+  // We devide the sbp graph into multiple layers.
+  // MinLayer is the minimum layer number to run this op as soon as possible.
+  // MaxLayer is the maximum layer number without slowing down the whole process of the graph.
+  // producer.MaxLayer < this_node.MinLayer <= this_node.MaxLayer < consumer.MinLayer
+  int32_t MinLayer = -1, MaxLayer = -1;
+
 #ifdef DEBUG_ALGORITHM_
 
   // original edge out
@@ -155,6 +161,15 @@ class SbpNode {
   void DetectSpreadOverlap();
   // Detect and spread overlaps for sbp proxy.
   void DetectSpreadOverlap(double overlap_ratio);
+
+  // Get or compute the minimum layer of this node
+  int32_t GetMinLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+  // Spread the minimum layer to compute the maximum layer of producers
+  void SpreadMaxLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+  // Drop down the maximum layer with the minimum layer form consumer
+  void DropMaxLayer(int32_t upper_bound);
+  // Set MaxLayer = MinLayer if this node does not have any consumer
+  void LiftMaxLayer();
 
 };  // class SbpNode
 }  // namespace Algorithm
@@ -553,6 +568,52 @@ void SbpNode<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
     CHECK(EdgesIn.size() == 1) << "Multiple incoming edges for sbp proxy" << std::endl;
     EdgesIn[0]->DetectSpreadOverlap(overlap_ratio);
   }
+}
+
+// Get or compute the minimum layer of this node
+template<class SbpSignature>
+int32_t SbpNode<SbpSignature>::GetMinLayer(
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  if (MinLayer >= 0) return MinLayer;
+  if (!op_node) return MinLayer;
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    int32_t producer_min_layer = this_edge->StartNode->GetMinLayer(op_name2sbp_node);
+    if (producer_min_layer > MinLayer) MinLayer = producer_min_layer;
+  }
+  for (const auto &ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    if (it != op_name2sbp_node.end()) {
+      int32_t producer_min_layer = it->second->GetMinLayer(op_name2sbp_node);
+      if (producer_min_layer > MinLayer) MinLayer = producer_min_layer;
+    }
+  }
+  return ++MinLayer;
+}
+
+// Spread the minimum lay to compute the maximum layer of producers
+template<class SbpSignature>
+void SbpNode<SbpSignature>::SpreadMaxLayer(
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  if (MinLayer <= 0) return;
+  int32_t producer_max_lay = MinLayer - 1;
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    this_edge->StartNode->DropMaxLayer(producer_max_lay);
+  }
+  for (const auto &ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    if (it != op_name2sbp_node.end()) { it->second->DropMaxLayer(producer_max_lay); }
+  }
+}
+
+// Drop down the maximum layer with the minimum layer form consumer
+template<class SbpSignature>
+void SbpNode<SbpSignature>::DropMaxLayer(int32_t upper_bound) {
+  if (upper_bound < MaxLayer || MaxLayer < 0) MaxLayer = upper_bound;
+}
+// Set MaxLayer = MinLayer if this node does not have any consumer
+template<class SbpSignature>
+void SbpNode<SbpSignature>::LiftMaxLayer() {
+  if (MaxLayer < MinLayer) MaxLayer = MinLayer;
 }
 
 }  // namespace Algorithm

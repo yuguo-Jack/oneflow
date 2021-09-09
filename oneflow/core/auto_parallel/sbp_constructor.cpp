@@ -70,6 +70,8 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
   Algorithm::SbpGraph<SbpSignature> sbp_graph;
   // OpGraph op_graph(*job);
   InitializeSbpGraph(op_graph, op_name2sbp_node, op_name2is_fixed, sbp_graph);
+  // Compute layer number for each node
+  sbp_graph.ComputeLayer(op_name2sbp_node);
 
   // Initialize sbp signature candidate list for each node
   InferLogicalBlobDesc(op_graph, job, op_name2sbp_node, op_name2is_fixed);
@@ -521,6 +523,7 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
       const Algorithm::SbpNode<SbpSignature>* sbp_node = op_name2sbp_node[op_node->op().op_name()];
       std::cout << op_node->op().op_name()
                 << " (^_^):" << sbp_node->Cost[sbp_node->FinalSbpSignatureId] << std::endl;
+      std::cout << "Min Layer: " << sbp_node->MinLayer << ", Max Layer: " << sbp_node->MaxLayer << std::endl;
     }
     for (const auto& ibn : op_node->op().input_bns()) {
       auto producer_node = op_node->MutSrcNode4Ibn(ibn);
@@ -547,6 +550,9 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
       std::cout << std::endl;
       /* auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0); */
       /* std::cout << " shape:" << blob_desc->shape().DebugStr() << std::endl; */
+    }
+    for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()){
+      std::cout << "Ctrl In Op: " << ctrl_in_op_name << std::endl;
     }
     /* if (!op_name2is_fixed[op_node->op().op_name()]) { */
     /*   Algorithm::SbpNode<SbpSignature>* sbp_node = op_name2sbp_node[op_node->op().op_name()]; */

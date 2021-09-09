@@ -113,6 +113,9 @@ class SbpGraph {
   // Detect all the overlaps and then adjust copy cost correspondingly.
   void DetectAdjustOverlap();
 
+  // Compute the minimum and maximum layer of each node in the graph
+  void ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+
  private:
   void DFS_AddNbhCost(std::vector<int32_t> &nbh_id2NodeListId,
                       std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id,
@@ -680,6 +683,20 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap() {
   // adjust copy cost correspondingly.
   for (const auto &this_node : NodeList) {
     for (auto this_edge : this_node->EdgesIn) { this_edge->AdjustOverlapCost(); }
+  }
+}
+
+// Compute the minimum and maximum layer of each node in the graph
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node){
+  for(SbpNode<SbpSignature> *this_node : NodeList){
+    this_node->GetMinLayer(op_name2sbp_node);
+  }
+  for(SbpNode<SbpSignature> *this_node : NodeList){
+    this_node->SpreadMaxLayer(op_name2sbp_node);
+  }
+  for(SbpNode<SbpSignature> *this_node : NodeList){
+    this_node->LiftMaxLayer();
   }
 }
 
