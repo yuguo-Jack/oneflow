@@ -68,6 +68,7 @@ namespace {
 
 void DoJobComplete(Job* job) {
   JobCompleter().Complete(job);
+#ifdef AUTO_PARALLEL_
   // auto-parallel
   // TODO: recode this
   if (job->job_conf().job_name() == "TrainNet")
@@ -75,6 +76,7 @@ void DoJobComplete(Job* job) {
   OpGraph op_graph(*job);
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(op_graph, *job);
+#endif  // AUTO_PARALLEL_
   JobCompleter().InsertIdentity(job);
 }
 

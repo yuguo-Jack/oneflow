@@ -549,12 +549,13 @@ void SbpNode<SbpSignature>::DetectSpreadOverlap() {
   // if(op_node){} is unnecessary. Sbp proxy will not have multiple EdgesIn.
 
   // If a node have multiple incoming edges, the overlap occurs
-  if (EdgesIn.size() >= 2) {
-    for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+  if (174 == MinLayer) {
+    for (SbpEdge<SbpSignature> *this_edge : EdgesOut) {
       // overlap ratio for EdgesIn: 0.25
       // Some other values including 1/N for N devices, or a value from an algorithm.
-      this_edge->DetectSpreadOverlap(0.25);
+      this_edge->DetectSpreadOverlap(1e-3);
     }
+    
   }
 }
 // Detect and spread overlaps for sbp proxy.

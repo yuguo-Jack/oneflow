@@ -87,11 +87,11 @@ Maybe<double> VariableOp::GetComputeComplexity(
     std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
     const ParallelDesc& parallel_desc) const {
   double CostRatio;
-  std::ifstream ifs("/root/work/codes/OneFlow-Benchmark/Classification/cnns/VarCostRatioFile.txt");
-  if (ifs.is_open()) {
-    ifs >> CostRatio;
-  } else
-    CostRatio = 1;
+  // std::ifstream ifs("/root/work/codes/OneFlow-Benchmark/Classification/cnns/VarCostRatioFile.txt");
+  // if (ifs.is_open()) {
+  //   ifs >> CostRatio;
+  // } else
+  CostRatio = 1.0;
   // std::cout << "variable Cost Ratio: " << CostRatio << std::endl;
   return CostRatio
          * JUST(Operator::GetComputeComplexity(sbp_signature, logical_blob_desc4bn, parallel_desc));
