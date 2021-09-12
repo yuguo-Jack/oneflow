@@ -125,6 +125,22 @@ Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
 
+Maybe<bool> Device::is_primary_device() const {
+  // TODO(lixinqi): refactor this function when DeviceDescriptor and vm::Stream introduced into Device.
+  static const HashMap<std::string, bool> type2is_primary_device{
+      {"cpu", true}, {"gpu", true}, {"cuda", true},
+      {"cuda_h2d", true},{"sync_launched_nccl", true}, 
+      {"cuda_d2h", false}, {"comm_net", false}, {"async_launched_nccl", false},
+  };
+  bool is_primary_device = JUST(MapAt(type2is_primary_device, type()));
+  if (!is_primary_device) {
+    static std::string gpu_local_call_op_kernel("gpu.LocalCallOpKernel");
+    const auto& local_call_op_kernel = JUST(GetLocalCallInstructionName(type()));
+    CHECK_NE_OR_RETURN(local_call_op_kernel, gpu_local_call_op_kernel);
+  }
+  return  is_primary_device;
+}
+
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   // gpu.LocalCallOpKernel is shared between device `cuda` and device `cuda_h2d`.
   static const HashMap<std::string, std::string> type2instr_name{
