@@ -24,15 +24,15 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
     def allreduce(grad):
         ddp_state_for_reversed_params[param][0] = True
         ret = None
-        for cur_param, (ready, deleted) in ddp_state_for_reversed_params.items():
+        for cur_param, (ready, deleted, name) in ddp_state_for_reversed_params.items():
             if deleted:
                 continue
             if ready:
                 ddp_state_for_reversed_params[cur_param][1] = True
                 if cur_param is param:
-                    ret = flow._C.local_all_reduce(grad)
+                    ret = flow._C.local_all_reduce(grad, name)
                 else:
-                    cur_param.grad = flow._C.local_all_reduce(cur_param.grad)
+                    cur_param.grad = flow._C.local_all_reduce(cur_param.grad, name)
             else:
                 break
         return ret
@@ -53,7 +53,7 @@ def DistributedDataParallel(
             x.requires_grad_(requires_grad)
 
     ddp_state_for_reversed_params = OrderedDict(
-        reversed([(x, [False, False]) for x in module.parameters()])
+        reversed([(x, [False, False, name]) for name, x in module.named_parameters()])
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():

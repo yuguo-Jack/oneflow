@@ -132,7 +132,7 @@ class BroadcastFunctor {
 class LocalAllReduceFunctor {
  public:
   LocalAllReduceFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& name) const {
     {
       const auto& device = JUST(x->device());
       CHECK_EQ_OR_RETURN(JUST(device->of_type()), "gpu");
@@ -156,17 +156,19 @@ class LocalAllReduceFunctor {
                          .Input("in")
                          .Output("out")
                          .Attr("parallel_conf", PbMessage2TxtString(parallel_conf))
-                         .Attr<bool>("async_launch", false)
+                         .Attr<bool>("async_launch", true)
                          .Build());
       rank_group2op_expr[rank_group] = op_expr;
     } else {
       op_expr = iter->second;
     }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("name", name));
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
       return OpInterpUtil::Dispatch<Tensor>(*op_expr,
-                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, {});
+                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, attrs);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, {});
+      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, attrs);
     }
   }
 };
