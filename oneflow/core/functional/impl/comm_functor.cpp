@@ -132,7 +132,7 @@ class BroadcastFunctor {
 class LocalAllReduceFunctor {
  public:
   LocalAllReduceFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& name) const {
     {
       const auto& device = JUST(x->device());
       CHECK_EQ_OR_RETURN(JUST(device->of_type()), "gpu");
@@ -162,11 +162,13 @@ class LocalAllReduceFunctor {
     } else {
       op_expr = iter->second;
     }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("name", name));
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
       return OpInterpUtil::Dispatch<Tensor>(*op_expr,
-                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, {});
+                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, attrs);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, {});
+      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, attrs);
     }
   }
 };
