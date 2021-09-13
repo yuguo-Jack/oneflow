@@ -77,6 +77,12 @@ void DoJobComplete(Job* job) {
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(op_graph, *job);
 #endif
+
+  // Print Op Graph
+  if (job->job_conf().job_name() == "TrainNet") {
+    OpGraph op_graph(*job);
+    op_graph.PrintGraph();
+  }
   JobCompleter().InsertIdentity(job);
 }
 

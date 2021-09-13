@@ -20,6 +20,7 @@ limitations under the License.
 #include <functional>
 #include <iostream>
 #include <vector>
+#include "algorithm_util.h"
 
 namespace Algorithm {
 
@@ -145,26 +146,6 @@ class SbpNode {
 // function in cpp. Should be put in one file due to use of template
 // Otherwise we will need to declare specific template at the end of cpp file.
 namespace Algorithm {
-
-// this function is to remove the i-th element from a vector in Constant time.
-// the vector should not care about ordering.
-// Be more careful about this function. Make sure that the traveling order of
-// the vector goes from back to front.
-template<class T>
-void RemoveFrom(std::vector<T> &v, int32_t i) {
-  v[i] = v.back();
-  v.pop_back();
-}
-
-template<class T>
-void CheckAndRemoveFrom(std::vector<T> &v, T &t) {
-  for (int32_t i = v.size() - 1; i >= 0; i--) {
-    if (v[i] == t) {
-      RemoveFrom<T>(v, i);
-      break;
-    }
-  }
-}
 
 template<class SbpSignature>
 SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignature> *second) {
