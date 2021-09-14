@@ -29,6 +29,15 @@ namespace oneflow {
 
 class SbpConstructor {
  public:
+  // A mapping from op names to nodes in cost model of auto parallel
+  HashMap<std::string, Algorithm::SbpNode<SbpSignature>*> op_name2sbp_node;
+  // Time ratio for unit computation cost vs unit copy cost
+  double CostRatio;
+  // Maps operator name to the successive proxy of sbp node
+  HashMap<std::string, Algorithm::SbpNode<SbpSignature>*> op_name2sbp_proxy;
+  // sbp graph
+  Algorithm::SbpGraph<SbpSignature> sbp_graph;
+
   SbpConstructor() {
     std::ifstream ifs("/home/liyipeng/OneFlow-Benchmark/Classification/cnns/CostRatioFile.txt");
     if (ifs.is_open()) {
@@ -49,21 +58,14 @@ class SbpConstructor {
   int32_t FindAllMirroredOpNodes(HashMap<std::string, bool>& op_name2is_mirrored,
                                  OpGraph& op_graph);
 
-  void InitializeSbpGraph(OpGraph& op_graph,
-                          HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
-                          HashMap<std::string, bool>& op_name2is_mirrored,
-                          Algorithm::SbpGraph<SbpSignature>& sbp_graph);
+  void InitializeSbpGraph(OpGraph& op_graph, HashMap<std::string, bool>& op_name2is_fixed);
 
   int32_t FindAllFixedOpNodes(HashMap<std::string, bool>& op_name2is_fixed, OpGraph& op_graph);
 
-  Maybe<void> InferLogicalBlobDesc(
-      OpGraph& op_graph, const Job& job,
-      HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
-      HashMap<std::string, bool>& op_name2is_fixed);
+  Maybe<void> InferLogicalBlobDesc(OpGraph& op_graph, const Job& job,
+                                   HashMap<std::string, bool>& op_name2is_fixed);
 
-  void InferOpNodeSbpSignature(
-      OpNode* op_node, const SbpSignature& sbp_sig_conf,
-      HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node);
+  void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf);
 
   Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
 
@@ -74,49 +76,36 @@ class SbpConstructor {
   Maybe<void> InferOpSbpSignature(
       const Operator& op_, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
       const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
-      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp,
-      HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node);
+      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp);
 
   Maybe<void> InferSbpSignatureIf(
       const Operator& op_, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc,
-      HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node);
+      const ParallelDesc& parallel_desc);
 
   // With sbp signature fixed in upstream, determine a sbp signature for downstream
   Maybe<void> InferSbpSignature(
       const Operator& op_, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc,
-      HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node);
+      const ParallelDesc& parallel_desc);
 
   // Compute copy cost.
-  void InitializeCopyCost(OpGraph& op_graph,
-                          HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
-                          HashMap<std::string, bool>& op_name2is_fixed);
+  void InitializeCopyCost(OpGraph& op_graph, HashMap<std::string, bool>& op_name2is_fixed);
 
   // Load logical blob ids onto sbp edges
-  void LoadLbi2SbpEdge(OpGraph& op_graph,
-                       HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
-                       HashMap<std::string, bool>& op_name2is_fixed);
+  void LoadLbi2SbpEdge(OpGraph& op_graph, HashMap<std::string, bool>& op_name2is_fixed);
 
   // Compute computation cost for all sbp nodes
-  void InitializeComputationCost(
-      OpGraph& op_graph, HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
-      HashMap<std::string, bool>& op_name2is_fixed);
+  void InitializeComputationCost(OpGraph& op_graph, HashMap<std::string, bool>& op_name2is_fixed);
 
   // Initialize Cost Model with Sbp from OpGraph
-  void StealSbpFromOpGraph(
-      OpGraph& op_graph, HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
-      HashMap<std::string, bool>& op_name2is_fixed);
+  void StealSbpFromOpGraph(OpGraph& op_graph, HashMap<std::string, bool>& op_name2is_fixed);
 
   // Update Sbp Signature in each operator
-  Maybe<void> UpdateSbpSignature4Op(
-      OpGraph& op_graph, Job& job,
-      HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
-      HashMap<std::string, bool>& op_name2is_fixed);
+  Maybe<void> UpdateSbpSignature4Op(OpGraph& op_graph, Job& job,
+                                    HashMap<std::string, bool>& op_name2is_fixed);
 
   // Should customize a function to compute computation cost for each kind of op
   // compute computation cost
@@ -125,10 +114,8 @@ class SbpConstructor {
 
   // Algorithm::SbpGraph<SbpSignature> sbp_graph;
 
-  // Time ratio for unit computation cost vs unit copy cost
-  double CostRatio;
-  // Maps operator name to the successive proxy of sbp node
-  HashMap<std::string, Algorithm::SbpNode<SbpSignature>*> op_name2sbp_proxy;
+  // Print the graph with SBP in order
+  void PrintGraph(OpGraph& op_graph);
 };
 
 // compute copy cost

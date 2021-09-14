@@ -81,10 +81,12 @@ void DoJobComplete(Job* job) {
 
   // Print Op Graph
   if (job->job_conf().job_name() == "TrainNet") {
-#ifndef AUTO_PARALLEL_
+#ifdef AUTO_PARALLEL_
+    sbp_constructor.PrintGraph(op_graph);
+#else
     OpGraph op_graph(*job);
-#endif // AUTO_PARALLEL_
     op_graph.PrintGraph();
+#endif  // AUTO_PARALLEL_
   }
   JobCompleter().InsertIdentity(job);
 }
