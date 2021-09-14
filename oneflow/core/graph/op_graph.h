@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_GRAPH_OP_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_OP_GRAPH_H_
+#define AUTO_PARALLEL_
 
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/job/job_desc.h"
@@ -185,6 +186,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpBatchAxisLbi(Job* job) const;
 
   Maybe<void> Init(const Job& job);
+
+  // Print the graph with SBP in order
+  void PrintGraph();
 
  private:
   friend class SbpConstructor;

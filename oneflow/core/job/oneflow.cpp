@@ -71,12 +71,21 @@ void DoJobComplete(Job* job) {
 #ifdef AUTO_PARALLEL_
   // auto-parallel
   // TODO: recode this
+  std::cout << "Start Auto Parallel" << std::endl;
   if (job->job_conf().job_name() == "TrainNet")
     job->mutable_job_parallel_view_conf()->clear_op_name2sbp_signature_conf();
   OpGraph op_graph(*job);
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(op_graph, *job);
 #endif  // AUTO_PARALLEL_
+
+  // Print Op Graph
+  if (job->job_conf().job_name() == "TrainNet") {
+#ifndef AUTO_PARALLEL_
+    OpGraph op_graph(*job);
+#endif // AUTO_PARALLEL_
+    op_graph.PrintGraph();
+  }
   JobCompleter().InsertIdentity(job);
 }
 
