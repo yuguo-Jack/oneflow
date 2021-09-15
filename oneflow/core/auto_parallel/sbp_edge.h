@@ -60,9 +60,17 @@ class SbpEdge {
   std::vector<SbpEdge<SbpSignature> *> EdgeList;
 
  private:
+  // Mininum and maximum cost would not be changed by eliminations, which will generate new edges.
+  // Also would not be changed by node merging, which will only perform cost copy for the expanding
+  // dimensions.
   // Minimum cost in the 2D array Cost.
   // Would be initialized after GetMinCost();
+  // Only used in the final graph.
   double min_cost = -1.0;
+  // Maximum cost in the 2D array Cost.
+  // Would be initialized after GetMaxCost();
+  // Only used in the original graph.
+  double max_cost = -1.0;
   // overlap ratio. Applied in copy cost.
   double overlap_ratio = 1.0;
 
@@ -119,6 +127,8 @@ class SbpEdge {
 
   // Get the minimum element in Cost
   double GetMinCost();
+  // Get the maximum element in Cost
+  double GetMaxCost();
 
   // Detect and spread overlaps for this edge and StartNode if it is a proxy of lbi.
   void DetectSpreadOverlap(double overlap_ratio_);
@@ -321,9 +331,39 @@ double SbpEdge<SbpSignature>::GetMinCost() {
   return min_cost;
 }
 
+// Get the maximum element in Cost
+template<class SbpSignature>
+double SbpEdge<SbpSignature>::GetMaxCost() {
+  // used the stored value if pre-computed.
+  if (max_cost >= 0) return max_cost;
+  // Check the size of Cost
+  CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
+  // Compute the max_cost
+  for (int32_t i = 0; i < Cost.size(); i++) {
+    double max_cost_row = *std::min_element(Cost[i].begin(), Cost[i].end());
+    if (max_cost_row > max_cost) max_cost = max_cost_row;
+  }
+  return max_cost;
+}
+
 // Detect and spread overlaps for this edge and StartNode if it is a proxy of lbi.
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::DetectSpreadOverlap(double overlap_ratio_) {
+  // test debug
+  std::cout << "StartNode: ";
+  if (StartNode->op_node) {
+    std::cout << StartNode->op_node->op().op_name();
+  } else {
+    std::cout << "proxy";
+  }
+  std::cout << " to ";
+  if (EndNode->op_node) {
+    std::cout << EndNode->op_node->op().op_name();
+  } else {
+    std::cout << "proxy";
+  }
+  std::cout << ", overlap ratio: " << overlap_ratio_ << std::endl;
+
   if (overlap_ratio_ < 1.0) {
     if (overlap_ratio_ < 0.0) overlap_ratio_ = 0.0;
 

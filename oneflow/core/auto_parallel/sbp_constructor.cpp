@@ -93,7 +93,7 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
   // Initialize copy cost
   InitializeCopyCost(op_graph, op_name2is_fixed);
 
-  sbp_graph.DetectAdjustOverlap();
+  sbp_graph.DetectAdjustOverlap(CostRatio);
 
   // Random Initial Sbp Signatures
   sbp_graph.RandomSbpSignature();

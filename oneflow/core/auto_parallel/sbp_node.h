@@ -99,6 +99,15 @@ class SbpNode {
   int32_t CurrDeg;
 #endif  // DEBUG_ALGORITHM_
 
+ private:
+  // Minimum cost in the array Cost.
+  // Would be initialized after GetMinCost();
+  // Minimum cost of node would be changed by eliminations.
+  // We only use it in the original graph.
+  // We might want to remove this parameter since GetMinCost() is called only once.
+  double min_cost = -1.0;
+
+ public:
   // default constructor
   SbpNode() { FinalSbpSignatureId = 0; }
 
@@ -157,8 +166,9 @@ class SbpNode {
   // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
   void OneRingNeighborhood(std::vector<int32_t> &nbh_1ring);
 
-  // Detect and spread overlaps for EdgesIn.
-  void DetectSpreadOverlap();
+  // Detect and spread overlaps for EdgesOut.
+  void DetectSpreadOverlap(double max_1_comp_cost, double max_2_comp_cost, int32_t max_1_id,
+                           double min_ratio);
   // Detect and spread overlaps for sbp proxy.
   void DetectSpreadOverlap(double overlap_ratio);
 
@@ -170,6 +180,9 @@ class SbpNode {
   void DropMaxLayer(int32_t upper_bound);
   // Set MaxLayer = MinLayer if this node does not have any consumer
   void LiftMaxLayer();
+
+  // Get the minimum element in Cost
+  double GetMinCost();
 
 };  // class SbpNode
 }  // namespace Algorithm
@@ -544,18 +557,36 @@ void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t> &nbh_1ring)
 
 // Detect and spread overlaps for EdgesIn.
 template<class SbpSignature>
-void SbpNode<SbpSignature>::DetectSpreadOverlap() {
-  // We need to skip sbp proxy, but actually, using
-  // if(op_node){} is unnecessary. Sbp proxy will not have multiple EdgesIn.
+void SbpNode<SbpSignature>::DetectSpreadOverlap(double max_1_comp_cost, double max_2_comp_cost,
+                                                int32_t max_1_id, double min_ratio) {
+  // min_ratio should be less than 1.0
+  CHECK(min_ratio < 1.0) << "Wrong overlap ratio here!" << std::endl;
+  // If one layer have multiple nodes, the overlap occurs.
+  // We need to skip sbp proxy and single node at each layer.
+  // Actually, it is skipped before this function.
 
-  // If a node have multiple incoming edges, the overlap occurs
-  if (174 == MinLayer) {
-    for (SbpEdge<SbpSignature> *this_edge : EdgesOut) {
-      // overlap ratio for EdgesIn: 0.25
-      // Some other values including 1/N for N devices, or a value from an algorithm.
-      this_edge->DetectSpreadOverlap(1e-3);
-    }
-    
+  // skip it if empty EdgesOut
+  if (EdgesOut.empty()) return;
+
+  // total maximum copy cost of outcoming edges
+  double total_copy_cost = 0.0;
+  for (SbpEdge<SbpSignature> *this_edge : EdgesOut) { total_copy_cost += this_edge->GetMaxCost(); }
+  // maximum of the computation cost of other operators
+  double max_comp_cost;
+  if (id == max_1_id)
+    max_comp_cost = max_2_comp_cost;
+  else
+    max_comp_cost = max_1_comp_cost;
+  // Use the ratio between the total copy cost and maximum computation cost as ratio
+  double overlap_ratio;
+  if (max_comp_cost >= total_copy_cost)
+    overlap_ratio = min_ratio;
+  else
+    overlap_ratio = 1.0 - (1.0 - min_ratio) * max_comp_cost / total_copy_cost;
+
+  // Set up overlap ratio for the outcoming edges
+  for (SbpEdge<SbpSignature> *this_edge : EdgesOut) {
+    this_edge->DetectSpreadOverlap(overlap_ratio);
   }
 }
 // Detect and spread overlaps for sbp proxy.
@@ -615,6 +646,18 @@ void SbpNode<SbpSignature>::DropMaxLayer(int32_t upper_bound) {
 template<class SbpSignature>
 void SbpNode<SbpSignature>::LiftMaxLayer() {
   if (MaxLayer < MinLayer) MaxLayer = MinLayer;
+}
+
+// Get the minimum element in Cost
+template<class SbpSignature>
+double SbpNode<SbpSignature>::GetMinCost() {
+  // used the stored value if pre-computed.
+  if (min_cost >= 0) return min_cost;
+  // Check the size of Cost
+  CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
+  // Compute the min_cost
+  min_cost = *std::min_element(Cost.begin(), Cost.end());
+  return min_cost;
 }
 
 }  // namespace Algorithm

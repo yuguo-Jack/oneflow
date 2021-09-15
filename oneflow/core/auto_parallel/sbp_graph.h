@@ -111,10 +111,10 @@ class SbpGraph {
   void ClipEdge(SbpEdge<SbpSignature> *this_edge);
 
   // Detect all the overlaps and then adjust copy cost correspondingly.
-  void DetectAdjustOverlap();
+  void DetectAdjustOverlap(double CostRatio);
 
   // Compute the minimum and maximum layer of each node in the graph
-  void ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+  void ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
 
  private:
   void DFS_AddNbhCost(std::vector<int32_t> &nbh_id2NodeListId,
@@ -233,8 +233,8 @@ template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature> *this_node) {
   if (this_node->EdgesIn.size() + this_node->EdgesOut.size() == 2) {
     std::vector<SbpNode<SbpSignature> *> TwoNode;
-    for (auto &one_edge : this_node->EdgesIn) TwoNode.emplace_back(one_edge->StartNode);
-    for (auto &one_edge : this_node->EdgesOut) TwoNode.emplace_back(one_edge->EndNode);
+    for (const auto &one_edge : this_node->EdgesIn) TwoNode.emplace_back(one_edge->StartNode);
+    for (const auto &one_edge : this_node->EdgesOut) TwoNode.emplace_back(one_edge->EndNode);
 
     // If a node is pointing to itself, could happen when shrink from a circle
     if (TwoNode[0] == TwoNode[1]) {
@@ -677,27 +677,57 @@ void SbpGraph<SbpSignature>::ClipEdge(SbpEdge<SbpSignature> *this_edge) {
 
 // Detect all the overlaps and then adjust copy cost correspondingly.
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::DetectAdjustOverlap() {
+void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
+  // Find the maximum layer number in the graph
+  int32_t max_layer_num = -1;
+  for (const auto &this_node : NodeList) {
+    if (this_node->MinLayer > max_layer_num) max_layer_num = this_node->MinLayer;
+  }
+  // Prestore the first and second maximum computation cost for each layer
+  // In a layer, each operator will provide the mininum element in the array Cost.
+  // max_1_comp_cost[i] >= max_2_comp_cost[i] >= the rest computation cost on the i-th layer
+  std::vector<double> max_1_comp_cost(max_layer_num, -1.0);
+  std::vector<double> max_2_comp_cost(max_layer_num, -1.0);
+  // Prestore the id of the op with the maximum computation cost in the i-th layer
+  std::vector<int32_t> max_1_id(max_layer_num);
+
+  for (const auto &this_node : NodeList) {
+    int32_t lay_num = this_node->MinLayer;
+    double comp_cost = this_node->GetMinCost();
+    if (comp_cost > max_2_comp_cost[lay_num]) {
+      if (comp_cost > max_1_comp_cost[lay_num]) {
+        max_2_comp_cost[lay_num] = max_1_comp_cost[lay_num];
+        max_1_comp_cost[lay_num] = comp_cost;
+        max_1_id[lay_num] = this_node->id;
+      } else {
+        max_2_comp_cost[lay_num] = comp_cost;
+      }
+    }
+  }
+
   // Detect all the overlaps
-  for (const auto &this_node : NodeList) { this_node->DetectSpreadOverlap(); }
+  for (const auto &this_node : NodeList) {
+    int32_t lay_num = this_node->MinLayer;
+    // Skip proxy nodes and single node in one layer
+    if (lay_num < 0 || max_2_comp_cost[lay_num] < 0.0) continue;
+    // Detect overlap. We do not spread it since we only adjust outcoming edges.
+    double min_ratio = std::min(CostRatio, 0.5);
+    this_node->DetectSpreadOverlap(max_1_comp_cost[lay_num], max_2_comp_cost[lay_num],
+                                   max_1_id[lay_num], min_ratio);
+  }
   // adjust copy cost correspondingly.
   for (const auto &this_node : NodeList) {
-    for (auto this_edge : this_node->EdgesIn) { this_edge->AdjustOverlapCost(); }
+    for (const auto &this_edge : this_node->EdgesIn) { this_edge->AdjustOverlapCost(); }
   }
 }
 
 // Compute the minimum and maximum layer of each node in the graph
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node){
-  for(SbpNode<SbpSignature> *this_node : NodeList){
-    this_node->GetMinLayer(op_name2sbp_node);
-  }
-  for(SbpNode<SbpSignature> *this_node : NodeList){
-    this_node->SpreadMaxLayer(op_name2sbp_node);
-  }
-  for(SbpNode<SbpSignature> *this_node : NodeList){
-    this_node->LiftMaxLayer();
-  }
+void SbpGraph<SbpSignature>::ComputeLayer(
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->GetMinLayer(op_name2sbp_node); }
+  for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->SpreadMaxLayer(op_name2sbp_node); }
+  for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->LiftMaxLayer(); }
 }
 
 #ifdef RANDOM_GENERATOR_
