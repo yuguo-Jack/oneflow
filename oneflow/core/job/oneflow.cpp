@@ -851,11 +851,21 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     data_type = blob_conf->data_type();
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
   }
+  OperatorConf proxy_op_conf;
+  {
+    proxy_op_conf.set_name("System-Boxing-Proxy-" + NewUniqueId());
+    auto* copy_conf = proxy_op_conf.mutable_copy_conf();
+    copy_conf->set_in(
+        GenLogicalBlobName(input_op_conf.name(), input_op_conf.mutable_input_conf()->out()));
+    copy_conf->set_out("out");
+    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {proxy_op_conf});
+  }
   OperatorConf foreign_output_op_conf;
   {
     foreign_output_op_conf.set_name(std::string("System-Pull-ForeignOutput_") + NewUniqueId());
     auto* foreign_output_conf = foreign_output_op_conf.mutable_foreign_output_conf();
-    foreign_output_conf->set_in(input_op_conf.name() + "/out");
+    foreign_output_conf->set_in(
+        GenLogicalBlobName(proxy_op_conf.name(), proxy_op_conf.mutable_copy_conf()->out()));
     foreign_output_conf->set_ofblob_buffer_name(GetForeignOutputBufferName(job_name));
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");

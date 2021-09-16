@@ -69,6 +69,7 @@ REGISTER_OP(OperatorConf::kIdentityConf, IdentityOpTpl<IdentityOp>);
 
 struct CopyOp {};
 REGISTER_OP(OperatorConf::kCopyConf, IdentityOpTpl<CopyOp>);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kCopyConf, 1);
 
 class MirroredCastOp : public Operator {
  public:
