@@ -99,15 +99,6 @@ class SbpNode {
   int32_t CurrDeg;
 #endif  // DEBUG_ALGORITHM_
 
- private:
-  // Minimum cost in the array Cost.
-  // Would be initialized after GetMinCost();
-  // Minimum cost of node would be changed by eliminations.
-  // We only use it in the original graph.
-  // We might want to remove this parameter since GetMinCost() is called only once.
-  double min_cost = -1.0;
-
- public:
   // default constructor
   SbpNode() { FinalSbpSignatureId = 0; }
 
@@ -651,13 +642,10 @@ void SbpNode<SbpSignature>::LiftMaxLayer() {
 // Get the minimum element in Cost
 template<class SbpSignature>
 double SbpNode<SbpSignature>::GetMinCost() {
-  // used the stored value if pre-computed.
-  if (min_cost >= 0) return min_cost;
   // Check the size of Cost
   CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
-  // Compute the min_cost
-  min_cost = *std::min_element(Cost.begin(), Cost.end());
-  return min_cost;
+  // Compute the min_comp_cost
+  return *std::min_element(Cost.begin(), Cost.end());
 }
 
 }  // namespace Algorithm

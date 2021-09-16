@@ -683,6 +683,7 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
   for (const auto &this_node : NodeList) {
     if (this_node->MinLayer > max_layer_num) max_layer_num = this_node->MinLayer;
   }
+  max_layer_num++;
   // Prestore the first and second maximum computation cost for each layer
   // In a layer, each operator will provide the mininum element in the array Cost.
   // max_1_comp_cost[i] >= max_2_comp_cost[i] >= the rest computation cost on the i-th layer
@@ -693,6 +694,7 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
 
   for (const auto &this_node : NodeList) {
     int32_t lay_num = this_node->MinLayer;
+    if(lay_num < 0) continue;
     double comp_cost = this_node->GetMinCost();
     if (comp_cost > max_2_comp_cost[lay_num]) {
       if (comp_cost > max_1_comp_cost[lay_num]) {
