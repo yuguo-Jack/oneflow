@@ -32,6 +32,9 @@ class ParallelDesc;
 
 namespace one {
 
+class MirroredTensorMeta;
+class ConsistentTensorMeta;
+
 class TensorMeta : public user_op::TensorDesc {
  public:
   TensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
@@ -54,6 +57,11 @@ class TensorMeta : public user_op::TensorDesc {
   DataType* mut_data_type() override { return &data_type_; }
   bool* mut_is_dynamic() override { return &is_dynamic_; }
   void set_is_dynamic(bool val) override { is_dynamic_ = val; }
+
+  virtual size_t CalcHashValue() const = 0;
+  virtual bool Equals(const TensorMeta& other) const = 0; 
+  virtual bool EqualsMirroredTensorMeta(const MirroredTensorMeta& other) const = 0; 
+  virtual bool EqualsConsistentTensorMeta(const ConsistentTensorMeta& other) const = 0; 
 
  private:
   std::shared_ptr<const Shape> shape_;
@@ -79,7 +87,16 @@ class MirroredTensorMeta : public TensorMeta {
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   bool operator==(const MirroredTensorMeta& other) const;
-  size_t CalcHashValue() const;
+  size_t CalcHashValue() const override;
+  bool Equals(const TensorMeta& other) const override {
+    return other.EqualsMirroredTensorMeta(*this);
+  }
+  bool EqualsMirroredTensorMeta(const MirroredTensorMeta& other) const override {
+    return *this == other;
+  }
+  bool EqualsConsistentTensorMeta(const ConsistentTensorMeta& other) const override {
+    return false;
+  }
 
  private:
   Symbol<Device> device_;
@@ -105,11 +122,64 @@ class ConsistentTensorMeta : public TensorMeta {
 
   void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; }
 
-  size_t CalcHashValue() const;
+  size_t CalcHashValue() const override;
+  bool Equals(const TensorMeta& other) const override {
+    return other.EqualsConsistentTensorMeta(*this);
+  }
+  bool EqualsMirroredTensorMeta(const MirroredTensorMeta& other) const override {
+    return false;
+  }
+  bool EqualsConsistentTensorMeta(const ConsistentTensorMeta& other) const override {
+    return *this == other;
+  }
 
  private:
   Symbol<cfg::NdSbp> nd_sbp_;
   Symbol<ParallelDesc> parallel_desc_;
+};
+
+class MutMirroredTensorMeta : public TensorMeta {
+ public:
+  MutMirroredTensorMeta() : TensorMeta(std::make_shared<const Shape>(), kInvalidDataType) {}
+  MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
+  MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
+  ~MutMirroredTensorMeta() override = default;
+
+  size_t CalcHashValue() const override {
+    UNIMPLEMENTED();
+    return 0;
+  }
+  bool Equals(const TensorMeta& other) const override {
+    UNIMPLEMENTED();
+    return false;
+  }
+  bool EqualsMirroredTensorMeta(const MirroredTensorMeta& other) const override {
+    UNIMPLEMENTED();
+    return false;
+  }
+  bool EqualsConsistentTensorMeta(const ConsistentTensorMeta& other) const override {
+    UNIMPLEMENTED();
+    return false;
+  }
+};
+
+class TensorMetaHashKey final {
+ public:
+  explicit TensorMetaHashKey(const std::shared_ptr<TensorMeta>& tensor_meta)
+      : tensor_meta_(tensor_meta), hash_value_(tensor_meta->CalcHashValue()) {}
+  TensorMetaHashKey(const TensorMetaHashKey&&) = default;
+  TensorMetaHashKey(TensorMetaHashKey&&&) = default;
+  ~TensorMetaHashKey() = default;
+
+  bool operator==(const TensorMetaHashKey& other) const {
+    return tensor_meta_->Equals(*other.tensor_meta_);
+  }
+
+  size_t hash_value() const { return hash_value_; }
+
+ private:
+  std::shared_ptr<TensorMeta> tensor_meta_;
+  const size_t hash_value_;
 };
 
 }  // namespace one
@@ -118,9 +188,23 @@ class ConsistentTensorMeta : public TensorMeta {
 namespace std {
 
 template<>
+struct hash<oneflow::one::MirroredTensorMeta> final {
+  size_t operator()(const oneflow::one::MirroredTensorMeta& local_tensor_meta) const {
+    return local_tensor_meta.CalcHashValue();
+  }
+};
+
+template<>
 struct hash<oneflow::one::ConsistentTensorMeta> final {
   size_t operator()(const oneflow::one::ConsistentTensorMeta& consistent_tensor_meta) const {
     return consistent_tensor_meta.CalcHashValue();
+  }
+};
+
+template<>
+struct hash<oneflow::one::TensorMetaHashKey> final {
+  size_t operator()(const oneflow::one::TensorMetaHashKey& key) const {
+    return key.hash_value();
   }
 };
 

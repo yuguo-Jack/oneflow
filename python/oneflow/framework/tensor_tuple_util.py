@@ -19,6 +19,15 @@ from typing import Optional, Sequence, Union
 
 from oneflow._oneflow_internal import Tensor, TensorTuple
 
+# return (converter_to_tensor_tuple, converter_from_tensor_tuple)
+def get_tensor_tuple_converter_pair(args: Optional[Union[Tensor, Sequence[Tensor]]]):
+    if args is None:
+        return lambda x: TensorTuple(), lambda t: None
+    elif isinstance(args, collections.abc.Sequence):
+        args_type = type(args)
+        return lambda x: TensorTuple(x), lambda t: args_type(t)
+    else:
+        return lambda x: TensorTuple([x]), lambda t: t[0]
 
 def convert_to_tensor_tuple(args: Optional[Union[Tensor, Sequence[Tensor]]]):
     if args is None:

@@ -57,14 +57,6 @@ Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>&
   return tensor->mut_eager_mirrored_tensor_impl();
 }
 
-class MutMirroredTensorMeta : public TensorMeta {
- public:
-  MutMirroredTensorMeta() : TensorMeta(std::make_shared<const Shape>(), kInvalidDataType) {}
-  MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
-  MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
-  ~MutMirroredTensorMeta() override = default;
-};
-
 std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
   static thread_local std::vector<MutMirroredTensorMeta> struct_vec;
   static thread_local std::vector<TensorMeta*> ptr_vec;

@@ -16,13 +16,13 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/instruction_replay.h"
+#include "oneflow/core/jit/instructions_record.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-namespace debug {
+namespace jit {
 
 ONEFLOW_API_PYBIND11_MODULE("debug", m) {
   m.def("start_recording_instructions", &StartRecordingInstructions);
@@ -31,6 +31,6 @@ ONEFLOW_API_PYBIND11_MODULE("debug", m) {
   m.def("replay_instructions", &ReplayInstructions);
 }
 
-}  // namespace debug
+}  // namespace jit
 
 }  // namespace oneflow

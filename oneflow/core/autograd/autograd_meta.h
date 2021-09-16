@@ -73,7 +73,7 @@ class AutogradMeta final {
   // Only meaningful on leaf Tensors (must be false otherwise)
   bool requires_grad_;
 
-  // Oney meaningful on non_leaf Tensors (must be false otherwise)
+  // Only meaningful on non_leaf Tensors (must be false otherwise)
   bool retain_grad_;
 
   std::shared_ptr<Tensor> acc_grad_;

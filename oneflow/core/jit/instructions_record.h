@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
-#define ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
+#ifndef ONEFLOW_CORE_JIT_INSTRUCTION_REPLAY_H_
+#define ONEFLOW_CORE_JIT_INSTRUCTION_REPLAY_H_
 
 #include "oneflow/core/vm/instruction.msg.h"
 
 namespace oneflow {
 
-namespace debug {
+namespace jit {
 
 bool RecordingInstructions();
 
@@ -31,12 +31,12 @@ void EndRecordingInstructions();
 
 void ClearRecordedInstructions();
 
-void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction);
+void RecordInstructions(vm::InstructionMsgList* instruction_msg_list);
 
 void ReplayInstructions();
 
-}  // namespace debug
+}  // namespace jit
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
+#endif  // ONEFLOW_CORE_JIT_INSTRUCTION_REPLAY_H_

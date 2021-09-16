@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include <list>
-#include "oneflow/core/framework/instruction_replay.h"
+#include "oneflow/core/jit/instructions_record.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/instruction.msg.h"
 
@@ -28,14 +28,14 @@ bool* RecordingInstructionsFlag() {
   return &recording_instruction;
 }
 
-std::list<ObjectMsgPtr<vm::InstructionMsg>>* RecordedInstructionList() {
-  static thread_local std::list<ObjectMsgPtr<vm::InstructionMsg>> list;
+vm::InstructionMsgList* RecordedInstructionList() {
+  static thread_local vm::InstructionMsgList list;
   return &list;
 }
 
 }  // namespace
 
-namespace debug {
+namespace jit {
 
 bool RecordingInstructions() { return *RecordingInstructionsFlag(); }
 
@@ -43,20 +43,20 @@ void StartRecordingInstructions() { *RecordingInstructionsFlag() = true; }
 
 void EndRecordingInstructions() { *RecordingInstructionsFlag() = false; }
 
-void ClearRecordedInstructions() { RecordedInstructionList()->clear(); }
+void ClearRecordedInstructions() { RecordedInstructionList()->Clear(); }
 
-void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction) {
-  RecordedInstructionList()->push_back(instruction);
+void RecordInstructions(vm::InstructionMsgList* instruction_msg_list) {
+  instruction_msg_list->MoveTo(RecordedInstructionList());
 }
 
 void ReplayInstructions() {
   vm::InstructionMsgList instr_msg_list;
-  for (const auto& instr_msg : *RecordedInstructionList()) {
+  OBJECT_MSG_LIST_FOR_EACH(RecordedInstructionList(), instr_msg) {
     instr_msg_list.EmplaceBack(instr_msg->Clone());
   }
   CHECK_JUST(vm::Run(&instr_msg_list));
 }
 
-}  // namespace debug
+}  // namespace jit
 
 }  // namespace oneflow

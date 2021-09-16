@@ -197,7 +197,9 @@ void BuiltinInstructionMsg::add_del_operand(ObjectId logical_object_id) {
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::Clone() const {
-  return ObjectMsgPtr<InstructionMsg>::NewFrom(mut_allocator(), *this);
+  auto instruction_msg = ObjectMsgPtr<InstructionMsg>::New();
+  instruction_msg->mutable_composable()->reset_builtin(composable().builtin());
+  return instruction_msg;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {

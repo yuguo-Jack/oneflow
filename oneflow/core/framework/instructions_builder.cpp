@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/instruction_replay.h"
+#include "oneflow/core/jit/instructions_record.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
@@ -683,7 +683,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   int i = 0;
   for (const auto& input : *input_eager_blob_objects) {
     CHECK_OR_RETURN(input->last_used_device().has_value());
-    const auto& blob_last_used_device = JUST(input->last_used_device().value());
+    const auto& blob_last_used_device = JUST(input->last_used_device());
     if (op_type == "broadcast_div") {
       LOG(INFO) << "blob_last_used_device of broadcast_div input " << std::to_string(i) << ": "
                 << blob_last_used_device->ToString();
@@ -1657,13 +1657,12 @@ Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& 
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   JUST(Build(&instructions_builder));
-  if (debug::RecordingInstructions()) {
-    OBJECT_MSG_LIST_FOR_EACH(instructions_builder.mut_instruction_list(), instruction_msg) {
-      debug::RecordInstruction(instruction_msg);
-    }
+  if (jit::RecordingInstructions()) {
+    jit::RecordInstructions(instructions_builder.mut_instruction_list());
+  } else {
+    JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
+        instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   }
-  JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
-      instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
 }
 
