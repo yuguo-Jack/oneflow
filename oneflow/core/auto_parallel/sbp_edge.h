@@ -70,7 +70,7 @@ class SbpEdge {
   // Maximum cost in the 2D array Cost.
   // Would be initialized after GetMaxCost();
   // Only used in the original graph.
-  double max_cost = -1.0;
+  // double max_cost = -1.0;
   // overlap ratio. Applied in copy cost.
   double overlap_ratio = 1.0;
 
@@ -335,13 +335,15 @@ double SbpEdge<SbpSignature>::GetMinCost() {
 template<class SbpSignature>
 double SbpEdge<SbpSignature>::GetMaxCost() {
   // used the stored value if pre-computed.
-  if (max_cost >= 0) return max_cost;
+  // if (max_cost >= 0) return max_cost;
   // Check the size of Cost
   CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the max_cost
+  double max_cost = -1.0;
   for (int32_t i = 0; i < Cost.size(); i++) {
-    double max_cost_row = *std::min_element(Cost[i].begin(), Cost[i].end());
-    if (max_cost_row > max_cost) max_cost = max_cost_row;
+    for (int32_t j = 0; j < Cost[i].size(); j++){
+      if(Cost[i][j] < 1e38 && Cost[i][j] > max_cost) max_cost = Cost[i][j];
+    }
   }
   return max_cost;
 }
