@@ -54,6 +54,11 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
+    LOG(INFO) << "---------------------------------------";                    
+    LOG(INFO) << "forward prediction : " << prediction->dptr<T>();
+    LOG(INFO) << "forward label      : " << label->dptr<K>();
+    LOG(INFO) << "forward y          : " << out->dptr<T>();
+    LOG(INFO) << "---------------------------------------";
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
@@ -158,6 +163,12 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
     Memset<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), 0,
                         prediction_diff_bytes_size);
+    LOG(INFO) << "---------------------------------------";                    
+    LOG(INFO) << "backward prediction     : " << prediction->dptr<T>();
+    LOG(INFO) << "backward dy             : " << dy->dptr<T>();
+    LOG(INFO) << "backward label          : " << label->dptr<K>();
+    LOG(INFO) << "backward prediction_diff: " << prediction_diff->dptr<T>();
+    LOG(INFO) << "---------------------------------------";
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());

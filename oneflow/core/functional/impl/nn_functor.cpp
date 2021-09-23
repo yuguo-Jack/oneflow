@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cstdint>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -361,25 +362,36 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
-class SparseSoftmaxCrossEntropyFunctor {
+class DistributedSparseSoftmaxCrossEntropyFunctor {
  public:
-  SparseSoftmaxCrossEntropyFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy")
-                         .Input("prediction")
-                         .Input("label")
-                         .Output("out")
-                         .Output("prob")
-                         .Build());
+  DistributedSparseSoftmaxCrossEntropyFunctor() {
+    op_sparse_cross_entropy_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy")
+                        .Input("prediction")
+                        .Input("label")
+                        .Output("out")
+                        .Build());
+    op_softmax_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
-                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& logits,
+                                const std::shared_ptr<one::Tensor>& label) const {
     MutableAttrMap attrs;
+    int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
+
+    const auto& output_broadcast_div
+      = JUST(OpInterpUtil::Dispatch<Tensor>(*op_softmax_, {logits}, attrs));
+
     JUST(attrs.SetAttr<int64_t>("depth", depth));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
+    const auto& output_sparse_cross_entropy_ms
+      = JUST(OpInterpUtil::Dispatch<Tensor>(*op_sparse_cross_entropy_, {output_broadcast_div, label}, attrs));
+
+    const TensorTuple result = {output_broadcast_div, output_sparse_cross_entropy_ms};
+
+    return result;
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_sparse_cross_entropy_;
+  std::shared_ptr<OpExpr> op_softmax_;
 };
 
 class SoftmaxCrossEntropyFunctor {
@@ -1174,7 +1186,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
-  m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::DistributedSparseSoftmaxCrossEntropyFunctor>("DistributedSparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
