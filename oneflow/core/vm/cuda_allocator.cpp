@@ -281,11 +281,12 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
   *mem_ptr = piece->ptr;
+  LOG(INFO)<<"CudaAllocator::Allocate: " << (int*)(*mem_ptr);
 }
 
 void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
-
+  LOG(INFO)<<"CudaAllocator::Deallocate: " << (int*)(mem_ptr);
   auto it = ptr2piece_.find(mem_ptr);
   CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = "
                                 << mem_ptr << " size = " << size;

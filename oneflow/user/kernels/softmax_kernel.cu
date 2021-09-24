@@ -30,6 +30,10 @@ class SoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    LOG(INFO) << "---------------------------------------";                    
+    LOG(INFO) << "softmax forward in        : " << in->dptr<T>();
+    LOG(INFO) << "softmax forward out       : " << out->dptr<T>();
+    LOG(INFO) << "---------------------------------------";
     const ShapeView& in_shape = in->shape();
     const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
@@ -64,6 +68,11 @@ class SoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGr
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    LOG(INFO) << "---------------------------------------";                    
+    LOG(INFO) << "softmax backward y        : " << y->dptr<T>();
+    LOG(INFO) << "softmax backward dy       : " << dy->dptr<T>();
+    LOG(INFO) << "softmax backward dx       : " << dx->dptr<T>();
+    LOG(INFO) << "---------------------------------------";
     const int64_t cols = y->shape().At(y->shape().NumAxes() - 1);
     const int64_t rows = y->shape().elem_cnt() / cols;
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
