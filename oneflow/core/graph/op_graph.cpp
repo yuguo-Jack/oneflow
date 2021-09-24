@@ -598,6 +598,40 @@ const OpNode* OpGraph::OpNode4OpName(const std::string& op_name) const {
   return op_node_it->second;
 }
 
+Maybe<void> OpGraph::PrintSbp(const Job& job) const {
+  std::cout << "PRINT BEGIN" << std::endl;
+  JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+    // test debug
+    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
+    for (const auto& ibn : op_node->op().input_bns()) {
+      auto producer_node = op_node->MutSrcNode4Ibn(ibn);
+      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+      if (this_sbp_parallel.has_split_parallel())
+        std::cout << " S" << this_sbp_parallel.split_parallel().axis();
+      if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " B";
+      if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
+      std::cout << std::endl;
+      /* auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0); */
+      /* std::cout << " shape:" << blob_desc->shape().DebugStr() << std::endl; */
+    }
+    for (const auto& ibn : op_node->op().output_bns()) {
+      std::cout << "Out Op:" << ibn;
+      const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+      if (this_sbp_parallel.has_split_parallel())
+        std::cout << " S" << this_sbp_parallel.split_parallel().axis();
+      if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " B";
+      if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
+      std::cout << std::endl;
+      /* auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0); */
+      /* std::cout << " shape:" << blob_desc->shape().DebugStr() << std::endl; */
+    }
+    return Maybe<void>::Ok();
+  }));
+  std::cout << "PRINT END" << std::endl;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
   JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
   HashMap<OpBlobArg, std::vector<OpBlobArg>> oba2sbp_identical_obas;

@@ -16,9 +16,10 @@ limitations under the License.
 #include <algorithm>
 #include <type_traits>
 #include <vector>
+#include <cmath>
 #define DEBUG_ALGORITHM_
 //#define TEST_DEBUG_
-//#define PRINT_GRAPH_
+#define PRINT_GRAPH_
 #define TEST_DEBUG_2
 
 #include "sbp_constructor.h"
@@ -68,6 +69,7 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
   HashMap<std::string, Algorithm::SbpNode<SbpSignature>*> op_name2sbp_node;
   // sbp graph
   Algorithm::SbpGraph<SbpSignature> sbp_graph;
+
   // OpGraph op_graph(*job);
   InitializeSbpGraph(op_graph, op_name2sbp_node, op_name2is_fixed, sbp_graph);
 
@@ -84,7 +86,7 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
   InitializeComputationCost(op_graph, op_name2sbp_node, op_name2is_fixed);
 
   // Random Initial Sbp Signatures
-  sbp_graph.RandomSbpSignature();
+  //  sbp_graph.RandomSbpSignature();
   StealSbpFromOpGraph(op_graph, op_name2sbp_node, op_name2is_fixed);
 
   // Find proper sbp strategy
@@ -107,7 +109,9 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
 
 #ifdef PRINT_GRAPH_
   // Now we have the sbp graph.
-   sbp_graph.PrintGraph();
+  //   sbp_graph.PrintGraph();
+  sbp_graph.PrintGraph();
+  sbp_graph.PrintSbpSigs();
 //  std::cout << sbp_graph.NextId << std::endl;
 #endif  // PRINT_GRAPH_
 }
@@ -162,7 +166,9 @@ void SbpConstructor::InitializeSbpGraph(
     // if this op node is mirrored, skip it.
     // generate sbp node in cost model and link it with corresponding op node
     if (!op_name2is_fixed[op_node->op().op_name()]) {
-      op_name2sbp_node[op_node->op().op_name()] = sbp_graph.GenerateNode();
+      op_name2sbp_node[op_node->op().op_name()] = sbp_graph.GenerateNode(op_node->op().op_name());
+    } else {
+      printf("fixed: %s\n", op_node->op().op_name().c_str());
     }
   });
   // Initialize sbp edges
@@ -227,6 +233,35 @@ double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_paral
 }
 
 }  // namespace
+
+bool endsWith(std::string const& value, std::string const& ending) {
+  if (ending.size() > value.size()) return false;
+  return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+bool contains(std::string const& value, std::string const& finding) {
+  return value.find(finding) != std::string::npos;
+}
+
+double ComputationCostFunction(double cost, const SbpParallel& sbp_producer,
+                               const SbpParallel& sbp_consumer, const std::string& start_op_name,
+                               const std::string& end_op_name) {
+  if (endsWith(start_op_name, "weight")
+      && (contains(start_op_name, "branch") || contains(start_op_name, "fc1001"))
+      && !sbp_producer.has_broadcast_parallel()) {
+    //    puts("TRIGGERED");
+    return cost + 1e39;
+  }
+
+  if (endsWith(end_op_name, "weight")
+      && (contains(end_op_name, "branch") || contains(end_op_name, "fc1001"))
+      && !sbp_consumer.has_broadcast_parallel()) {
+    //    puts("TRIGGERED");
+    return cost + 1e39;
+  }
+
+  return cost;
+}
 
 // Should customize a function to compute computation cost for each kind of op
 // compute computation cost
@@ -321,8 +356,11 @@ void SbpConstructor::InitializeCopyCost(
           // TODO: print to error log
           if (edge_found == NULL) std::cout << "SbpEdge not found!" << std::endl;
 
-          edge_found->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
-              sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
+          edge_found->Cost[sbp_id_producer][sbp_id_consumer] += ComputationCostFunction(
+              ComputCopyCostBetweenTwoSbpParallel(sbp_producer, sbp_consumer, logical_blob_desc,
+                                                  parallel_desc, is_same_sbp),
+              sbp_producer, sbp_consumer, edge_found->StartNode->op_name,
+              edge_found->EndNode->op_name);
 
 #ifdef TEST_DEBUG_
           // test debug
@@ -355,9 +393,24 @@ void SbpConstructor::InitializeComputationCost(
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
       return op_node->LogicalBlobDesc4Lbi(lbi);
     };
+    double matmul_ratio = 1.0;
+    if (op_node->op().op_name().find("Resnet-fc1001-matmul_grad_b") != std::string::npos) {
+      std::cout << "sbp_list_size: " << sbp_node->SbpSignatureList.size() << std::endl;
+    }
     for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
+      //        std::cout << "MATMUL:"
+      //                  << CHECK_JUST(op_node->op().GetComputeComplexity(
+      //                         sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4bn,
+      //                         parallel_desc))
+      //                  << std::endl;
+      if (op_node->op().op_name().find("Resnet-fc1001-matmul_grad_b") != std::string::npos) {
+        std::cout << "id: " << sbp_id << ' '
+                  << CHECK_JUST(op_node->op().GetComputeComplexity(
+                         sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4bn, parallel_desc))
+                  << std::endl;
+      }
       sbp_node->Cost[sbp_id] =
-          CostRatio
+          (op_node->op().op_name().find("matmul") != std::string::npos ? matmul_ratio : CostRatio)
           * CHECK_JUST(op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
                                                           logical_blob_desc4bn, parallel_desc));
     }

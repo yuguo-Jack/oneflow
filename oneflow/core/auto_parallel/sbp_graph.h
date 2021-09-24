@@ -63,7 +63,7 @@ class SbpGraph {
   double ComputeCost();
 
   // Generate a node
-  SbpNode<SbpSignature> *GenerateNode();
+  SbpNode<SbpSignature> *GenerateNode(std::string op_name);
 
   // Remove a node from nodelist
   void RemoveFromNodeList(SbpNode<SbpSignature> *this_node);
@@ -125,11 +125,12 @@ namespace Algorithm {
 
 // Generate a node
 template<class SbpSignature>
-SbpNode<SbpSignature> *SbpGraph<SbpSignature>::GenerateNode() {
+SbpNode<SbpSignature> *SbpGraph<SbpSignature>::GenerateNode(std::string op_name) {
   SbpNode<SbpSignature> *this_node = new SbpNode<SbpSignature>();
   NodeList.emplace_back(this_node);
   this_node->id = NextId++;
   this_node->NodeListId = NodeList.size() - 1;
+  this_node->op_name = op_name;
   return this_node;
 }
 
@@ -185,6 +186,7 @@ double SbpGraph<SbpSignature>::ComputeCost() {
 
     GraphCost += this_node->Cost[this_id];
     for (const auto &edge_out : this_node->EdgesOut) {
+//        printf(" -> %lf\n", edge_out->Cost[this_id][edge_out->EndNode->FinalSbpSignatureId])
       GraphCost += edge_out->Cost[this_id][edge_out->EndNode->FinalSbpSignatureId];
     }
   }
@@ -586,9 +588,17 @@ void PrintNode(SbpNode<SbpSignature> *this_node) {
   if (!this_node->HalfNode.empty())
     printf("(%d, %d) ", this_node->HalfNode[0]->id, this_node->HalfNode[1]->id);
 
-  printf("%d -> ", this_node->id);
+  printf("%s -> ", this_node->op_name.c_str());
 
-  for (const auto &edge_out : this_node->EdgesOut) { printf("%d, ", edge_out->EndNode->id); }
+  for (const auto &edge_out : this_node->EdgesOut) { printf("%s, ", edge_out->EndNode->op_name.c_str()); }
+  puts("");
+  for (const auto &edge_out : this_node->EdgesOut) {
+      if (edge_out->Cost[this_node->FinalSbpSignatureId][edge_out->EndNode->FinalSbpSignatureId] > 1e6)
+      printf("%s -> %s: %f\n",
+             this_node->op_name.c_str(),
+             edge_out->EndNode->op_name.c_str(),
+             edge_out->Cost[this_node->FinalSbpSignatureId][edge_out->EndNode->FinalSbpSignatureId]);
+  }
   printf("\n");
 }
 
@@ -635,10 +645,10 @@ void SbpGraph<SbpSignature>::PrintGraph() {
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::PrintSbpSigs() {
   printf("**********Sbp Signatures***********\n");
-  for (const auto &this_node : OriginalNodeList) {
-    printf("%d (Sbp: %d)\n", this_node->id,
-           this_node->SbpSignatureList[this_node->FinalSbpSignatureId]->id);
-  }
+//  for (const auto &this_node : OriginalNodeList) {
+//    printf("%d (Sbp: %d)\n", this_node->id,
+//           this_node->SbpSignatureList[this_node->FinalSbpSignatureId]->id);
+//  }
   printf("|*********************************|\n");
 }
 

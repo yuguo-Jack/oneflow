@@ -43,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/utils.hpp"
 
 namespace std {
 
@@ -77,6 +78,13 @@ void DoJobComplete(Job* job) {
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(op_graph, *job);
 #endif
+//#ifdef DEBUG_AOHAN
+//   OpGraph op_graph(*job);
+//   SbpConstructor sbp_constructor;
+//   sbp_constructor.printOpGraph(op_graph);
+//#endif
+  OpGraph op_graph2(*job);
+  op_graph2.PrintSbp(*job);
   JobCompleter().InsertIdentity(job);
 }
 

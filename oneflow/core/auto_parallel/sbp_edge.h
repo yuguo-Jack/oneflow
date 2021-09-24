@@ -226,6 +226,13 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
   MinCost = StartNode->EvalNbhCost() + EndNode->EvalNbhCost() - Cost[MinSbpStart][MinSbpEnd];
   OrgCost = MinCost;
 
+
+    if (StartNode->op_name.find("System-AutoTick-Prepend-DeviceTick_661") != std::string::npos &&
+        EndNode->op_name.find("Resnet-res5_0_branch1-weight") != std::string::npos
+        ) {
+//        printf("TARGET\n");
+    }
+
   // pre-compute and store the Current Cost for EndNode.
   std::vector<double> EndNodeCurrCost(EndNode->Cost.size());
   for (int32_t sbp_end = 0; sbp_end < Cost[0].size(); sbp_end++) {
@@ -243,7 +250,14 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
       // compute Current Cost for Neighborhood of edge
       EndNode->FinalSbpSignatureId = sbp_end;
       CurrCost = StartNodeCurrCost + EndNodeCurrCost[sbp_end] + Cost[sbp_start][sbp_end];
-      // Find the minimum current cost
+
+        if (StartNode->op_name.find("Resnet-res5_0_branch1-weight") != std::string::npos &&
+            EndNode->op_name.find("Resnet-res5_0_branch1") != std::string::npos
+            ) {
+//            printf("TARGET: %f %f\n", CurrCost, Cost[sbp_start][sbp_end]);
+        }
+
+        // Find the minimum current cost
       if (CurrCost < MinCost) {
         MinCost = CurrCost;
         MinSbpStart = sbp_start;
@@ -251,6 +265,11 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
       }
     }
   }
+  if (StartNode->op_name.find("Resnet-res5_0_branch1-weight") != std::string::npos &&
+        EndNode->op_name.find("Resnet-res5_0_branch1") != std::string::npos
+        ) {
+        printf("TARGET: %f\n", CurrCost);
+    }
   StartNode->FinalSbpSignatureId = MinSbpStart;
   EndNode->FinalSbpSignatureId = MinSbpEnd;
   return MinCost - OrgCost;

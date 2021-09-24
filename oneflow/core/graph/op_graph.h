@@ -61,6 +61,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   friend class OpGraph;
   friend class OpEdge;
   friend class SbpConstructor;
+  friend class AutoParallelSolver;
   // Getters
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
 
@@ -185,9 +186,11 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpBatchAxisLbi(Job* job) const;
 
   Maybe<void> Init(const Job& job);
+  Maybe<void> PrintSbp(const Job& job) const;
 
  private:
   friend class SbpConstructor;
+  friend class AutoParallelSolver;
 
   void InitNodes(const Job& job);
   void InitEdges();

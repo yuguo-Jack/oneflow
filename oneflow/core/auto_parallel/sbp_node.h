@@ -72,6 +72,8 @@ class SbpNode {
   // Cost[sbp] is Computation Cost when using SbpSignatureList[sbp]
   std::vector<double> Cost;
 
+  std::string op_name;
+
 #ifdef DEBUG_ALGORITHM_
 
   // original edge out
