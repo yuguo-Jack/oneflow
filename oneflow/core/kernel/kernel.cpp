@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 
-#define OP_PROFILER_
+// #define OP_PROFILER_
 #ifdef OP_PROFILER_
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>

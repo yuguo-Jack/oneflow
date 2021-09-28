@@ -114,7 +114,11 @@ class SbpGraph {
   void DetectAdjustOverlap(double CostRatio);
 
   // Compute the minimum and maximum layer of each node in the graph
-  void ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+  int32_t ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+
+  // Find the mianstem of the sbp graph
+  void FindMainstem(int32_t max_MinLayer,
+                    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
 
  private:
   void DFS_AddNbhCost(std::vector<int32_t> &nbh_id2NodeListId,
@@ -694,7 +698,7 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
 
   for (const auto &this_node : NodeList) {
     int32_t lay_num = this_node->MinLayer;
-    if(lay_num < 0) continue;
+    if (lay_num < 0) continue;
     double comp_cost = this_node->GetMinCost();
     if (comp_cost > max_2_comp_cost[lay_num]) {
       if (comp_cost > max_1_comp_cost[lay_num]) {
@@ -725,11 +729,60 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
 
 // Compute the minimum and maximum layer of each node in the graph
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::ComputeLayer(
+int32_t SbpGraph<SbpSignature>::ComputeLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
   for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->GetMinLayer(op_name2sbp_node); }
+  int32_t max_MinLayer = -1;
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    if (max_MinLayer < this_node->MinLayer) { max_MinLayer = this_node->MinLayer; }
+  }
   for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->SpreadMaxLayer(op_name2sbp_node); }
-  for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->LiftMaxLayer(); }
+  for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->LiftMaxLayer(max_MinLayer); }
+  return max_MinLayer;
+}
+
+// Find the mianstem of the sbp graph
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::FindMainstem(
+    int32_t max_MinLayer,
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  // Summerize cost for each layer, on the mainstem or tributaries
+  std::vector<double> mainstem_cost(max_MinLayer + 1, 0);
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    mainstem_cost[this_node->MinLayer] += this_node->GetMinCost();
+  }
+  // Decide mainstems
+  double acc_cost = 0;
+  // All the nodes with MinLayer>=mainstem_end_id would be considerd as mainstems
+  int32_t mainstem_end_id;
+  for (int32_t layer_id = max_MinLayer; layer_id >= 0; layer_id--) {
+    acc_cost += mainstem_cost[layer_id];
+    if (acc_cost > 0.5 * wait_time) {
+      mainstem_end_id = layer_id;
+      break;
+    }
+  }
+  // test debug
+  std::cout << "Mainstem end id: " << mainstem_end_id << std::endl;
+  // Find out all the nodes on the mainstem.
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    if (this_node->MinLayer >= mainstem_end_id) this_node->SpreadMainstem(op_name2sbp_node);
+  }
+  // Summerize cost for each layer on the mainstem, store it to avoid substraction of large values.
+  mainstem_cost.assign(max_MinLayer + 1, 0);
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    if (this_node->IfMainstem) mainstem_cost[this_node->MinLayer] += this_node->GetMinCost();
+  }
+  // Accumulate the cost from the consumer to the end, not including itself
+  std::vector<double> acc_mainstem_cost(max_MinLayer + 1, 0);
+  for (int32_t layer_id = max_MinLayer; layer_id > 0; layer_id--) {
+    acc_mainstem_cost[layer_id - 1] = acc_mainstem_cost[layer_id] + mainstem_cost[layer_id];
+  }
+  // test debug
+  for (int32_t layer_id = 0; layer_id <= max_MinLayer; layer_id++) {
+    std::cout << "layer: " << layer_id << ", cost: " << mainstem_cost[layer_id]
+              << ", accumulate cost: " << acc_mainstem_cost[layer_id] << std::endl;
+  }
 }
 
 #ifdef RANDOM_GENERATOR_

@@ -26,6 +26,11 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "algorithm_util.h"
 
+#define ms_1 1e11
+#define us_1 1e8
+#define s_1 1e14
+#define wait_time 1.65e11
+
 namespace Algorithm {
 
 template<class SbpSignature>
@@ -83,6 +88,8 @@ class SbpNode {
   // MaxLayer is the maximum layer number without slowing down the whole process of the graph.
   // producer.MaxLayer < this_node.MinLayer <= this_node.MaxLayer < consumer.MinLayer
   int32_t MinLayer = -1, MaxLayer = -1;
+
+  bool IfMainstem = false;
 
 #ifdef DEBUG_ALGORITHM_
 
@@ -171,9 +178,15 @@ class SbpNode {
   void DropMaxLayer(int32_t upper_bound);
   // Set MaxLayer = MinLayer if this node does not have any consumer
   void LiftMaxLayer();
+  // Set MaxLayer = upper_bound if this node does not have any consumer
+  void LiftMaxLayer(int32_t upper_bound);
 
   // Get the minimum element in Cost
   double GetMinCost();
+
+  // Judge if this node is on the mainstem
+  // If so, judge it for its producer/upstream nodes
+  void SpreadMainstem(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
 
 };  // class SbpNode
 }  // namespace Algorithm
@@ -634,9 +647,20 @@ void SbpNode<SbpSignature>::DropMaxLayer(int32_t upper_bound) {
   if (upper_bound < MaxLayer || MaxLayer < 0) MaxLayer = upper_bound;
 }
 // Set MaxLayer = MinLayer if this node does not have any consumer
+// This is the end of the whole graph
+// We could also set it to be the maximum of the MinLayer in the graph. (It should be the same.)
 template<class SbpSignature>
 void SbpNode<SbpSignature>::LiftMaxLayer() {
   if (MaxLayer < MinLayer) MaxLayer = MinLayer;
+}
+// Set MaxLayer = upper_bound if this node does not have any consumer
+template<class SbpSignature>
+void SbpNode<SbpSignature>::LiftMaxLayer(int32_t upper_bound) {
+  if (MaxLayer < MinLayer) {
+    // test debug
+    std::cout << "I am at the top!" << std::endl;
+    MaxLayer = upper_bound;
+  }
 }
 
 // Get the minimum element in Cost
@@ -646,6 +670,30 @@ double SbpNode<SbpSignature>::GetMinCost() {
   CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_comp_cost
   return *std::min_element(Cost.begin(), Cost.end());
+}
+
+// Judge if this node is on the mainstem
+// If so, judge it for its producer/upstream nodes
+template<class SbpSignature>
+void SbpNode<SbpSignature>::SpreadMainstem(
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  // Skip it if this node is already judged.
+  if (IfMainstem) return;
+  // Skip sbp proxy. This is before we have proxy.
+  if (MinLayer < 0) return;
+  IfMainstem = true;
+  // If I am in the mainstem, then all the children with (MinLayer >= my layer id - 1) would be
+  // considered as in the mainstem
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    if (this_edge->StartNode->MinLayer >= MinLayer - 1)
+      this_edge->StartNode->SpreadMainstem(op_name2sbp_node);
+  }
+  for (const auto &ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    if (it != op_name2sbp_node.end() && it->second->MinLayer >= MinLayer - 1) {
+      it->second->SpreadMainstem(op_name2sbp_node);
+    }
+  }
 }
 
 }  // namespace Algorithm

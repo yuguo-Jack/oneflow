@@ -91,7 +91,7 @@ Maybe<double> VariableOp::GetComputeComplexity(
   // if (ifs.is_open()) {
   //   ifs >> CostRatio;
   // } else
-  CostRatio = 1.0;
+  CostRatio = 1e-3;
   // std::cout << "variable Cost Ratio: " << CostRatio << std::endl;
   return CostRatio
          * JUST(Operator::GetComputeComplexity(sbp_signature, logical_blob_desc4bn, parallel_desc));

@@ -73,13 +73,16 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
   // OpGraph op_graph(*job);
   InitializeSbpGraph(op_graph, op_name2is_fixed);
   // Compute layer number for each node
-  sbp_graph.ComputeLayer(op_name2sbp_node);
+  int32_t max_MinLayer = sbp_graph.ComputeLayer(op_name2sbp_node);
 
   // Initialize sbp signature candidate list for each node
   InferLogicalBlobDesc(op_graph, job, op_name2is_fixed);
 
   // Compute computation cost for all sbp nodes
   InitializeComputationCost(op_graph, op_name2is_fixed);
+
+  // Accumulate cost on the mainstem after initializing computation cost
+  sbp_graph.FindMainstem(max_MinLayer, op_name2sbp_node);
 
 #ifdef USE_SBP_COLLECTOR_
   // Load logical blobs on all sbp edges.
@@ -786,7 +789,7 @@ void SbpConstructor::PrintGraph(OpGraph& op_graph) {
       const Algorithm::SbpNode<SbpSignature>* sbp_node = it->second;
       std::cout << "Computation Cost: " << sbp_node->Cost[sbp_node->FinalSbpSignatureId];
       std::cout << ", Min Layer: " << sbp_node->MinLayer << ", Max Layer: " << sbp_node->MaxLayer
-                << std::endl;
+                << ", in mainstem: " << sbp_node->IfMainstem << std::endl;
     }
     // Print upstream operators
     for (const auto& ibn : op_node->op().input_bns()) {
