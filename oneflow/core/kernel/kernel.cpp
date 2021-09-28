@@ -17,6 +17,15 @@ limitations under the License.
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 
+#define OP_PROFILER_
+#ifdef OP_PROFILER_
+#include <nvtx3/nvToolsExt.h>
+#include <sys/syscall.h>
+#include <iostream>
+#include <cuda_profiler_api.h>
+#include "oneflow/core/device/cuda_util.h"
+#endif  // OP_PROFILER_
+
 namespace oneflow {
 
 namespace {
@@ -105,12 +114,21 @@ void Kernel::SetOutputBlobConsumerAccessChecker(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+#ifdef OP_PROFILER_
+  nvtxRangeId_t range{};
+  if (this->op_conf().device_tag() == "gpu") {
+    range = nvtxRangeStartA(this->op_conf().name().data());
+  }
+#endif  // OP_PROFILER_
   SetOutputBlobProducerInferAccessChecker(BnInOp2Blob);
   ForwardHeader(ctx, BnInOp2Blob);
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
   SetOutputBlobConsumerAccessChecker(BnInOp2Blob);
+#ifdef OP_PROFILER_
+  if (this->op_conf().device_tag() == "gpu") { nvtxRangeEnd(range); }
+#endif  // OP_PROFILER_
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
