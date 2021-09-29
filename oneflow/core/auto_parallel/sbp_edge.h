@@ -58,6 +58,9 @@ class SbpEdge {
   // example 2: type 2 EdgeList contain three edges:
   //        StartNode -> EndNode, EndNode -> StartNode, StartNode -> EndNode;
   std::vector<SbpEdge<SbpSignature> *> EdgeList;
+  // Time waiting for other gpus. pthread_cond_wait
+  double WaitTime = -1.0;
+
 
  private:
   // Mininum and maximum cost would not be changed by eliminations, which will generate new edges.

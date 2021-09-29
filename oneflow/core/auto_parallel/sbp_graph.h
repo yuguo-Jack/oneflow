@@ -116,7 +116,7 @@ class SbpGraph {
   // Compute the minimum and maximum layer of each node in the graph
   int32_t ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
 
-  // Find the mianstem of the sbp graph
+  // Find the mianstem of the sbp graph, then reduce the wait time for tributaries
   void FindMainstem(int32_t max_MinLayer,
                     oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
 
@@ -741,7 +741,7 @@ int32_t SbpGraph<SbpSignature>::ComputeLayer(
   return max_MinLayer;
 }
 
-// Find the mianstem of the sbp graph
+// Find the mianstem of the sbp graph, then reduce the wait time for tributaries
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::FindMainstem(
     int32_t max_MinLayer,
@@ -782,6 +782,16 @@ void SbpGraph<SbpSignature>::FindMainstem(
   for (int32_t layer_id = 0; layer_id <= max_MinLayer; layer_id++) {
     std::cout << "layer: " << layer_id << ", cost: " << mainstem_cost[layer_id]
               << ", accumulate cost: " << acc_mainstem_cost[layer_id] << std::endl;
+  }
+  // Clear counter for each sbp node
+  for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->counter = 0; }
+  // Count the number of consumers and downstream nodes
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    this_node->RaiseConsumerNum(op_name2sbp_node);
+  }
+  // Reduce the wait time for tributaries
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    this_node->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node);
   }
 }
 

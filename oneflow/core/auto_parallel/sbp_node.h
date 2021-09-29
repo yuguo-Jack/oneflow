@@ -88,8 +88,12 @@ class SbpNode {
   // MaxLayer is the maximum layer number without slowing down the whole process of the graph.
   // producer.MaxLayer < this_node.MinLayer <= this_node.MaxLayer < consumer.MinLayer
   int32_t MinLayer = -1, MaxLayer = -1;
-
+  // Whether we are on the mainstem
   bool IfMainstem = false;
+  // A counter buffer for topological traversal or something else
+  int32_t counter = 0;
+  // Accumulate mainstem cost from consumer to the end
+  double AccMainstemCost = -1.0;
 
 #ifdef DEBUG_ALGORITHM_
 
@@ -187,6 +191,15 @@ class SbpNode {
   // Judge if this node is on the mainstem
   // If so, judge it for its producer/upstream nodes
   void SpreadMainstem(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+  // Count consumers and any downstream nodes defined by control edges
+  // for producers or upstream nodes
+  void RaiseConsumerNum(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+  // Compute the minimal available wait time for producers or upstream nodes
+  void SpreadAvailWaitTime(
+      std::vector<double> &mainstem_cost, std::vector<double> &acc_mainstem_cost,
+      oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+  // Drop down the available wait time with the minimum cost from downstreams
+  void DropAvailWaitTime(double curr_mainstem_cost);
 
 };  // class SbpNode
 }  // namespace Algorithm
@@ -694,6 +707,95 @@ void SbpNode<SbpSignature>::SpreadMainstem(
       it->second->SpreadMainstem(op_name2sbp_node);
     }
   }
+}
+
+// Count consumers and any downstream nodes defined by control edges
+template<class SbpSignature>
+void SbpNode<SbpSignature>::RaiseConsumerNum(
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  // Should clear it before running.
+  // skip the proxy nodes and the sources
+  if (MinLayer <= 0) return;
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) { this_edge->StartNode->counter++; }
+  for (const auto &ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    if (it != op_name2sbp_node.end()) { it->second->counter++; }
+  }
+}
+
+// Compute the minimal available wait time for producers or upstream nodes
+template<class SbpSignature>
+void SbpNode<SbpSignature>::SpreadAvailWaitTime(
+    std::vector<double> &mainstem_cost, std::vector<double> &acc_mainstem_cost,
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  // skip the proxy nodes and the sources
+  if (MinLayer <= 0) return;
+  // Have not finished spreading for consumers or downstream nodes or already visited.
+  if (counter) return;
+  if (IfMainstem) {
+    // Nodes on the mianstem does not have any accumulate cost
+    AccMainstemCost = 0;
+  } else {
+    if (AccMainstemCost < 0) {
+      // Do not have any consumer or downstream node
+      AccMainstemCost = acc_mainstem_cost[MinLayer - 1];
+    } else {
+      // Add the mainstem cost at this layer
+      AccMainstemCost += mainstem_cost[MinLayer];
+    }
+  }
+
+  // Reduce the wait time for EdgesIn, put the rest of the mainstem cost in the producers
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    CHECK(this_edge->WaitTime < 0)
+        << "Double assgin values into WaitTime of this edge!" << std::endl;
+    SbpNode<SbpSignature> *producer = this_edge->StartNode;
+    // Accumulate the cost from the start node to this node
+    double curr_mainstem_cost =
+        AccMainstemCost + acc_mainstem_cost[producer->MinLayer] - acc_mainstem_cost[MinLayer - 1];
+    if (curr_mainstem_cost >= wait_time) {
+      // Remain cost in the mainstem is able to cover all the wait time
+      this_edge->WaitTime = 0.0;
+      curr_mainstem_cost -= wait_time;
+    } else {
+      // Remain cost in the mainstem can only cover partial wait time
+      this_edge->WaitTime = wait_time - curr_mainstem_cost;
+      curr_mainstem_cost = 0.0;
+    }
+    // Do not inherit mainstem cost for nodes on the mainstem
+    if (!producer->IfMainstem) {
+      // Inherit the minimal of the mainstem cost from consumers
+      producer->DropAvailWaitTime(curr_mainstem_cost);
+    }
+    producer->counter--;
+    producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node);
+  }
+  // Put the rest the mainstem cost in the upstream nodes.
+  for (const auto &ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    if (it != op_name2sbp_node.end()) {
+      SbpNode<SbpSignature> *producer = it->second;
+      // Do not inherit mainstem cost for nodes on the mainstem
+      if (!producer->IfMainstem) {
+        // Accumulate the cost from the start node to this node
+        double curr_mainstem_cost = AccMainstemCost + acc_mainstem_cost[producer->MinLayer]
+                                    - acc_mainstem_cost[MinLayer - 1];
+        // Inherit the minimal of the mainstem cost from consumers
+        producer->DropAvailWaitTime(curr_mainstem_cost);
+      }
+      producer->counter--;
+      producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node);
+    }
+  }
+  // Set counter to be -1, do not visit it again.
+  counter--;
+}
+
+// Drop down the available wait time with the minimum cost from downstreams
+template<class SbpSignature>
+void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_mainstem_cost) {
+  if (AccMainstemCost < 0.0 || AccMainstemCost > curr_mainstem_cost)
+    AccMainstemCost = curr_mainstem_cost;
 }
 
 }  // namespace Algorithm
