@@ -273,7 +273,7 @@ void SbpCollector::ProxySbpCandidate(
       edge_found->UnloadLbi(lbi);
       // Do not clip this edge. Save it for wait time.
       // clip this edge if it no longer carrys any blob
-      // if (edge_found->EmptyLbi()) sbp_graph.ClipEdge(edge_found);
+      if (edge_found->EmptyLbi()&&edge_found->WaitTime<=0.0) sbp_graph.ClipEdge(edge_found);
     }
 
     // Todo: coding

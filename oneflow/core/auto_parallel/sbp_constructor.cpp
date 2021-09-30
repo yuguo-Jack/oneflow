@@ -219,8 +219,7 @@ void SbpConstructor::InitializeCopyCost(OpGraph& op_graph,
     // skip it if fixed
     if (op_name2is_fixed[op_node->op().op_name()]) return;
     // get corresponding sbp node consumer
-    Algorithm::SbpNode<SbpSignature>* sbp_node_consumer =
-        op_name2sbp_node[op_node->op().op_name()];
+    Algorithm::SbpNode<SbpSignature>* sbp_node_consumer = op_name2sbp_node[op_node->op().op_name()];
     // Initialize copy cost between two nodes
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // producer sbp node
@@ -237,31 +236,31 @@ void SbpConstructor::InitializeCopyCost(OpGraph& op_graph,
         sbp_edge->Cost[sbp_id_producer].resize(consumer_sbp_size, 0);
       }
     }
-
-    sbp_node_consumer->InitializeCopyCost(true);
-    /*
-    // Assemble copy cost between two nodes
-    // look through input blobs
-    for (const std::string& ibn : op_node->op().input_bns()) {
-      // Each input blob has one source op node.
-      OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
-      // Skip this node because it is not in SbpGraph. However, our final goal is adding every node
-      // into SbpGraph.
-      if (op_name2is_fixed[producer->op().op_name()]) continue;
-      // producer sbp node
-      const auto* sbp_node_producer = op_name2sbp_node[producer->op().op_name()];
-      SbpEdge<SbpSignature>* edge_found =
-          FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
-      // We do not clip edges now
-      // CHECK(edge_found != NULL) << "Can not find edges while initailizing copy cost!" << std::endl;
-      // Edge is clipped. Skip it.
-      if (edge_found == NULL) { continue; }
-
-      edge_found->InitializeCopyCost(ibn, true);
+    // Find all those cases with wait time
+    // Do not skip edges carrying no lbi
+    sbp_node_consumer->InitializeCopyCost(false);
+    for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
+      // skip it if proxy
+      if (!sbp_edge->StartNode->op_node) continue;
+      // Reset Wait time
+      for (int32_t sbp_id_producer = 0; sbp_id_producer < sbp_edge->Cost.size();
+           sbp_id_producer++) {
+        for (int32_t sbp_id_consumer = 0; sbp_id_consumer < sbp_edge->Cost[sbp_id_producer].size();
+             sbp_id_consumer++) {
+          // If transferring between devices, we need to add wait time.
+          if (sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] > 0.0) {
+            sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] = sbp_edge->WaitTime;
+          }
+        }
+      }
+      // test debug
+      std::cout << sbp_edge->StartNode->op_node->op().op_name() << " to "
+                << sbp_edge->EndNode->op_node->op().op_name()
+                << " Wait time: " << sbp_edge->WaitTime << std::endl;
     }
-    */
 
-
+    // Re-compute the costs, skip edges carrying no lbi
+    sbp_node_consumer->InitializeCopyCost(true);
   });
 }
 
