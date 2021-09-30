@@ -357,21 +357,6 @@ double SbpEdge<SbpSignature>::GetMaxCost() {
 // Detect and spread overlaps for this edge and StartNode if it is a proxy of lbi.
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::DetectSpreadOverlap(double overlap_ratio_) {
-  // test debug
-  std::cout << "StartNode: ";
-  if (StartNode->op_node) {
-    std::cout << StartNode->op_node->op().op_name();
-  } else {
-    std::cout << "proxy";
-  }
-  std::cout << " to ";
-  if (EndNode->op_node) {
-    std::cout << EndNode->op_node->op().op_name();
-  } else {
-    std::cout << "proxy";
-  }
-  std::cout << ", overlap ratio: " << overlap_ratio_ << std::endl;
-
   if (overlap_ratio_ < 1.0) {
     if (overlap_ratio_ < 0.0) overlap_ratio_ = 0.0;
 

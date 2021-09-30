@@ -681,17 +681,6 @@ Maybe<void> SbpConstructor::InferSbpSignature(
     *sbp_sig_list.mutable_sbp_signature(0) = *CHECK_JUST(op_.sbp_signature());
   }
 
-  // TODO: delete this
-  /*
-  if (op_.op_name().find("Return") != std::string::npos) {
-    std::cout << "op filter: " << op_.op_name() << std::endl;
-    std::cout << sbp_sig_conf.DebugString() << std::endl;
-    std::cout << "list: " << std::endl;
-    std::cout << sbp_sig_list.DebugString() << std::endl;
-    std::cout << "================\n";
-  }
-  */
-
   // filter out those sbp signatures who contain sbp signature configure from sbp signature list
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);

@@ -471,7 +471,6 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   for (int32_t step = NodeList.size(); step >= 0; step--) {
     CostRdc = 0;
     for (SbpNode<SbpSignature> *this_node : NodeList) {
-      std::cout << "Greedy Searching for node " << this_node->id << std::endl;
       if (nbh_num <= 1) {
         // Greedy strategy on nodes
         nbh_id2NodeListId[0] = this_node->NodeListId;
@@ -504,8 +503,6 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
     }
     if (CostRdc == 0) break;
     TtlCostRdc += CostRdc;
-    // test debug
-    std::cout << "Cost Reduce at this round: " << CostRdc << std::endl;
   }
   return TtlCostRdc;
 }
@@ -625,7 +622,13 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t> &nbh_id2No
     NodeList[nbh_id2NodeListId[nbh_id]]->FinalSbpSignatureId = MinSbpSignatureId[nbh_id];
   }
 
-  return MinCost - OrgCost;
+  if(MinCost < OrgCost){
+    // Directly return (MinCost - OrgCost) might have floating point error up to 3e-16
+    // For example, OrgCost: 2.22507e+06, MinCost: 2.22507e+06, diff: -4.65661e-10, relative diff:2.09279e-16
+    // Therefore, we use a threshold to filter out such fake true detection to avoid unlimited search.
+    if((OrgCost - MinCost)/OrgCost > 3e-15) return MinCost - OrgCost;
+  }
+  return 0.0;
 }
 
 // Select and Merge two nodes

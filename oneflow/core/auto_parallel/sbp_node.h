@@ -503,11 +503,11 @@ template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t> &NodeListId2nbh_id,
                                             std::vector<int32_t> &nbh_id2order) {
   // check if this node is in the node list
-  CHECK(NodeListId >= 0) << "Compute out cost for a node out of the node list" << std::endl;
+  CHECK(NodeListId >= 0) << "Compute in cost for a node out of the node list" << std::endl;
   // check if the node is in the neighborhood
   auto this_it = NodeListId2nbh_id.find(NodeListId);
   CHECK(this_it != NodeListId2nbh_id.end())
-      << "Compute out cost for a node out of the neighborhood" << std::endl;
+      << "Compute in cost for a node out of the neighborhood" << std::endl;
   // Compute the minimum cost between this node and adjacent nodes with a lower order
   int32_t order = nbh_id2order[this_it->second];
   double CurrCost = 0;
@@ -669,11 +669,7 @@ void SbpNode<SbpSignature>::LiftMaxLayer() {
 // Set MaxLayer = upper_bound if this node does not have any consumer
 template<class SbpSignature>
 void SbpNode<SbpSignature>::LiftMaxLayer(int32_t upper_bound) {
-  if (MaxLayer < MinLayer) {
-    // test debug
-    std::cout << "I am at the top!" << std::endl;
-    MaxLayer = upper_bound;
-  }
+  if (MaxLayer < MinLayer) { MaxLayer = upper_bound; }
 }
 
 // Get the minimum element in Cost
