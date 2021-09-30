@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/operator/normal_model_update_op.h"
 #include <fstream>
 #include "sbp_collector.h"
+#include "sbp_util.h"
 
 namespace oneflow {
 
@@ -118,16 +119,6 @@ class SbpConstructor {
   void PrintGraph(OpGraph& op_graph);
 };
 
-// compute copy cost
-double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_parallel,
-                                           const SbpParallel& consumer_sbp_parallel,
-                                           const BlobDesc& logical_blob_desc,
-                                           const ParallelDesc& parallel_desc, bool is_same_sbp);
-
-// Find sbp edge between two given sbp nodes
-Algorithm::SbpEdge<SbpSignature>* FindEdgeBetweenNodes(
-    const Algorithm::SbpNode<SbpSignature>* sbp_node_producer,
-    const Algorithm::SbpNode<SbpSignature>* sbp_node_consumer);
 
 }  // namespace oneflow
 

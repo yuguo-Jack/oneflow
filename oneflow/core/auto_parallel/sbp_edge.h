@@ -20,6 +20,7 @@ limitations under the License.
 #include "sbp_node.h"
 #include <assert.h>
 #include <algorithm>
+#include "sbp_util.h"
 
 #ifdef USE_SBP_COLLECTOR_
 #include <unordered_set>
@@ -60,7 +61,6 @@ class SbpEdge {
   std::vector<SbpEdge<SbpSignature> *> EdgeList;
   // Time waiting for other gpus. pthread_cond_wait
   double WaitTime = -1.0;
-
 
  private:
   // Mininum and maximum cost would not be changed by eliminations, which will generate new edges.
@@ -138,6 +138,9 @@ class SbpEdge {
 
   // Adjust cost with overlaps
   void AdjustOverlapCost();
+
+  // Assemble copy cost
+  void InitializeCopyCost(const std::string &ibn, bool skip_unloaded_lbi);
 };
 }  // namespace Algorithm
 // function in cpp. Should be put in one file due to use of template
@@ -344,8 +347,8 @@ double SbpEdge<SbpSignature>::GetMaxCost() {
   // Compute the max_cost
   double max_cost = -1.0;
   for (int32_t i = 0; i < Cost.size(); i++) {
-    for (int32_t j = 0; j < Cost[i].size(); j++){
-      if(Cost[i][j] < 1e38 && Cost[i][j] > max_cost) max_cost = Cost[i][j];
+    for (int32_t j = 0; j < Cost[i].size(); j++) {
+      if (Cost[i][j] < 1e38 && Cost[i][j] > max_cost) max_cost = Cost[i][j];
     }
   }
   return max_cost;
@@ -396,6 +399,72 @@ void SbpEdge<SbpSignature>::AdjustOverlapCost() {
       if (Cost[i][j] > 0.0 && Cost[i][j] < 1e38) { Cost[i][j] = overlap_ratio * Cost[i][j]; }
     }
   }
+}
+
+// Assemble copy cost
+template<class SbpSignature>
+void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string &ibn, bool skip_unloaded_lbi) {
+  // In this part, we assemble the cost from nodes to nodes.
+  if (StartNode->op_node && EndNode->op_node) {
+    oneflow::OpNode *consumer = EndNode->op_node;
+
+    // Add copy cost for each blob
+    const oneflow::LogicalBlobId &lbi = consumer->op().BnInOp2Lbi(ibn);
+
+#ifdef USE_SBP_COLLECTOR_
+    // Check whether lbi is transferred by this edge
+    if (skip_unloaded_lbi && !SearchLbi(lbi)) return;
+#endif  // USE_SBP_COLLECTOR_
+    oneflow::OpNode *producer = StartNode->op_node;
+    const oneflow::ParallelDesc &parallel_desc = consumer->parallel_desc();
+
+    // Need to be careful, the logical blob description should be independent to current
+    // SbpParallel. Use producer or op_node?
+    const oneflow::BlobDesc &logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
+    const std::string &obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
+    const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
+    bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
+    int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
+
+    // look through sbp signature in producer
+    for (int32_t sbp_id_producer = 0; sbp_id_producer < StartNode->SbpSignatureList.size();
+         sbp_id_producer++) {
+      // get sbp parallel for a logical blob in producer
+      const auto producer_sbp_bn_in_op2sbp_parallel =
+          StartNode->SbpSignatureList[sbp_id_producer]->bn_in_op2sbp_parallel();
+      const oneflow::SbpParallel &sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
+
+      // look through sbp signature in consumer
+      for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
+        // get sbp parallel for a logical blob in consumer
+        const auto consumer_sbp_bn_in_op2sbp_parallel =
+            EndNode->SbpSignatureList[sbp_id_consumer]->bn_in_op2sbp_parallel();
+        const oneflow::SbpParallel &sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
+
+        // compute copy cost for a specific logical blob
+        Cost[sbp_id_producer][sbp_id_consumer] += oneflow::ComputCopyCostBetweenTwoSbpParallel(
+            sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
+      }
+    }
+  }
+}
+
+// Find sbp edge between two given sbp nodes
+template<class SbpSignature>
+SbpEdge<SbpSignature> *FindEdgeBetweenNodes(const SbpNode<SbpSignature> *sbp_node_producer,
+                                            const SbpNode<SbpSignature> *sbp_node_consumer) {
+  // Look through Edges for SbpEdge(sbp_node_producer->sbp_node_consumer)
+  // Might need to use HashMap for sbp_edge
+  if (sbp_node_producer->EdgesOut.size() > sbp_node_consumer->EdgesIn.size()) {
+    for (auto *sbp_edge : sbp_node_consumer->EdgesIn) {
+      if (sbp_edge->StartNode == sbp_node_producer) { return sbp_edge; }
+    }
+  } else {
+    for (auto *sbp_edge : sbp_node_producer->EdgesOut) {
+      if (sbp_edge->EndNode == sbp_node_consumer) { return sbp_edge; }
+    }
+  }
+  return NULL;
 }
 
 }  // namespace Algorithm

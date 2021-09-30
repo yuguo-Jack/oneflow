@@ -197,71 +197,6 @@ void SbpConstructor::InitializeSbpGraph(OpGraph& op_graph,
   });
 }
 
-namespace {
-
-// check whether the sbp_parallel is legal
-bool CheckSbpParallel(const SbpParallel& sbp_parallel) {
-  // Which checking should we use?
-  // return sbp_parallel.parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET;
-  return sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel()
-         || sbp_parallel.has_partial_sum_parallel();
-}
-
-}  // namespace
-
-// compute copy cost
-double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_parallel,
-                                           const SbpParallel& consumer_sbp_parallel,
-                                           const BlobDesc& logical_blob_desc,
-                                           const ParallelDesc& parallel_desc, bool is_same_sbp) {
-  // Checking here.
-  if (!(CheckSbpParallel(producer_sbp_parallel) && CheckSbpParallel(consumer_sbp_parallel))) {
-    // TODO: replace assert
-    std::cout << "Replace assert here!" << std::endl;
-    return GetMaxVal<float>();
-  }
-  // S->S, B->B, P->P
-  if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
-  // Will directly modify output blob of source op. Requiring data having same sbp_parallel
-  if (is_same_sbp) { return GetMaxVal<float>(); }
-  // Not supporting S->P, B->P for now. Actually yes for boxing op, but it does not work with some
-  // other ops.
-  if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
-  // B->S
-  if (producer_sbp_parallel.has_broadcast_parallel()) { return 0; }
-  double logical_blob_size =
-      logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
-  // has S
-  if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel()) {
-    if (consumer_sbp_parallel.has_split_parallel() && producer_sbp_parallel.has_split_parallel()) {
-      // S(0)->S(1), S(1)->S(0), etc.
-      return logical_blob_size;
-    } else {
-      // P->S, S->B
-      return logical_blob_size * parallel_desc.parallel_num();
-    }
-  }
-  // P->B (= p->S + S->B)
-  return 2 * logical_blob_size * parallel_desc.parallel_num();
-}
-
-// Find sbp edge between two given sbp nodes
-SbpEdge<SbpSignature>* FindEdgeBetweenNodes(const SbpNode<SbpSignature>* sbp_node_producer,
-                                            const SbpNode<SbpSignature>* sbp_node_consumer) {
-  // Look through Edges for SbpEdge(sbp_node_producer->sbp_node_consumer)
-  // Might need to use HashMap for sbp_edge
-  if (sbp_node_producer->EdgesOut.size() > sbp_node_consumer->EdgesIn.size()) {
-    for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
-      if (sbp_edge->StartNode == sbp_node_producer) { return sbp_edge; }
-    }
-  } else {
-    for (auto* sbp_edge : sbp_node_producer->EdgesOut) {
-      if (sbp_edge->EndNode == sbp_node_consumer) { return sbp_edge; }
-    }
-  }
-  return NULL;
-}
-
 // Should customize a function to compute computation cost for each kind of op
 // compute computation cost
 // deprecated
@@ -319,12 +254,8 @@ void SbpConstructor::InitializeCopyCost(OpGraph& op_graph,
       // if (op_node->op().op_name().find("Return") != std::string::npos) is_same_sbp = true;
       SbpEdge<SbpSignature>* edge_found =
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
-      // Edge is clipped. Skip it.
-      if (edge_found == NULL) {
-        // std::cout << "SbpEdge not found while computing copy cost from " << sbp_node_producer->id
-        // << " to " << sbp_node_consumer->id  << std::endl;
-        continue;
-      }
+      // We do not clip edges now
+      CHECK(edge_found != NULL) << "Can not find edges while initailizing copy cost!" << std::endl;
 
       // Add copy cost for each blob
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
@@ -362,6 +293,33 @@ void SbpConstructor::InitializeCopyCost(OpGraph& op_graph,
               sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
         }
       }
+      // test debug
+      // look through sbp signature in producer
+      std::vector<std::vector<double>> temp_cost(sbp_node_producer->SbpSignatureList.size());
+      for (int32_t sbp_id_producer = 0;
+           sbp_id_producer < sbp_node_producer->SbpSignatureList.size(); sbp_id_producer++) {
+        // look through sbp signature in consumer
+        temp_cost[sbp_id_producer].resize(consumer_sbp_size);
+        for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
+          temp_cost[sbp_id_producer][sbp_id_consumer] =
+              edge_found->Cost[sbp_id_producer][sbp_id_consumer];
+          edge_found->Cost[sbp_id_producer][sbp_id_consumer] = 0.0;
+        }
+      }
+
+      edge_found->InitializeCopyCost(ibn, true);
+      for (int32_t sbp_id_producer = 0;
+           sbp_id_producer < sbp_node_producer->SbpSignatureList.size(); sbp_id_producer++) {
+        // look through sbp signature in consumer
+        for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
+          std::cout << "id: (" << sbp_id_producer << ", " << sbp_id_consumer
+                    << "), Old: " << temp_cost[sbp_id_producer][sbp_id_consumer]
+                    << ", new: " << edge_found->Cost[sbp_id_producer][sbp_id_consumer] << ", diff: "
+                    << temp_cost[sbp_id_producer][sbp_id_consumer]
+                           - edge_found->Cost[sbp_id_producer][sbp_id_consumer]
+                    << std::endl;
+        }
+      }
     }
   });
 }
@@ -389,7 +347,7 @@ void SbpConstructor::LoadLbi2SbpEdge(OpGraph& op_graph,
       const auto* sbp_node_producer = op_name2sbp_node[producer->op().op_name()];
       // TODO: recode this
       SbpEdge<SbpSignature>* edge_found =
-          FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
+          Algorithm::FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
 #ifdef USE_SBP_COLLECTOR_
       // should use assert or CHECK process here, skip for speeding up for now
       // TODO: print to error log
@@ -789,9 +747,8 @@ void SbpConstructor::PrintGraph(OpGraph& op_graph) {
       const Algorithm::SbpNode<SbpSignature>* sbp_node = it->second;
       std::cout << "Computation Cost: " << sbp_node->Cost[sbp_node->FinalSbpSignatureId];
       std::cout << ", Min Layer: " << sbp_node->MinLayer << ", Max Layer: " << sbp_node->MaxLayer
-                << ", in mainstem: " << sbp_node->IfMainstem 
-                << ", Remain Cost: " << sbp_node->AccMainstemCost
-                << std::endl;
+                << ", in mainstem: " << sbp_node->IfMainstem
+                << ", Remain Cost: " << sbp_node->AccMainstemCost << std::endl;
     }
     // Print upstream operators
     for (const auto& ibn : op_node->op().input_bns()) {

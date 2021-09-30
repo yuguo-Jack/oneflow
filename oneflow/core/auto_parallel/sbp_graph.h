@@ -471,6 +471,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   for (int32_t step = NodeList.size(); step >= 0; step--) {
     CostRdc = 0;
     for (SbpNode<SbpSignature> *this_node : NodeList) {
+      std::cout << "Greedy Searching for node " << this_node->id << std::endl;
       if (nbh_num <= 1) {
         // Greedy strategy on nodes
         nbh_id2NodeListId[0] = this_node->NodeListId;
@@ -503,6 +504,8 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
     }
     if (CostRdc == 0) break;
     TtlCostRdc += CostRdc;
+    // test debug
+    std::cout << "Cost Reduce at this round: " << CostRdc << std::endl;
   }
   return TtlCostRdc;
 }

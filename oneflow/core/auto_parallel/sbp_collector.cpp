@@ -261,7 +261,7 @@ void SbpCollector::ProxySbpCandidate(
     // Build connection and compute copy cost between proxy and consumers
     InitializeCopyCostFromProxy2Consumer(sbp_proxy, consumer_bn2sbp_set, op_name2sbp_node);
 
-    // Unloading and maybe clipping
+    // Unloading
     for (const auto& consumer_bn_group : consumer_bn2sbp_set) {
       // consumer in cost model
       Algorithm::SbpNode<SbpSignature>* sbp_node_consumer =
@@ -271,8 +271,9 @@ void SbpCollector::ProxySbpCandidate(
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
       // unload logical blob from sbp edges
       edge_found->UnloadLbi(lbi);
+      // Do not clip this edge. Save it for wait time.
       // clip this edge if it no longer carrys any blob
-      if (edge_found->EmptyLbi()) sbp_graph.ClipEdge(edge_found);
+      // if (edge_found->EmptyLbi()) sbp_graph.ClipEdge(edge_found);
     }
 
     // Todo: coding
