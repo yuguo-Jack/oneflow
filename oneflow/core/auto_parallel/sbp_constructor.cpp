@@ -219,10 +219,8 @@ void SbpConstructor::InitializeCopyCost(OpGraph& op_graph,
     // skip it if fixed
     if (op_name2is_fixed[op_node->op().op_name()]) return;
     // get corresponding sbp node consumer
-    const Algorithm::SbpNode<SbpSignature>* sbp_node_consumer =
+    Algorithm::SbpNode<SbpSignature>* sbp_node_consumer =
         op_name2sbp_node[op_node->op().op_name()];
-    // get parallel description. Number of devices.
-    const ParallelDesc& parallel_desc = op_node->parallel_desc();
     // Initialize copy cost between two nodes
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // producer sbp node
@@ -240,6 +238,8 @@ void SbpConstructor::InitializeCopyCost(OpGraph& op_graph,
       }
     }
 
+    sbp_node_consumer->InitializeCopyCost(true);
+    /*
     // Assemble copy cost between two nodes
     // look through input blobs
     for (const std::string& ibn : op_node->op().input_bns()) {
@@ -250,77 +250,18 @@ void SbpConstructor::InitializeCopyCost(OpGraph& op_graph,
       if (op_name2is_fixed[producer->op().op_name()]) continue;
       // producer sbp node
       const auto* sbp_node_producer = op_name2sbp_node[producer->op().op_name()];
-      // TODO: recode this
-      // if (op_node->op().op_name().find("Return") != std::string::npos) is_same_sbp = true;
       SbpEdge<SbpSignature>* edge_found =
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
       // We do not clip edges now
-      CHECK(edge_found != NULL) << "Can not find edges while initailizing copy cost!" << std::endl;
-
-      // Add copy cost for each blob
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
-
-#ifdef USE_SBP_COLLECTOR_
-      // Check whether lbi is transferred by this edge
-      if (!edge_found->SearchLbi(lbi)) continue;
-#endif  // USE_SBP_COLLECTOR_
-
-      // Need to be careful, the logical blob description should be independent to current
-      // SbpParallel. Use producer or op_node?
-      const BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
-      const std::string& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
-      const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
-      bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
-      int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
-
-      // look through sbp signature in producer
-      for (int32_t sbp_id_producer = 0;
-           sbp_id_producer < sbp_node_producer->SbpSignatureList.size(); sbp_id_producer++) {
-        // get sbp parallel for a logical blob in producer
-        const auto producer_sbp_bn_in_op2sbp_parallel =
-            sbp_node_producer->SbpSignatureList[sbp_id_producer]->bn_in_op2sbp_parallel();
-        const SbpParallel& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
-
-        // look through sbp signature in consumer
-        for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
-          // get sbp parallel for a logical blob in consumer
-          const auto consumer_sbp_bn_in_op2sbp_parallel =
-              sbp_node_consumer->SbpSignatureList[sbp_id_consumer]->bn_in_op2sbp_parallel();
-          const SbpParallel& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
-
-          // compute copy cost for a specific logical blob
-          edge_found->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
-              sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
-        }
-      }
-      // test debug
-      // look through sbp signature in producer
-      std::vector<std::vector<double>> temp_cost(sbp_node_producer->SbpSignatureList.size());
-      for (int32_t sbp_id_producer = 0;
-           sbp_id_producer < sbp_node_producer->SbpSignatureList.size(); sbp_id_producer++) {
-        // look through sbp signature in consumer
-        temp_cost[sbp_id_producer].resize(consumer_sbp_size);
-        for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
-          temp_cost[sbp_id_producer][sbp_id_consumer] =
-              edge_found->Cost[sbp_id_producer][sbp_id_consumer];
-          edge_found->Cost[sbp_id_producer][sbp_id_consumer] = 0.0;
-        }
-      }
+      // CHECK(edge_found != NULL) << "Can not find edges while initailizing copy cost!" << std::endl;
+      // Edge is clipped. Skip it.
+      if (edge_found == NULL) { continue; }
 
       edge_found->InitializeCopyCost(ibn, true);
-      for (int32_t sbp_id_producer = 0;
-           sbp_id_producer < sbp_node_producer->SbpSignatureList.size(); sbp_id_producer++) {
-        // look through sbp signature in consumer
-        for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
-          std::cout << "id: (" << sbp_id_producer << ", " << sbp_id_consumer
-                    << "), Old: " << temp_cost[sbp_id_producer][sbp_id_consumer]
-                    << ", new: " << edge_found->Cost[sbp_id_producer][sbp_id_consumer] << ", diff: "
-                    << temp_cost[sbp_id_producer][sbp_id_consumer]
-                           - edge_found->Cost[sbp_id_producer][sbp_id_consumer]
-                    << std::endl;
-        }
-      }
     }
+    */
+
+
   });
 }
 

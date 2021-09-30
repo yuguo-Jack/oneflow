@@ -201,6 +201,9 @@ class SbpNode {
   // Drop down the available wait time with the minimum cost from downstreams
   void DropAvailWaitTime(double curr_mainstem_cost);
 
+  // Assemble copy cost for all the incoming edges
+  void InitializeCopyCost(bool skip_unloaded_lbi);
+
 };  // class SbpNode
 }  // namespace Algorithm
 
@@ -792,6 +795,25 @@ template<class SbpSignature>
 void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_mainstem_cost) {
   if (AccMainstemCost < 0.0 || AccMainstemCost > curr_mainstem_cost)
     AccMainstemCost = curr_mainstem_cost;
+}
+
+// Assemble copy cost for all the incoming edges
+template<class SbpSignature>
+void SbpNode<SbpSignature>::InitializeCopyCost(bool skip_unloaded_lbi) {
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    const auto *sbp_node_producer = this_edge->StartNode;
+    oneflow::OpNode *producer = sbp_node_producer->op_node;
+#ifdef USE_SBP_COLLECTOR_
+    // skip it if proxy
+    if (!producer) continue;
+#endif  // USE_SBP_COLLECTOR_
+    // look through input blobs
+    for (const std::string &ibn : op_node->op().input_bns()) {
+      if (producer->op().op_name() == op_node->SrcNode4Ibn(ibn).op().op_name()) {
+        this_edge->InitializeCopyCost(ibn, skip_unloaded_lbi);
+      }
+    }
+  }
 }
 
 }  // namespace Algorithm
