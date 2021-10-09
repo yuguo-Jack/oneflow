@@ -202,7 +202,7 @@ class SbpNode {
   void DropAvailWaitTime(double curr_mainstem_cost);
 
   // Assemble copy cost for all the incoming edges
-  void InitializeCopyCost(bool skip_unloaded_lbi);
+  void InitializeCopyCost(bool compute_cost);
 
 };  // class SbpNode
 }  // namespace Algorithm
@@ -799,7 +799,7 @@ void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_mainstem_cost) {
 
 // Assemble copy cost for all the incoming edges
 template<class SbpSignature>
-void SbpNode<SbpSignature>::InitializeCopyCost(bool skip_unloaded_lbi) {
+void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost) {
   for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
     const auto *sbp_node_producer = this_edge->StartNode;
     oneflow::OpNode *producer = sbp_node_producer->op_node;
@@ -810,7 +810,7 @@ void SbpNode<SbpSignature>::InitializeCopyCost(bool skip_unloaded_lbi) {
     // look through input blobs
     for (const std::string &ibn : op_node->op().input_bns()) {
       if (producer->op().op_name() == op_node->SrcNode4Ibn(ibn).op().op_name()) {
-        this_edge->InitializeCopyCost(ibn, skip_unloaded_lbi);
+        this_edge->InitializeCopyCost(ibn, compute_cost);
       }
     }
   }

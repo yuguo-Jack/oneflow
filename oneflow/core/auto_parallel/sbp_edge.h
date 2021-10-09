@@ -140,7 +140,9 @@ class SbpEdge {
   void AdjustOverlapCost();
 
   // Assemble copy cost
-  void InitializeCopyCost(const std::string &ibn, bool skip_unloaded_lbi);
+  // compute_cost = true: It is computing cost
+  // compute_cost = false: It is deciding whether this edge needs the wait time.
+  void InitializeCopyCost(const std::string &ibn, bool compute_cost);
 };
 }  // namespace Algorithm
 // function in cpp. Should be put in one file due to use of template
@@ -388,7 +390,7 @@ void SbpEdge<SbpSignature>::AdjustOverlapCost() {
 
 // Assemble copy cost
 template<class SbpSignature>
-void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string &ibn, bool skip_unloaded_lbi) {
+void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string &ibn, bool compute_cost) {
   // In this part, we assemble the cost from nodes to nodes.
   if (StartNode->op_node && EndNode->op_node) {
     oneflow::OpNode *consumer = EndNode->op_node;
@@ -398,7 +400,7 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string &ibn, bool skip
 
 #ifdef USE_SBP_COLLECTOR_
     // Check whether lbi is transferred by this edge
-    if (skip_unloaded_lbi && !SearchLbi(lbi)) return;
+    if (compute_cost && !SearchLbi(lbi)) return;
 #endif  // USE_SBP_COLLECTOR_
     oneflow::OpNode *producer = StartNode->op_node;
     const oneflow::ParallelDesc &parallel_desc = consumer->parallel_desc();
@@ -408,7 +410,9 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string &ibn, bool skip
     const oneflow::BlobDesc &logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
     const std::string &obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
     const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
-    bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
+    // If we are deciding whether we need the wait time, then make is_same_sbp true.
+    // B->S cause cudaEventSynchronize in current implementation.
+    bool is_same_sbp = (!compute_cost) || (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable());
     int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
 
     // look through sbp signature in producer
