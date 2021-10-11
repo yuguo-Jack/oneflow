@@ -761,6 +761,12 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
       this_edge->WaitTime = wait_time - curr_mainstem_cost;
       curr_mainstem_cost = 0.0;
     }
+    // Reducing non-matching edges
+    // For example:
+    // (1) P->S0->S0->S0->B
+    // (2) p->B->B->B->B
+    // We would use (2) when the tensor is relatively tiny.
+    this_edge->WaitTime += 0.1*wait_time;
     // Do not inherit mainstem cost for nodes on the mainstem
     if (!producer->IfMainstem) {
       // Inherit the minimal of the mainstem cost from consumers
