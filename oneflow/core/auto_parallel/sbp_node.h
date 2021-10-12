@@ -30,6 +30,7 @@ limitations under the License.
 #define us_1 1e8
 #define s_1 1e14
 #define wait_time 1.65e11
+#define cut_cost 3e38
 
 namespace Algorithm {
 
@@ -235,7 +236,7 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature> *first, SbpNode<SbpSignatur
 
   // Find all available merged-SbpSignature(edge's cost less than threshold).
   if (common_edge) {
-    double edge_threshold = 3e38;
+    double edge_threshold = cut_cost;
     double min_cost = 1e100;
     for (const auto &row : common_edge->Cost) {
       for (const double &c : row) min_cost = std::min(min_cost, c);

@@ -143,6 +143,11 @@ class SbpEdge {
   // compute_cost = true: It is computing cost
   // compute_cost = false: It is deciding whether this edge needs the wait time.
   void InitializeCopyCost(const std::string &ibn, bool compute_cost);
+
+  // find the cut ratio
+  // (#c>cut_cost in Cost)/(#c in Cost)
+  // But we would lift the cut ratio to 1 to filter out some improper couples
+  double FindCutRatio(int32_t thrhld);
 };
 }  // namespace Algorithm
 // function in cpp. Should be put in one file due to use of template
@@ -412,7 +417,9 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string &ibn, bool comp
     const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
     // If we are deciding whether we need the wait time, then make is_same_sbp true.
     // B->S cause cudaEventSynchronize in current implementation.
-    bool is_same_sbp = (!compute_cost) || (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable());
+    bool is_same_sbp =
+        (!compute_cost)
+        || (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable());
     int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
 
     // look through sbp signature in producer
@@ -435,6 +442,24 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string &ibn, bool comp
             sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
       }
     }
+  }
+}
+
+// find the cut ratio
+// (#c>cut_cost in Cost)/(#c in Cost)
+template<class SbpSignature>
+double SbpEdge<SbpSignature>::FindCutRatio(int32_t thrhld) {
+  int32_t num = 0;
+  for (int32_t i = 0; i < Cost.size(); i++) {
+    for (int32_t j = 0; j < Cost[i].size(); j++) {
+      if (Cost[i][j] < cut_cost) { num++; }
+    }
+  }
+  // lift the cut ratio to 1 to filter out some improper couples
+  if (num <= Cost.size() * 2 || num <= Cost[0].size() * 2 || num <= thrhld) {
+    return double(num) / double(Cost.size() * Cost[0].size());
+  } else {
+    return 1.0;
   }
 }
 

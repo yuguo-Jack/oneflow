@@ -622,11 +622,13 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t> &nbh_id2No
     NodeList[nbh_id2NodeListId[nbh_id]]->FinalSbpSignatureId = MinSbpSignatureId[nbh_id];
   }
 
-  if(MinCost < OrgCost){
+  if (MinCost < OrgCost) {
     // Directly return (MinCost - OrgCost) might have floating point error up to 3e-16
-    // For example, OrgCost: 2.22507e+06, MinCost: 2.22507e+06, diff: -4.65661e-10, relative diff:2.09279e-16
-    // Therefore, we use a threshold to filter out such fake true detection to avoid unlimited search.
-    if((OrgCost - MinCost)/OrgCost > 3e-15) return MinCost - OrgCost;
+    // For example, OrgCost: 2.22507e+06, MinCost: 2.22507e+06,
+    // diff: -4.65661e-10, relative diff:2.09279e-16
+    // Therefore, we use a threshold to filter out such fake true detection to
+    // avoid unlimited search.
+    if ((OrgCost - MinCost) / OrgCost > 3e-15) return MinCost - OrgCost;
   }
   return 0.0;
 }
@@ -635,46 +637,65 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t> &nbh_id2No
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::PickAndMerge() {
   if (NodeList.size() < 4) return 0;
-  std::vector<BinarySet> NodeBinarySets(NodeList.size());
+  // Pick the one with the smallest cut ratio
+  double min_cut_cost = 1.0;
+  double curr_cut_cost;
+  SbpEdge<SbpSignature> *merging_edge = nullptr;
   for (int32_t i = 0; i < NodeList.size(); i++) {
-    // Transfer edge to binary set
-    NodeBinarySets[i].Initialize(NodeList.size());
-    NodeBinarySets[i].AddEntry(i);
-    for (const SbpEdge<SbpSignature> *edge_in : NodeList[i]->EdgesIn) {
-      NodeBinarySets[i].AddEntry(edge_in->StartNode->NodeListId);
-    }
-    for (const SbpEdge<SbpSignature> *edge_out : NodeList[i]->EdgesOut) {
-      NodeBinarySets[i].AddEntry(edge_out->StartNode->NodeListId);
-    }
-  }
-  // Find two nodes with largest common subset
-  // buffer of binary set
-  BinarySet BuffBnrSet(NodeList.size());
-  // Number of common edges
-  int32_t MaxCommEdgeNum = 0, CurrCommEdgeNum;
-  int32_t MinNodePair[2];
-  // Number of Sbp Signature in merged node
-  int32_t MinSbpNum = 0, CurrSbpNum;
-  for (int32_t i = 0; i < NodeList.size(); i++) {
-    for (int32_t j = i + 1; j < NodeList.size(); j++) {
-      CurrSbpNum = NodeList[i]->Cost.size() * NodeList[j]->Cost.size();
-      if (CurrSbpNum <= Threshold) {
-        NodeBinarySets[i].IntersectionTo(NodeBinarySets[j], BuffBnrSet);
-        CurrCommEdgeNum = BuffBnrSet.Total();
-        if (CurrCommEdgeNum > MaxCommEdgeNum
-            || (CurrCommEdgeNum == MaxCommEdgeNum && CurrSbpNum < MinSbpNum)) {
-          MinNodePair[0] = i;
-          MinNodePair[1] = j;
-          MaxCommEdgeNum = CurrCommEdgeNum;
-          MinSbpNum = CurrSbpNum;
-        }
+    for (SbpEdge<SbpSignature> *edge_in : NodeList[i]->EdgesIn) {
+      curr_cut_cost = edge_in->FindCutRatio(Threshold);
+      if (curr_cut_cost < min_cut_cost) {
+        min_cut_cost = curr_cut_cost;
+        merging_edge = edge_in;
       }
     }
   }
-  if (MaxCommEdgeNum > 0)
-    return NodeMerging(NodeList[MinNodePair[0]], NodeList[MinNodePair[1]]);
-  else
-    return 0;
+  if (merging_edge != nullptr) {
+    return NodeMerging(merging_edge->StartNode, merging_edge->EndNode);
+  } else {
+    // std::cout << "Pick the couple with the largest similar neighborhood" << std::endl;
+    // Pick the couple with the largest similar neighborhood
+    std::vector<BinarySet> NodeBinarySets(NodeList.size());
+    for (int32_t i = 0; i < NodeList.size(); i++) {
+      // Transfer edge to binary set
+      NodeBinarySets[i].Initialize(NodeList.size());
+      NodeBinarySets[i].AddEntry(i);
+      for (const SbpEdge<SbpSignature> *edge_in : NodeList[i]->EdgesIn) {
+        NodeBinarySets[i].AddEntry(edge_in->StartNode->NodeListId);
+      }
+      for (const SbpEdge<SbpSignature> *edge_out : NodeList[i]->EdgesOut) {
+        NodeBinarySets[i].AddEntry(edge_out->StartNode->NodeListId);
+      }
+    }
+    // Find two nodes with largest common subset
+    // buffer of binary set
+    BinarySet BuffBnrSet(NodeList.size());
+    // Number of common edges
+    int32_t MaxCommEdgeNum = 0, CurrCommEdgeNum;
+    int32_t MinNodePair[2];
+    // Number of Sbp Signature in merged node
+    int32_t MinSbpNum = 0, CurrSbpNum;
+    for (int32_t i = 0; i < NodeList.size(); i++) {
+      for (int32_t j = i + 1; j < NodeList.size(); j++) {
+        CurrSbpNum = NodeList[i]->Cost.size() * NodeList[j]->Cost.size();
+        if (CurrSbpNum <= Threshold) {
+          NodeBinarySets[i].IntersectionTo(NodeBinarySets[j], BuffBnrSet);
+          CurrCommEdgeNum = BuffBnrSet.Total();
+          if (CurrCommEdgeNum > MaxCommEdgeNum
+              || (CurrCommEdgeNum == MaxCommEdgeNum && CurrSbpNum < MinSbpNum)) {
+            MinNodePair[0] = i;
+            MinNodePair[1] = j;
+            MaxCommEdgeNum = CurrCommEdgeNum;
+            MinSbpNum = CurrSbpNum;
+          }
+        }
+      }
+    }
+    if (MaxCommEdgeNum > 0)
+      return NodeMerging(NodeList[MinNodePair[0]], NodeList[MinNodePair[1]]);
+    else
+      return 0;
+  }
 }
 
 // Clip an edge, remove it from graph
