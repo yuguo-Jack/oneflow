@@ -89,6 +89,8 @@ class SbpNode {
   // MaxLayer is the maximum layer number without slowing down the whole process of the graph.
   // producer.MaxLayer < this_node.MinLayer <= this_node.MaxLayer < consumer.MinLayer
   int32_t MinLayer = -1, MaxLayer = -1;
+  // Maximum layer in tributaries
+  int32_t TributaryLayer = -1;
   // Whether we are on the mainstem
   bool IfMainstem = false;
   // A counter buffer for topological traversal or something else
@@ -185,6 +187,11 @@ class SbpNode {
   void LiftMaxLayer();
   // Set MaxLayer = upper_bound if this node does not have any consumer
   void LiftMaxLayer(int32_t upper_bound);
+  // Compute maximum layer for tributaries
+  void SpreadTributaryLayer(
+      oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+  // Drop down the tributary layer
+  void DropTributaryLayer(int32_t upper_bound);
 
   // Get the minimum element in Cost
   double GetMinCost();
@@ -201,6 +208,8 @@ class SbpNode {
       oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
   // Drop down the available wait time with the minimum cost from downstreams
   void DropAvailWaitTime(double curr_mainstem_cost);
+  // Reduce and set the wait time for op in the mainstem
+  void SetMainstemWaitTime(double mainstem_wait_time);
 
   // Assemble copy cost for all the incoming edges
   void InitializeCopyCost(bool compute_cost);
@@ -643,7 +652,7 @@ int32_t SbpNode<SbpSignature>::GetMinLayer(
   return ++MinLayer;
 }
 
-// Spread the minimum lay to compute the maximum layer of producers
+// Spread the minimum layer to compute the maximum layer of producers
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadMaxLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
@@ -767,7 +776,7 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
     // (1) P->S0->S0->S0->B
     // (2) p->B->B->B->B
     // We would use (2) when the tensor is relatively tiny.
-    this_edge->WaitTime += 0.1*wait_time;
+    this_edge->WaitTime += 0.1 * wait_time;
     // Do not inherit mainstem cost for nodes on the mainstem
     if (!producer->IfMainstem) {
       // Inherit the minimal of the mainstem cost from consumers
@@ -821,6 +830,56 @@ void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost) {
       }
     }
   }
+}
+
+// Reduce and set the wait time for op in the mainstem
+template<class SbpSignature>
+void SbpNode<SbpSignature>::SetMainstemWaitTime(double mainstem_wait_time) {
+  // only reduce the wait time for operators in the mainstem
+  if (IfMainstem) {
+    // Reduce the wait time for EdgesOut
+    for (SbpEdge<SbpSignature> *edge_out : EdgesOut) {
+      if (edge_out->WaitTime < 0.0 || edge_out->WaitTime > mainstem_wait_time) {
+        edge_out->WaitTime = mainstem_wait_time;
+      }
+    }
+    // Might reduce it for EdgesIn
+  }
+}
+
+// Drop down the maximum layer with the minimum layer form consumer
+template<class SbpSignature>
+void SbpNode<SbpSignature>::DropTributaryLayer(int32_t upper_bound) {
+  if (upper_bound < TributaryLayer || TributaryLayer < 0) TributaryLayer = upper_bound;
+}
+
+// Compute maximum layer for tributaries
+template<class SbpSignature>
+void SbpNode<SbpSignature>::SpreadTributaryLayer(
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  if (counter || MinLayer <= 0) return;
+  int32_t producer_max_lay;
+  if (IfMainstem) {
+    producer_max_lay = MinLayer - 1;
+  } else {
+    // On a tributary, the operator could be run later.
+    producer_max_lay = TributaryLayer;
+    // producer_max_lay = TributaryLayer - 1;
+  }
+  for (SbpEdge<SbpSignature> *this_edge : EdgesIn) {
+    this_edge->StartNode->DropTributaryLayer(producer_max_lay);
+    if (--this_edge->StartNode->counter == 0) {
+      this_edge->StartNode->SpreadTributaryLayer(op_name2sbp_node);
+    }
+  }
+  for (const auto &ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    if (it != op_name2sbp_node.end()) {
+      it->second->DropTributaryLayer(producer_max_lay);
+      if (--it->second->counter == 0) { it->second->SpreadTributaryLayer(op_name2sbp_node); }
+    }
+  }
+  counter--;
 }
 
 }  // namespace Algorithm

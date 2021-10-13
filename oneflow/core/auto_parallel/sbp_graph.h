@@ -637,20 +637,23 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t> &nbh_id2No
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::PickAndMerge() {
   if (NodeList.size() < 4) return 0;
+  bool use_cut_ratio = true;
   // Pick the one with the smallest cut ratio
-  double min_cut_cost = 1.0;
-  double curr_cut_cost;
+  double min_cut_ratio = 1.0;
+  double curr_cut_ratio;
   SbpEdge<SbpSignature> *merging_edge = nullptr;
-  for (int32_t i = 0; i < NodeList.size(); i++) {
-    for (SbpEdge<SbpSignature> *edge_in : NodeList[i]->EdgesIn) {
-      curr_cut_cost = edge_in->FindCutRatio(Threshold);
-      if (curr_cut_cost < min_cut_cost) {
-        min_cut_cost = curr_cut_cost;
-        merging_edge = edge_in;
+  if (use_cut_ratio) {
+    for (int32_t i = 0; i < NodeList.size(); i++) {
+      for (SbpEdge<SbpSignature> *edge_in : NodeList[i]->EdgesIn) {
+        curr_cut_ratio = edge_in->FindCutRatio(Threshold);
+        if (curr_cut_ratio < min_cut_ratio) {
+          min_cut_ratio = curr_cut_ratio;
+          merging_edge = edge_in;
+        }
       }
     }
   }
-  if (merging_edge != nullptr) {
+  if (use_cut_ratio && merging_edge != nullptr) {
     return NodeMerging(merging_edge->StartNode, merging_edge->EndNode);
   } else {
     // std::cout << "Pick the couple with the largest similar neighborhood" << std::endl;
@@ -758,11 +761,14 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::ComputeLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+  // Compute minimum layer
   for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->GetMinLayer(op_name2sbp_node); }
+  // Find the largest minimum layer
   int32_t max_MinLayer = -1;
   for (SbpNode<SbpSignature> *this_node : NodeList) {
     if (max_MinLayer < this_node->MinLayer) { max_MinLayer = this_node->MinLayer; }
   }
+  // Compute maximum layer
   for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->SpreadMaxLayer(op_name2sbp_node); }
   for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->LiftMaxLayer(max_MinLayer); }
   return max_MinLayer;
@@ -795,10 +801,41 @@ void SbpGraph<SbpSignature>::FindMainstem(
   for (SbpNode<SbpSignature> *this_node : NodeList) {
     if (this_node->MinLayer >= mainstem_end_id) this_node->SpreadMainstem(op_name2sbp_node);
   }
+
+  // Compute maximum layer for tributaries
+  // Clear counter and initialize tributary layer for each sbp node
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    this_node->counter = 0;
+    this_node->DropTributaryLayer(max_MinLayer);
+  }
+  // Count the number of consumers and downstream nodes
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    this_node->RaiseConsumerNum(op_name2sbp_node);
+  }
+  // Compute maximum layer for tributaries
+  for (SbpNode<SbpSignature> *this_node : NodeList) {
+    this_node->SpreadTributaryLayer(op_name2sbp_node);
+  }
+
   // Summerize cost for each layer on the mainstem, store it to avoid substraction of large values.
   mainstem_cost.assign(max_MinLayer + 1, 0);
+  // test debug
+  // tributary cost start from each min layer
+  std::vector<double> tributary_cost(max_MinLayer + 1, 0);
+  // tributary cost would be outdated after Max Layer (before Max Layer + 1)
+  std::vector<double> outdated_tributary_cost(max_MinLayer + 1, 0);
+  // number of operators in the mainstem
+  std::vector<std::vector<SbpNode<SbpSignature> *>> mainstem_ops(max_MinLayer + 1);
+
   for (SbpNode<SbpSignature> *this_node : NodeList) {
-    if (this_node->IfMainstem) mainstem_cost[this_node->MinLayer] += this_node->GetMinCost();
+    if (this_node->IfMainstem) {
+      mainstem_cost[this_node->MinLayer] += this_node->GetMinCost();
+      mainstem_ops[this_node->MinLayer].emplace_back(this_node);
+    } else {
+      double curr_min_cost = this_node->GetMinCost();
+      tributary_cost[this_node->MinLayer] += curr_min_cost;
+      outdated_tributary_cost[this_node->TributaryLayer] += curr_min_cost;
+    }
   }
   // Accumulate the cost from the consumer to the end, not including itself
   std::vector<double> acc_mainstem_cost(max_MinLayer + 1, 0);
@@ -810,6 +847,7 @@ void SbpGraph<SbpSignature>::FindMainstem(
     std::cout << "layer: " << layer_id << ", cost: " << mainstem_cost[layer_id]
               << ", accumulate cost: " << acc_mainstem_cost[layer_id] << std::endl;
   }
+
   // Clear counter for each sbp node
   for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->counter = 0; }
   // Count the number of consumers and downstream nodes
@@ -819,6 +857,49 @@ void SbpGraph<SbpSignature>::FindMainstem(
   // Reduce the wait time for tributaries
   for (SbpNode<SbpSignature> *this_node : NodeList) {
     this_node->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node);
+  }
+
+  // Reduce the wait time for mainstem
+  double acc_tributary_cost = tributary_cost[0];
+  double used_tributary_cost = 0.0;
+  double curr_wait_time;
+  for (int32_t layer_id = 1; layer_id <= max_MinLayer; layer_id++) {
+    // Can not move it backward since we need to do this at the 0th layer.
+    // At some moment, the cost haven't been used would disappear.
+    if (outdated_tributary_cost[layer_id - 1] > used_tributary_cost) {
+      acc_tributary_cost -= outdated_tributary_cost[layer_id - 1] - used_tributary_cost;
+      used_tributary_cost = 0.0;
+      if (acc_tributary_cost < 0.0) {
+        // should not happen besides floating point error
+        std::cout << "Error! Current accumulated tributary cost is: " << acc_tributary_cost
+                  << std::endl;
+        acc_tributary_cost = 0.0;
+      }
+    } else {
+      used_tributary_cost -= outdated_tributary_cost[layer_id - 1];
+    }
+    // accumulate tributary cost at this layer
+    acc_tributary_cost += tributary_cost[layer_id];
+    // test debug
+    std::cout << "After accumulation, tributary cost is: " << acc_tributary_cost << std::endl;
+    // If we have more cost in tributaries, we reduce the wait time
+    // This code maintains ( acc_triburary_cost + used_tributary_cost )
+    if (acc_tributary_cost > 0.0) {
+      if (acc_tributary_cost > wait_time) {
+        curr_wait_time = 0.1 * wait_time;
+        acc_tributary_cost -= wait_time;
+        used_tributary_cost += wait_time;
+      } else {
+        curr_wait_time = 1.1 * wait_time - acc_tributary_cost;
+        used_tributary_cost += acc_tributary_cost;
+        acc_tributary_cost = 0.0;
+      }
+      std::cout << "Wait time at layer " << layer_id << " is : " << curr_wait_time << std::endl;
+      // Reduce the wait time in the mainstem
+      for (SbpNode<SbpSignature> *this_node : mainstem_ops[layer_id]) {
+        this_node->SetMainstemWaitTime(curr_wait_time);
+      }
+    }
   }
 }
 

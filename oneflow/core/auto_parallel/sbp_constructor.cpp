@@ -676,6 +676,7 @@ void SbpConstructor::PrintGraph(OpGraph& op_graph) {
       const Algorithm::SbpNode<SbpSignature>* sbp_node = it->second;
       std::cout << "Computation Cost: " << sbp_node->Cost[sbp_node->FinalSbpSignatureId];
       std::cout << ", Min Layer: " << sbp_node->MinLayer << ", Max Layer: " << sbp_node->MaxLayer
+                << ", Tributary Layer: " << sbp_node->TributaryLayer
                 << ", in mainstem: " << sbp_node->IfMainstem
                 << ", Remain Cost: " << sbp_node->AccMainstemCost << std::endl;
     }
