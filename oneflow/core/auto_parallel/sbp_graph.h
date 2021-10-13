@@ -637,26 +637,24 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t> &nbh_id2No
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::PickAndMerge() {
   if (NodeList.size() < 4) return 0;
-  bool use_cut_ratio = true;
   // Pick the one with the smallest cut ratio
   double min_cut_ratio = 1.0;
   double curr_cut_ratio;
   SbpEdge<SbpSignature> *merging_edge = nullptr;
-  if (use_cut_ratio) {
-    for (int32_t i = 0; i < NodeList.size(); i++) {
-      for (SbpEdge<SbpSignature> *edge_in : NodeList[i]->EdgesIn) {
-        curr_cut_ratio = edge_in->FindCutRatio(Threshold);
-        if (curr_cut_ratio < min_cut_ratio) {
-          min_cut_ratio = curr_cut_ratio;
-          merging_edge = edge_in;
-        }
+  for (int32_t i = 0; i < NodeList.size(); i++) {
+    for (SbpEdge<SbpSignature> *edge_in : NodeList[i]->EdgesIn) {
+      curr_cut_ratio = edge_in->FindCutRatio(Threshold);
+      if (curr_cut_ratio < min_cut_ratio) {
+        min_cut_ratio = curr_cut_ratio;
+        merging_edge = edge_in;
       }
     }
   }
-  if (use_cut_ratio && merging_edge != nullptr) {
+
+  if (merging_edge != nullptr) {
+    // Merge two nodes on the edge with the minimum cut ratio
     return NodeMerging(merging_edge->StartNode, merging_edge->EndNode);
   } else {
-    // std::cout << "Pick the couple with the largest similar neighborhood" << std::endl;
     // Pick the couple with the largest similar neighborhood
     std::vector<BinarySet> NodeBinarySets(NodeList.size());
     for (int32_t i = 0; i < NodeList.size(); i++) {
@@ -795,8 +793,6 @@ void SbpGraph<SbpSignature>::FindMainstem(
       break;
     }
   }
-  // test debug
-  std::cout << "Mainstem end id: " << mainstem_end_id << std::endl;
   // Find out all the nodes on the mainstem.
   for (SbpNode<SbpSignature> *this_node : NodeList) {
     if (this_node->MinLayer >= mainstem_end_id) this_node->SpreadMainstem(op_name2sbp_node);
@@ -819,7 +815,6 @@ void SbpGraph<SbpSignature>::FindMainstem(
 
   // Summerize cost for each layer on the mainstem, store it to avoid substraction of large values.
   mainstem_cost.assign(max_MinLayer + 1, 0);
-  // test debug
   // tributary cost start from each min layer
   std::vector<double> tributary_cost(max_MinLayer + 1, 0);
   // tributary cost would be outdated after Max Layer (before Max Layer + 1)
@@ -842,11 +837,6 @@ void SbpGraph<SbpSignature>::FindMainstem(
   for (int32_t layer_id = max_MinLayer; layer_id > 0; layer_id--) {
     acc_mainstem_cost[layer_id - 1] = acc_mainstem_cost[layer_id] + mainstem_cost[layer_id];
   }
-  // test debug
-  for (int32_t layer_id = 0; layer_id <= max_MinLayer; layer_id++) {
-    std::cout << "layer: " << layer_id << ", cost: " << mainstem_cost[layer_id]
-              << ", accumulate cost: " << acc_mainstem_cost[layer_id] << std::endl;
-  }
 
   // Clear counter for each sbp node
   for (SbpNode<SbpSignature> *this_node : NodeList) { this_node->counter = 0; }
@@ -859,29 +849,27 @@ void SbpGraph<SbpSignature>::FindMainstem(
     this_node->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node);
   }
 
-  // Reduce the wait time for mainstem
-  double acc_tributary_cost = tributary_cost[0];
+  // Reduce the wait time for mainstem from the end to the begining
+  double acc_tributary_cost = outdated_tributary_cost[max_MinLayer];
   double used_tributary_cost = 0.0;
   double curr_wait_time;
-  for (int32_t layer_id = 1; layer_id <= max_MinLayer; layer_id++) {
+  for (int32_t layer_id = max_MinLayer - 1; layer_id >= 0; layer_id--) {
     // Can not move it backward since we need to do this at the 0th layer.
     // At some moment, the cost haven't been used would disappear.
-    if (outdated_tributary_cost[layer_id - 1] > used_tributary_cost) {
-      acc_tributary_cost -= outdated_tributary_cost[layer_id - 1] - used_tributary_cost;
+    if (tributary_cost[layer_id + 1] > used_tributary_cost) {
+      acc_tributary_cost -= tributary_cost[layer_id + 1] - used_tributary_cost;
       used_tributary_cost = 0.0;
       if (acc_tributary_cost < 0.0) {
         // should not happen besides floating point error
-        std::cout << "Error! Current accumulated tributary cost is: " << acc_tributary_cost
+        std::cout << "Caution! Current accumulated tributary cost is: " << acc_tributary_cost
                   << std::endl;
         acc_tributary_cost = 0.0;
       }
     } else {
-      used_tributary_cost -= outdated_tributary_cost[layer_id - 1];
+      used_tributary_cost -= tributary_cost[layer_id + 1];
     }
     // accumulate tributary cost at this layer
-    acc_tributary_cost += tributary_cost[layer_id];
-    // test debug
-    std::cout << "After accumulation, tributary cost is: " << acc_tributary_cost << std::endl;
+    acc_tributary_cost += outdated_tributary_cost[layer_id];
     // If we have more cost in tributaries, we reduce the wait time
     // This code maintains ( acc_triburary_cost + used_tributary_cost )
     if (acc_tributary_cost > 0.0) {
@@ -894,7 +882,6 @@ void SbpGraph<SbpSignature>::FindMainstem(
         used_tributary_cost += acc_tributary_cost;
         acc_tributary_cost = 0.0;
       }
-      std::cout << "Wait time at layer " << layer_id << " is : " << curr_wait_time << std::endl;
       // Reduce the wait time in the mainstem
       for (SbpNode<SbpSignature> *this_node : mainstem_ops[layer_id]) {
         this_node->SetMainstemWaitTime(curr_wait_time);
