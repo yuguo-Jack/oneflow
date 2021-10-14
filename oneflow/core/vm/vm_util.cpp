@@ -46,11 +46,16 @@ Maybe<void> ClusterSync() {
   BlockingCounter bc(1);
   JUST(Run([&bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());
-    JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
+    JUST(builder->ComputeRankFrontSeqCallback([&bc]() {
+      LOG(INFO) << "ClusterSync callback";
+      bc.Decrease();
+    }));
     return Maybe<void>::Ok();
   }));
 
+  LOG(INFO) << "ClusterSync submit";
   bc.WaitUntilCntEqualZero();
+  LOG(INFO) << "ClusterSync finish";
 
   return Maybe<void>::Ok();
 }
@@ -58,11 +63,16 @@ Maybe<void> ClusterSync() {
 Maybe<void> CurrentRankSync() {
   BlockingCounter bc(1);
   JUST(PhysicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
+    JUST(builder->ComputeRankFrontSeqCallback([&bc]() {
+      LOG(INFO) << "CurrentRankSync callback";
+      bc.Decrease();
+    }));
     return Maybe<void>::Ok();
   }));
 
+  LOG(INFO) << "CurrentRankSync submit";
   bc.WaitUntilCntEqualZero();
+  LOG(INFO) << "CurrentRankSync finish";
 
   return Maybe<void>::Ok();
 }

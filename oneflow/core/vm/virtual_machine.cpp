@@ -518,6 +518,7 @@ void VirtualMachine::DispatchAndPrescheduleInstructions(
   auto* active_stream_list = mut_active_stream_list();
   auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(ready_instruction_list, instruction) {
+    LOG(INFO) << "DispatchAndPrescheduleInstructions " << instruction->instr_msg().instr_type_name();
     vm_stat_running_list->PushBack(instruction);
     auto* stream = instruction->mut_stream();
     ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());

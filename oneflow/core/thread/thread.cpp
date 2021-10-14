@@ -71,6 +71,13 @@ void Thread::PollMsgChannel() {
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     CHECK(actor_it != id2actor_ptr_.end());
+    int64_t regst_id = -1;
+    if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+      regst_id = msg.regst_desc_id();
+    } else if (msg.msg_type() == ActorMsgType::kEordMsg) {
+      regst_id = msg.eord_regst_desc_id();
+    }
+    LOG(INFO) << "PollMsgChannel " << msg.msg_type() << " " << actor_id << " " << regst_id;
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;

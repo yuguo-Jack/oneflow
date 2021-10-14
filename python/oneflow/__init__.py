@@ -196,7 +196,9 @@ def atexit_hook(hook):
     if hook.is_normal_exit():
         if oneflow._oneflow_internal.IsEnvInited():
             if oneflow.env.is_multi_client():
+                print(f"[{oneflow.env.get_rank()}] exit hook before sync")
                 oneflow._oneflow_internal.eager.multi_client.Sync()
+                print(f"[{oneflow.env.get_rank()}] exit hook after sync")
             elif oneflow.env.get_rank() == 0:
                 oneflow._oneflow_internal.eager.single_client.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()

@@ -71,12 +71,15 @@ NNGraph::~NNGraph() {
 
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
-    VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
+    LOG(ERROR) << "Try to close c nn graph name " << name_ << "." << std::endl;
     CloseRuntimeBuffers();
+    LOG(ERROR) << "Try to close c nn graph name " << name_ << ", CloseRuntimeBuffers()";
     runtime_.reset();
+    LOG(ERROR) << "Try to close c nn graph name " << name_ << ", runtime_.reset()";
     Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
+    LOG(ERROR) << "Try to close c nn graph name " << name_ << ", RemoveGraphFreeEagerTensors()";
     is_closed_ = true;
-    VLOG(2) << "Finish close c nn graph name " << name_ << "." << std::endl;
+    LOG(ERROR) << "Finish close c nn graph name " << name_ << "." << std::endl;
   }
   return Maybe<void>::Ok();
 }

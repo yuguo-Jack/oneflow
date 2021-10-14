@@ -123,10 +123,10 @@ Maybe<void> MultiClientSessionContext::AddCGraph(
 
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session context." << std::endl;
+    LOG(ERROR) << "Try to delete multi client session context." << std::endl;
     for (auto wk_graph_ptr : graphs_) {
       if (auto sh_graph_ptr = wk_graph_ptr.lock()) {
-        VLOG(2) << "grap name " << sh_graph_ptr->job_name() << " not closed, try to close it.";
+        LOG(ERROR) << "grap name " << sh_graph_ptr->job_name() << " not closed, try to close it.";
         JUST(sh_graph_ptr->Close());
       }
     }
@@ -154,7 +154,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
   }
-  VLOG(2) << "Finish delete multi client session context." << std::endl;
+  LOG(ERROR) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
 }
 

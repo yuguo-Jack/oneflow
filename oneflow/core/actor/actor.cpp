@@ -336,6 +336,8 @@ bool Actor::ReceiveEordMsg(int64_t regst_desc_id) const {
 
 int Actor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    LOG(INFO) << "HandleEordMsg " << msg.src_actor_id() << " -> " << msg.dst_actor_id()
+              << ", regst_id: " << msg.eord_regst_desc_id();
     remaining_eord_cnt_ -= 1;
     CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
     if (naive_consumed_rs_.HasRegstDescId(msg.eord_regst_desc_id())) {
@@ -415,6 +417,8 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     CHECK_GE(remaining_eord_cnt_, 1);
     remaining_eord_cnt_ -= 1;
+    LOG(INFO) << "HandlerZombieEordMsg " << actor_id() << ", regst_id: " << msg.eord_regst_desc_id()
+              << ", remaining_eord_cnt: " << remaining_eord_cnt_;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) { AsyncSendRegstMsgToProducer(msg.regst()); }
   } else {
@@ -422,6 +426,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   }
   if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
     msg_handler_ = nullptr;
+    LOG(INFO) << "Actor End " << actor_id();
     return 1;
   }
   return 0;
@@ -617,8 +622,11 @@ void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
   for (auto& pair : produced_regsts_) {
     CHECK(!pair.second.empty());
     const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
-    AddCallback([regst_desc]() {
+    int64_t actor_id = this->actor_id();
+    AddCallback([actor_id, regst_desc]() {
       for (int64_t consumer : regst_desc->consumers_actor_id()) {
+        LOG(INFO) << "AsyncSendEORDMsg " << actor_id << " -> " << consumer
+                  << ", regst_id: " << regst_desc->regst_desc_id();
         Global<ActorMsgBus>::Get()->SendMsg(
             ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
       }

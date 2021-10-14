@@ -100,12 +100,16 @@ Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_o
 }
 
 Runtime::~Runtime() {
+  LOG(ERROR) << "Runtime destruction";
   for (auto pair : job_id2actor_size_) {
     Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
+    LOG(ERROR) << "Runtime destruction, job " << pair.first << " actor size equal to 0";
   }
   OF_SESSION_BARRIER();
+  LOG(ERROR) << "Runtime destruction, session barrier";
   Global<boxing::collective::CollectiveBoxingExecutor>::Get()->DeletePlan(
       collective_boxing_executor_plan_token_);
+  LOG(ERROR) << "Runtime destruction, DeletePlan";
 }
 
 }  // namespace oneflow
