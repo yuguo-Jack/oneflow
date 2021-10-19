@@ -31,6 +31,7 @@ limitations under the License.
 #define s_1 1e14
 #define wait_time 1.65e11
 #define cut_cost 3e38
+#define transfer_cost 1.65e10
 
 namespace Algorithm {
 
@@ -776,7 +777,7 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
     // (1) P->S0->S0->S0->B
     // (2) p->B->B->B->B
     // We would use (2) when the tensor is relatively tiny.
-    this_edge->WaitTime += 0.1 * wait_time;
+    this_edge->WaitTime += transfer_cost;
     // Do not inherit mainstem cost for nodes on the mainstem
     if (!producer->IfMainstem) {
       // Inherit the minimal of the mainstem cost from consumers

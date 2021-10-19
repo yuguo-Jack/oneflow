@@ -874,11 +874,11 @@ void SbpGraph<SbpSignature>::FindMainstem(
     // This code maintains ( acc_triburary_cost + used_tributary_cost )
     if (acc_tributary_cost > 0.0) {
       if (acc_tributary_cost > wait_time) {
-        curr_wait_time = 0.1 * wait_time;
+        curr_wait_time = transfer_cost;
         acc_tributary_cost -= wait_time;
         used_tributary_cost += wait_time;
       } else {
-        curr_wait_time = 1.1 * wait_time - acc_tributary_cost;
+        curr_wait_time = transfer_cost + wait_time - acc_tributary_cost;
         used_tributary_cost += acc_tributary_cost;
         acc_tributary_cost = 0.0;
       }
