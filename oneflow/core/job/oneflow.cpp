@@ -44,6 +44,10 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 
+#ifdef AUTO_PARALLEL_
+#include <chrono>
+#endif  // AUTO_PARALLEL_
+
 namespace std {
 
 template<>
@@ -72,11 +76,16 @@ void DoJobComplete(Job* job) {
   // auto-parallel
   // TODO: recode this
   std::cout << "Start Auto Parallel" << std::endl;
+  auto time_begin = std::chrono::high_resolution_clock::now();
   if (job->job_conf().job_name() == "TrainNet")
     job->mutable_job_parallel_view_conf()->clear_op_name2sbp_signature_conf();
   OpGraph op_graph(*job);
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(op_graph, *job);
+  auto time_end = std::chrono::high_resolution_clock::now();
+  std::cout << "Auto parallel took "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count()
+            << " ms\n";
 #endif  // AUTO_PARALLEL_
 
   // Print Op Graph
