@@ -34,7 +34,6 @@ struct CudnnConvArgsAndAlgo final {
   CudnnConvArgs args;
   PerfT algo_perf;
 
-  // TODO(hanbinbin): remove arg job_desc and set cudnn_conv config as args of CudnnConvArgsAndAlgo
   CudnnConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y,
                        user_op::Tensor* buf, const user_op::KernelComputeContext* ctx,
                        DeviceCtx* device_ctx, bool has_forced_algo, int32_t forced_algo)
@@ -196,7 +195,8 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     }
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()
@@ -265,7 +265,8 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
         args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()
@@ -323,7 +324,8 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
         filter_diff->mut_dptr()));
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()

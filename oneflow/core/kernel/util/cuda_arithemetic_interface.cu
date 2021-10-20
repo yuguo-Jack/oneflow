@@ -167,6 +167,16 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
                                                 const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const std::vector<int32_t>& permutation,
+                                                const int64_t elem_cnt, const uint8_t* x,
+                                                uint8_t* y) {
+  TRANSPOSE_CHECK;
+  TransposeUtil<uint8_t>::SwitchTransposeImpl(SwitchCase(num_axis), ctx, x_shape, y_shape,
+                                              permutation, elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const std::vector<int32_t>& permutation,
                                                 const int64_t elem_cnt, const int32_t* x,
                                                 int32_t* y) {
   TRANSPOSE_CHECK;
@@ -220,6 +230,16 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const int8_t* x,
                                                 int8_t* y) {
+  ArithemeticIf<DeviceType::kGPU>::Transpose(
+      ctx, num_axis, x_shape, y_shape,
+      std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const uint8_t* x,
+                                                uint8_t* y) {
   ArithemeticIf<DeviceType::kGPU>::Transpose(
       ctx, num_axis, x_shape, y_shape,
       std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt, x, y);
@@ -308,17 +328,6 @@ __global__ void FillGpu(const int64_t n, const T value, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = value; }
 }
 
-template<typename T>
-__global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
-                                  const int64_t x_col_offset, const int64_t x_lda, T* y,
-                                  const int64_t y_col_offset, const int64_t y_lda) {
-  CUDA_1D_KERNEL_LOOP(index, row_num * col_num) {
-    const int64_t i = index / col_num;
-    const int64_t j = index % col_num;
-    y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
-  }
-}
-
 }  // namespace
 
 #define OP_BY_SCALAR(op, T)                                                                       \
@@ -398,68 +407,6 @@ void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, cons
                                            float16* y) {
   FillGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, float16_2half(value), reinterpret_cast<half*>(y));
-}
-
-void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n,
-                                           const DataType data_type, const void* value_ptr,
-                                           void* y) {
-  if (data_type == kFloat) {
-    return Fill(ctx, n, *(reinterpret_cast<const float*>(value_ptr)), reinterpret_cast<float*>(y));
-  } else if (data_type == kDouble) {
-    return Fill(ctx, n, *(reinterpret_cast<const double*>(value_ptr)),
-                reinterpret_cast<double*>(y));
-  } else if (data_type == kFloat16) {
-    return Fill(ctx, n, *(reinterpret_cast<const float16*>(value_ptr)),
-                reinterpret_cast<float16*>(y));
-  } else if (data_type == kInt8) {
-    return Fill(ctx, n, *(reinterpret_cast<const int8_t*>(value_ptr)),
-                reinterpret_cast<int8_t*>(y));
-  } else if (data_type == kInt32) {
-    return Fill(ctx, n, *(reinterpret_cast<const int32_t*>(value_ptr)),
-                reinterpret_cast<int32_t*>(y));
-  } else if (data_type == kInt64) {
-    return Fill(ctx, n, *(reinterpret_cast<const int64_t*>(value_ptr)),
-                reinterpret_cast<int64_t*>(y));
-  } else if (data_type == kBFloat16) {
-#if CUDA_VERSION >= 11000
-    return FillBFloat16(ctx, n, *(reinterpret_cast<const nv_bfloat16*>(value_ptr)),
-                        reinterpret_cast<nv_bfloat16*>(y));
-#else
-    UNIMPLEMENTED();
-#endif
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-#define COPY_COLS_REGION(T)                                                                    \
-  void ArithemeticIf<DeviceType::kGPU>::CopyColsRegion(                                        \
-      DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,                \
-      const int64_t x_col_offset, const int64_t x_lda, T* y, const int64_t y_col_offset,       \
-      const int64_t y_lda) {                                                                   \
-    CopyColsRegionGpu<T><<<BlocksNum4ThreadsNum(row_num* col_num), kCudaThreadsNumPerBlock, 0, \
-                           ctx->cuda_stream()>>>(row_num, col_num, x, x_col_offset, x_lda, y,  \
-                                                 y_col_offset, y_lda);                         \
-  }
-
-COPY_COLS_REGION(float)
-COPY_COLS_REGION(double)
-COPY_COLS_REGION(int8_t)
-COPY_COLS_REGION(int32_t)
-COPY_COLS_REGION(int64_t)
-
-#undef COPY_COLS_REGION
-
-void ArithemeticIf<DeviceType::kGPU>::CopyColsRegion(DeviceCtx* ctx, const int64_t row_num,
-                                                     const int64_t col_num, const float16* x,
-                                                     const int64_t x_col_offset,
-                                                     const int64_t x_lda, float16* y,
-                                                     const int64_t y_col_offset,
-                                                     const int64_t y_lda) {
-  CopyColsRegionGpu<half>
-      <<<BlocksNum4ThreadsNum(row_num * col_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          row_num, col_num, reinterpret_cast<const half*>(x), x_col_offset, x_lda,
-          reinterpret_cast<half*>(y), y_col_offset, y_lda);
 }
 
 }  // namespace oneflow
