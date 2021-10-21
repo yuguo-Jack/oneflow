@@ -102,7 +102,7 @@ char* IBVerbsCommNet::SerialTokenToData(void* token, size_t* token_size) {
   return data;
 }
 
-void* IBVerbsCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
+void* IBVerbsCommNet::DeSerialDataToToken(char * data, size_t * token_size) {
   void* token = malloc(sizeof(IBVerbsCommNetRMADesc));
   std::memcpy(token, data, sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
