@@ -13,17 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-<<<<<<< HEAD
-
-
-import math
-import os
-import unittest
-=======
 import unittest
 import math
 import os
->>>>>>> 9e06b6decad947d1850bc5d4d174a2faa0717585
 from collections import OrderedDict
 
 import numpy as np

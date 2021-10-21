@@ -97,13 +97,14 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
+  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_DEFAULT_MATH);
   if (GetCudaSmVersion() >= 500) {
-    OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+    OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_handle(), cublas_trans_b,
                                  cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16BF, ldb, a,
                                  CUDA_R_16BF, lda, &beta_f, c, CUDA_R_16BF, ldc, CUDA_R_32F,
                                  CUBLAS_GEMM_DFALT_TENSOR_OP));
   } else {
-    OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+    OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_handle(), cublas_trans_b,
                                   cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16BF, ldb, a,
                                   CUDA_R_16BF, lda, &beta_f, c, CUDA_R_16BF, ldc));
   }
@@ -224,13 +225,13 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
-
+  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_DEFAULT_MATH);
   if (GetCudaSmVersion() >= 500) {
     const float alpha_f = static_cast<float>(alpha);
     const float beta_f = static_cast<float>(beta);
     cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
-        ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
+        ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
         reinterpret_cast<const void*>(b), CUDA_R_16BF, ldb, b_stride,
         reinterpret_cast<const void*>(a), CUDA_R_16BF, lda, a_stride, &beta_f,
         reinterpret_cast<void*>(c), CUDA_R_16BF, ldc, c_stride, batch_size, CUDA_R_32F, algo));
