@@ -16,12 +16,14 @@ Functional operations for neural networks
 .. autofunction:: l2_normalize
 .. autofunction:: leaky_relu
 .. autofunction:: elu
+.. autofunction:: celu
 .. autofunction:: selu
 .. autofunction:: sigmoid
 .. autofunction:: pad
 .. autofunction:: prelu
-.. autofunction:: log_sigmoid 
+.. autofunction:: logsigmoid 
 .. autofunction:: gelu
+.. autofunction:: glu
 .. autofunction:: softsign
 .. autofunction:: softmax 
 .. autofunction:: softplus
@@ -33,3 +35,9 @@ Functional operations for neural networks
 .. autofunction:: upsample
 .. autofunction:: affine_grid
 .. autofunction:: grid_sample
+.. autofunction:: interpolate
+.. autofunction:: layer_norm
+.. autofunction:: ctc_greedy_decoder
+.. autofunction:: sparse_softmax_cross_entropy
+.. autofunction:: embedding
+.. autofunction:: linear
