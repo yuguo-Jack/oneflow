@@ -109,7 +109,7 @@ char* EpollCommNet::SerialTokenToData(void* token, size_t* token_size) {
   char* new_token = reinterpret_cast<char*>(token);
   std::memcpy(data, &new_token, sizeof(void*));
   *token_size = sizeof(void*);
-  return data;
+  return data; //
 }
 
 void* EpollCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
