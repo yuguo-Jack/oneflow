@@ -29,9 +29,7 @@ limitations under the License.
 #define ms_1 1e11
 #define us_1 1e8
 #define s_1 1e14
-#define wait_time 1.65e11
 #define cut_cost 3e38
-#define transfer_cost 1.65e10
 
 namespace Algorithm {
 
@@ -204,9 +202,10 @@ class SbpNode {
   // for producers or upstream nodes
   void RaiseConsumerNum(oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
   // Compute the minimal available wait time for producers or upstream nodes
-  void SpreadAvailWaitTime(
-      std::vector<double> &mainstem_cost, std::vector<double> &acc_mainstem_cost,
-      oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+  void SpreadAvailWaitTime(std::vector<double> &mainstem_cost,
+                           std::vector<double> &acc_mainstem_cost,
+                           oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node,
+                           double wait_time, double transfer_cost);
   // Drop down the available wait time with the minimum cost from downstreams
   void DropAvailWaitTime(double curr_mainstem_cost);
   // Reduce and set the wait time for op in the mainstem
@@ -737,7 +736,8 @@ void SbpNode<SbpSignature>::RaiseConsumerNum(
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadAvailWaitTime(
     std::vector<double> &mainstem_cost, std::vector<double> &acc_mainstem_cost,
-    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node) {
+    oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node, double wait_time,
+    double transfer_cost) {
   // skip the proxy nodes and the sources
   if (MinLayer <= 0) return;
   // Have not finished spreading for consumers or downstream nodes or already visited.
@@ -784,7 +784,8 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
       producer->DropAvailWaitTime(curr_mainstem_cost);
     }
     producer->counter--;
-    producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node);
+    producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node, wait_time,
+                                  transfer_cost);
   }
   // Put the rest the mainstem cost in the upstream nodes.
   for (const auto &ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
@@ -800,7 +801,8 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
         producer->DropAvailWaitTime(curr_mainstem_cost);
       }
       producer->counter--;
-      producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node);
+      producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node, wait_time,
+                                    transfer_cost);
     }
   }
   // Set counter to be -1, do not visit it again.

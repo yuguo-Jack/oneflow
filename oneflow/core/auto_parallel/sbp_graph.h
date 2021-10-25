@@ -39,6 +39,10 @@ class SbpGraph {
   int32_t Threshold = 100;
   // The next id that we are going to use for nodes.
   int32_t NextId = 0;
+  // Overlayable wait time for copy cost, which occurs before communication between devices.
+  double wait_time;
+  // Uncovered wait time for copy cost.
+  double transfer_cost;
 
   // functions
   SbpGraph();
@@ -119,6 +123,12 @@ class SbpGraph {
   // Find the mianstem of the sbp graph, then reduce the wait time for tributaries
   void FindMainstem(int32_t max_MinLayer,
                     oneflow::HashMap<std::string, SbpNode<SbpSignature> *> &op_name2sbp_node);
+
+  // Set wait time
+  void SetWaitTime(double wait_time_);
+
+  // Set transfer cost
+  void SetTransferCost(double transfer_cost_);
 
  private:
   void DFS_AddNbhCost(std::vector<int32_t> &nbh_id2NodeListId,
@@ -846,7 +856,8 @@ void SbpGraph<SbpSignature>::FindMainstem(
   }
   // Reduce the wait time for tributaries
   for (SbpNode<SbpSignature> *this_node : NodeList) {
-    this_node->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node);
+    this_node->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node, wait_time,
+                                   transfer_cost);
   }
 
   // Reduce the wait time for mainstem from the end to the begining
@@ -888,6 +899,18 @@ void SbpGraph<SbpSignature>::FindMainstem(
       }
     }
   }
+}
+
+// Set wait time
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::SetWaitTime(double wait_time_) {
+  wait_time = wait_time_;
+}
+
+// Set transfer cost
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::SetTransferCost(double transfer_cost_) {
+  transfer_cost = transfer_cost_;
 }
 
 #ifdef RANDOM_GENERATOR_

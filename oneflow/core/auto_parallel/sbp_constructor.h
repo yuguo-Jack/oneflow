@@ -33,7 +33,11 @@ class SbpConstructor {
   // A mapping from op names to nodes in cost model of auto parallel
   HashMap<std::string, Algorithm::SbpNode<SbpSignature>*> op_name2sbp_node;
   // Time ratio for unit computation cost vs unit copy cost
-  double CostRatio;
+  double CostRatio = -1.0;
+  // Overlayable wait time for copy cost, which occurs before communication between devices.
+  double wait_time = -1.0;
+  // Uncovered wait time for copy cost.
+  double transfer_cost = -1.0;
   // Maps operator name to the successive proxy of sbp node
   HashMap<std::string, Algorithm::SbpNode<SbpSignature>*> op_name2sbp_proxy;
   // sbp graph
@@ -43,12 +47,20 @@ class SbpConstructor {
     std::ifstream ifs("/home/liyipeng/OneFlow-Benchmark/Classification/cnns/CostRatioFile.txt");
     if (ifs.is_open()) {
       ifs >> CostRatio;
+      ifs >> wait_time;
+      ifs >> transfer_cost;
     } else {
-      CostRatio = 0.1;
       std::cout << "CostRatioFile.txt does not exist." << std::endl;
     }
     ifs.close();
+    if (CostRatio < 0) CostRatio = 0.1;
+    if (wait_time < 0) wait_time = 1.65e8;
+    if (transfer_cost < 0) transfer_cost = 1.65e7;
     std::cout << "Cost Ratio: " << CostRatio << std::endl;
+    std::cout << "Wait time:" << wait_time << std::endl;
+    std::cout << "Transfer Cost:" << transfer_cost << std::endl;
+    sbp_graph.SetWaitTime(wait_time);
+    sbp_graph.SetTransferCost(transfer_cost);
   };
   ~SbpConstructor() = default;
 
@@ -118,7 +130,6 @@ class SbpConstructor {
   // Print the graph with SBP in order
   void PrintGraph(OpGraph& op_graph);
 };
-
 
 }  // namespace oneflow
 
