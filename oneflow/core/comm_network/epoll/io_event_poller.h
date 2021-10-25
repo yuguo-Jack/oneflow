@@ -63,4 +63,3 @@ class IOEventPoller final {
 #endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_IO_EVENT_POLLER_H_
-
