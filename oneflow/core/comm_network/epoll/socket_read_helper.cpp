@@ -6,13 +6,14 @@ you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
-
+    
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/global.h"
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
@@ -73,9 +74,10 @@ bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) 
 
 void SocketReadHelper::SetStatusWhenMsgHeadDone() {
   switch (cur_msg_.msg_type) {
+    case SocketMsgType::kActor: SetStatusWhenActorMsgHeadDone(); break;
 #define MAKE_ENTRY(x, y) \
   case SocketMsgType::k##x: SetStatusWhen##x##MsgHeadDone(); break;
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
 #undef MAKE_ENTRY
     default: UNIMPLEMENTED();
   }
@@ -107,7 +109,10 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
-  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(cur_msg_.actor_msg);
+  size_t size = cur_msg_.actor_msg.size;
+  char* data = (char*)malloc(size);
+  std::memcpy(data, cur_msg_.actor_msg.data, size);
+  Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
   SwitchToMsgHeadReadHandle();
 }
 
