@@ -40,8 +40,6 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
   OF_PP_MAKE_TUPLE_SEQ(Transport, transport)
 
- 
-
 enum class SocketMsgType {
   kActor,
   kRequestWrite,
