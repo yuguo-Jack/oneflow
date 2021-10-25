@@ -13,11 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
-#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 #include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -94,30 +92,11 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
-  char* data = reinterpret_cast<char*>(addr);
-  SocketMsg msg;
-  msg.actor_msg.size = 0;
-  msg.msg_type = SocketMsgType::kActor;
-  std::memcpy(msg.actor_msg.data, data, size);
-  msg.actor_msg.size = size;
-  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
-}
+void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {}
 
-char* EpollCommNet::SerialTokenToData(void* token, size_t* token_size) {
-  char* data = (char*)malloc(sizeof(void*));
-  char* new_token = reinterpret_cast<char*>(token);
-  std::memcpy(data, &new_token, sizeof(void*));
-  *token_size = sizeof(void*);
-  return data;  //
-}
+char* EpollCommNet::SerialTokenToData(void* token, size_t* size) { return nullptr; }
 
-void* EpollCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
-  char* token = (char*)malloc(sizeof(void*));
-  std::memcpy(token, data, sizeof(void*));
-  *token_size = sizeof(void*);
-  return token;
-}
+void* EpollCommNet::DeSerialDataToToken(char* data, size_t* size) { return nullptr; }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
   SocketMsg msg;

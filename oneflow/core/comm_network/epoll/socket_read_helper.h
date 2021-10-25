@@ -42,7 +42,6 @@ class SocketReadHelper final {
   bool DoCurRead(void (SocketReadHelper::*set_cur_read_done)());
   void SetStatusWhenMsgHeadDone();
   void SetStatusWhenMsgBodyDone();
-  void SetStatusWhenActorMsgHeadDone();
 
 #define MAKE_ENTRY(x, y) void SetStatusWhen##x##MsgHeadDone();
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
@@ -61,3 +60,4 @@ class SocketReadHelper final {
 #endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_READ_HELPER_H_
+
