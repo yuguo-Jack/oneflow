@@ -35,8 +35,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define kMessageSize = 256 
-
 #define SOCKET_MSG_TYPE_SEQ                         \
   OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write) \
   OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
