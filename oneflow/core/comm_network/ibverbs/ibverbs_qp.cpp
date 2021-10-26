@@ -62,7 +62,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(qp_);
   num_outstanding_send_wr_ = 0;
   message_pool_ = message_pool;
-  max_outstanding_send_wr_ = queue_depth;
+  max_outstanding_send_wr_ = queue_depth_;
   read_block_size_ =
       ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE", kDefaultMemBlockSize);
 }
