@@ -6,7 +6,7 @@ you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
-
+    
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -112,9 +112,10 @@ bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)
 
 void SocketWriteHelper::SetStatusWhenMsgHeadDone() {
   switch (cur_msg_.msg_type) {
+    case SocketMsgType::kActor: SetStatusWhenActorMsgHeadDone(); break;
 #define MAKE_ENTRY(x, y) \
   case SocketMsgType::k##x: return SetStatusWhen##x##MsgHeadDone();
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
 #undef MAKE_ENTRY
     default: UNIMPLEMENTED();
   }
