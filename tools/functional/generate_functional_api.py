@@ -51,6 +51,7 @@ header_fmt = (
 #ifndef ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 #define ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 
+#include <ext/pool_allocator.h>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"

@@ -24,9 +24,9 @@ namespace one {
 
 struct SliceCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  std::vector<int64_t> start;
-  std::vector<int64_t> stop;
-  std::vector<int64_t> step;
+  std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> start;
+  std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> stop;
+  std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> step;
 };
 
 class Slice : public OpExprGradFunction<SliceCaptureState> {
@@ -46,9 +46,12 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
-    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
-    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
+    ctx->start = JUST(
+        composed_attrs.GetAttr<std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>>>("start"));
+    ctx->stop = JUST(
+        composed_attrs.GetAttr<std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>>>("stop"));
+    ctx->step = JUST(
+        composed_attrs.GetAttr<std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>>>("step"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -70,9 +73,9 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
 struct SliceUpdateCaptureState : public AutoGradCaptureState {
   bool requires_grad_x;
   bool requires_grad_update;
-  std::vector<int64_t> start;
-  std::vector<int64_t> stop;
-  std::vector<int64_t> step;
+  std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> start;
+  std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> stop;
+  std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> step;
 };
 
 class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
@@ -94,9 +97,12 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
     if (!ctx->requires_grad_x && !ctx->requires_grad_update) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
-    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
-    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
+    ctx->start = JUST(
+        composed_attrs.GetAttr<std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>>>("start"));
+    ctx->stop = JUST(
+        composed_attrs.GetAttr<std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>>>("stop"));
+    ctx->step = JUST(
+        composed_attrs.GetAttr<std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>>>("step"));
 
     if (ctx->requires_grad_x) { ctx->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();

@@ -19,6 +19,8 @@ enum AttrType {
   kAtListDataType = 12;
   kAtListShape = 13;
   kAtListString = 14;
+  kAtListInt32PoolAllocator = 15;
+  kAtListInt64PoolAllocator = 16;
 }
 
 message AttrValue {
@@ -41,6 +43,12 @@ message AttrValue {
   message ListString {
     repeated string val = 1;
   }
+  message ListInt32PoolAllocator {
+    repeated int32 val = 1;
+  }
+  message ListInt64PoolAllocator {
+    repeated int64 val = 1;
+  }
   oneof value {
     int32 at_int32 = 1;
     int64 at_int64 = 2;
@@ -56,6 +64,8 @@ message AttrValue {
     ListDataType at_list_data_type = 12;
     ListShape at_list_shape = 13;
     ListString at_list_string = 14;
+    ListInt32PoolAllocator at_list_int32_pool_allocator = 15;
+    ListInt64PoolAllocator at_list_int64_pool_allocator = 16;
   }
 }
 

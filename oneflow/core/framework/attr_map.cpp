@@ -158,6 +158,17 @@ const std::shared_ptr<const user_op::AttrVal>& ComposedAttrMap::Attr4Name(
 OF_PP_FOR_EACH_TUPLE(DEFINE_ATTR_VALUE_MAP_GET_ATTR, ATTR_SEQ);
 #undef DEFINE_ATTR_VALUE_MAP_GET_ATTR
 
+#define DEFINE_ATTR_VALUE_MAP_GET_ATTR_POOL_ALLOCATOR(field, T, attr_type)                   \
+  template Maybe<const std::vector<T, __gnu_cxx::__pool_alloc<T>>&>                          \
+  AttrMap::GetAttr<std::vector<T, __gnu_cxx::__pool_alloc<T>>>(const std::string& attr_name) \
+      const;                                                                                 \
+  template Maybe<const std::vector<T, __gnu_cxx::__pool_alloc<T>>&>                          \
+  ComposedAttrMap::GetAttr<std::vector<T, __gnu_cxx::__pool_alloc<T>>>(                      \
+      const std::string& attr_name) const;
+
+OF_PP_FOR_EACH_TUPLE(DEFINE_ATTR_VALUE_MAP_GET_ATTR_POOL_ALLOCATOR, LIST_POOL_ALLOCATOR_ATTR_SEQ);
+#undef DEFINE_ATTR_VALUE_MAP_GET_ATTR_POOL_ALLOCATOR
+
 template<>
 Maybe<void> MutableAttrMap::SetAttr(const std::string& attr_name,
                                     const std::shared_ptr<user_op::AttrVal>& attr_val) {

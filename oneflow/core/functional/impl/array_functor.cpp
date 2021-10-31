@@ -1464,7 +1464,7 @@ class TensorGetItemFunctor {
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
 
-    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+    std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> start(ndims), end(ndims), step(ndims);
     for (int i = 0; i < ndims; ++i) {
       const auto& slice = slice_indices.at(i);
       start[i] = slice.start();
@@ -1553,7 +1553,7 @@ class TensorSetItemFunctor {
         }
         value_tensor = JUST(Expand(value_tensor, target_shape));
       }
-      std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+      std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> start(ndims), end(ndims), step(ndims);
       DimVector slice_dims(ndims);
       for (int i = 0; i < ndims; ++i) {
         const auto& slice = slice_indices.at(i);

@@ -19,6 +19,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 #include <pybind11/pybind11.h>
+#include <ext/pool_allocator.h>
 
 #include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/common/maybe.h"
@@ -54,6 +55,10 @@ using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
   OF_PP_MAKE_TUPLE_SEQ(uint64_t) \
   OF_PP_MAKE_TUPLE_SEQ(bool)
 
+#define POOL_ALLOCATOR_INTEGER_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t)         \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t)
+
 #define FLOATING_TYPE_SEQ     \
   OF_PP_MAKE_TUPLE_SEQ(float) \
   OF_PP_MAKE_TUPLE_SEQ(double)
@@ -85,6 +90,20 @@ inline Maybe<std::vector<T>> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpa
   return values;
 }
 
+template<typename T, typename UnpackItemFunc>
+inline Maybe<std::vector<T, __gnu_cxx::__pool_alloc<T>>> PyUnpackSequencePoolAllocator(
+    PyObject* obj, UnpackItemFunc unpack_item) {
+  bool is_tuple = PyTuple_Check(obj);
+  CHECK_OR_RETURN(is_tuple || PyList_Check(obj))
+      << "The object is not list or tuple, but is " << Py_TYPE(obj)->tp_name;
+  size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);
+  auto values = std::make_shared<std::vector<T, __gnu_cxx::__pool_alloc<T>>>(size);
+  for (int i = 0; i < size; ++i) {
+    PyObject* item = is_tuple ? PyTuple_GET_ITEM(obj, i) : PyList_GET_ITEM(obj, i);
+    values->at(i) = dereference<T>(JUST(unpack_item(item)));
+  }
+  return values;
+}
 // Integer/Float list
 bool PyLongSequenceCheck(PyObject* obj);
 bool PyFloatSquenceCheck(PyObject* obj);
@@ -92,6 +111,13 @@ bool PyFloatSquenceCheck(PyObject* obj);
 template<typename T>
 inline Maybe<std::vector<T>> PyUnpackLongSequence(PyObject* obj) {
   return PyUnpackSequence<T>(
+      obj, [](PyObject* item) -> Maybe<T> { return static_cast<T>(PyLong_AsLongLong(item)); });
+}
+
+template<typename T>
+inline Maybe<std::vector<T, __gnu_cxx::__pool_alloc<T>>> PyUnpackLongSequencePoolAllocator(
+    PyObject* obj) {
+  return PyUnpackSequencePoolAllocator<T>(
       obj, [](PyObject* item) -> Maybe<T> { return static_cast<T>(PyLong_AsLongLong(item)); });
 }
 

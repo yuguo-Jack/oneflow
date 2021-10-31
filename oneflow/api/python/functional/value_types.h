@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/dtype.h"
+#include <ext/pool_allocator.h>
 
 namespace oneflow {
 class Scalar;
@@ -72,8 +73,10 @@ enum ValueType : int {
   kSTRING,
   // Integral list
   kINT32_LIST = 50,
+  kINT32_LIST_POOL_ALLOCATOR,
   kUINT32_LIST,
   kINT64_LIST,
+  kINT64_LIST_POOL_ALLOCATOR,
   kUINT64_LIST,
   kINTEGRAL_LIST_MASK = 60,
   // Floating list
@@ -122,6 +125,24 @@ enum ValueType : int {
     return value_type;                                                                           \
   }
 
+#define VALUE_TYPE_POOL_ALLOCATOR_OF_IMPL(data_type, value_type)                                   \
+  template<typename T,                                                                             \
+           typename std::enable_if<                                                                \
+               std::is_same<T, std::vector<data_type, __gnu_cxx::__pool_alloc<data_type>>>::value, \
+               int>::type = 0>                                                                     \
+  inline ValueType ValueTypeOf() {                                                                 \
+    return value_type;                                                                             \
+  }                                                                                                \
+  template<                                                                                        \
+      typename T,                                                                                  \
+      typename std::enable_if<                                                                     \
+          std::is_same<                                                                            \
+              T, Optional<std::vector<data_type, __gnu_cxx::__pool_alloc<data_type>>>>::value,     \
+          int>::type = 0>                                                                          \
+  inline ValueType ValueTypeOf() {                                                                 \
+    return value_type;                                                                             \
+  }
+
 VALUE_TYPE_OF_IMPL(void, kVOID);
 VALUE_TYPE_OF_IMPL(int32_t, kINT32);
 VALUE_TYPE_OF_IMPL(uint32_t, kUINT32);
@@ -132,8 +153,10 @@ VALUE_TYPE_OF_IMPL(double, kDOUBLE);
 VALUE_TYPE_OF_IMPL(bool, kBOOL);
 VALUE_TYPE_OF_IMPL(std::string, kSTRING);
 VALUE_TYPE_OF_IMPL(std::vector<int32_t>, kINT32_LIST);
+VALUE_TYPE_POOL_ALLOCATOR_OF_IMPL(int32_t, kINT32_LIST_POOL_ALLOCATOR);
 VALUE_TYPE_OF_IMPL(std::vector<uint32_t>, kUINT32_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<int64_t>, kINT64_LIST);
+VALUE_TYPE_POOL_ALLOCATOR_OF_IMPL(int64_t, kINT64_LIST_POOL_ALLOCATOR);
 VALUE_TYPE_OF_IMPL(std::vector<uint64_t>, kUINT64_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<float>, kFLOAT_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<double>, kDOUBLE_LIST);

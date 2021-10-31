@@ -17,5 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FUNCTIONAL_FUNCTIONAL_H_
 
 #include "oneflow/core/functional/functional_api.yaml.h"
+#include <ext/pool_allocator.h>
 
 #endif  // ONEFLOW_CORE_FUNCTIONAL_FUNCTIONAL_H_

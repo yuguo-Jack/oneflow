@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <ext/pool_allocator.h>
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/scope.h"
@@ -105,7 +106,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
       seed = rd();
     }
     std::seed_seq seq{seed};
-    std::vector<int64_t> seeds(parallel_ctx->parallel_num());
+    std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> seeds(parallel_ctx->parallel_num());
     seq.generate(seeds.begin(), seeds.end());
     kernel_conf->mutable_image_decoder_random_crop_resize_conf()->set_seed(
         seeds.at(parallel_ctx->parallel_id()));

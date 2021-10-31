@@ -80,7 +80,7 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
   in_grads->resize(2);
   if (ctx->activation_requires_grad) {
     const auto& x = ctx->SavedTensors().at(1);
-    std::vector<int64_t> start, stop, step;
+    std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> start, stop, step;
     for (int i = 0; i < x->shape()->NumAxes(); i++) {
       start.push_back(0);
       stop.push_back(x->shape()->At(i));

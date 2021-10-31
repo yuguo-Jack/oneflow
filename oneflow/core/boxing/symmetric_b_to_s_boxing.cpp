@@ -74,9 +74,9 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
     const TensorSliceView& intersection = out_slice.Intersect(in_slice);
     CHECK(!intersection.IsEmpty());
     const std::vector<Range>& range_vec = intersection.range_vec();
-    std::vector<int64_t> start;
-    std::vector<int64_t> stop;
-    std::vector<int64_t> step(range_vec.size(), 1);
+    std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> start;
+    std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> stop;
+    std::vector<int64_t, __gnu_cxx::__pool_alloc<int64_t>> step(range_vec.size(), 1);
     for (const auto& range : range_vec) {
       start.emplace_back(range.begin());
       stop.emplace_back(range.end());

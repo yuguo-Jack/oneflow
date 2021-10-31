@@ -44,10 +44,35 @@ namespace functional {
       return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyLong_AsLongLong(object_))); \
     }                                                                                             \
     return PyUnpackLongSequence<T>(object_);                                                      \
+  }                                                                                               \
+  template<>                                                                                      \
+  Maybe<std::vector<T, __gnu_cxx::__pool_alloc<T>>>                                               \
+  PythonArg::ObjectAs<std::vector<T, __gnu_cxx::__pool_alloc<T>>>() const {                       \
+    if (size_ > 0 && PyLong_Check(object_)) {                                                     \
+      return std::make_shared<std::vector<T, __gnu_cxx::__pool_alloc<T>>>(                        \
+          size_, static_cast<T>(PyLong_AsLongLong(object_)));                                     \
+    }                                                                                             \
+    return PyUnpackLongSequencePoolAllocator<T>(object_);                                         \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
 #undef INSTANCE_OBJECT_AS_INTEGER
+
+// #define INSTANCE_OBJECT_AS_INTEGER_POOL_ALLOCATOR(T)                                  \
+// template<>                                                                                      \
+//   Maybe<std::vector<T, __gnu_cxx::__pool_alloc<T>>> PythonArg::ObjectAs<std::vector<T, __gnu_cxx::__pool_alloc<T>>>() const {     \
+//     return static_cast<std::vector<T, __gnu_cxx::__pool_alloc<T>>>(PyLong_AsLongLong(object_));                                   \
+//   }                                                                                               \
+//   template<>                                                                                      \
+//   Maybe<std::vector<T, __gnu_cxx::__pool_alloc<T>>> PythonArg::ObjectAs<std::vector<T, __gnu_cxx::__pool_alloc<T>>>() const {                             \
+//     if (size_ > 0 && PyLong_Check(object_)) {                                                     \
+//       return std::make_shared<std::vector<T, __gnu_cxx::__pool_alloc<T>>>(size_, static_cast<T>(PyLong_AsLongLong(object_))); \
+//     }                                                                                             \
+//     return PyUnpackLongSequence<T>(object_);                                                      \
+//   }
+
+// OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER_POOL_ALLOCATOR, POOL_ALLOCATOR_INTEGER_TYPE_SEQ)
+// #undef INSTANCE_OBJECT_AS_INTEGER_POOL_ALLOCATOR
 
 #define INSTANCE_OBJECT_AS_FLOAT(T)                                                              \
   template<>                                                                                     \

@@ -909,11 +909,11 @@
   bind_python: True
 
 - name: "slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => Slice"
+  signature: "Tensor (Tensor x, Int64ListPoolAllocator start, Int64ListPoolAllocator stop, Int64ListPoolAllocator step) => Slice"
   bind_python: True
 
 - name: "slice_grad"
-  signature: "Tensor (Tensor dy, Tensor like, Int64List start, Int64List stop, Int64List step) => SliceGrad"
+  signature: "Tensor (Tensor dy, Tensor like, Int64ListPoolAllocator start, Int64ListPoolAllocator stop, Int64ListPoolAllocator step) => SliceGrad"
   bind_python: False
 
 - name: "narrow"
@@ -925,7 +925,7 @@
   bind_python: False
 
 - name: "slice_update"
-  signature: "Tensor (Tensor x, Tensor update, Int64List start, Int64List stop, Int64List step, *, Bool inplace=False) => SliceUpdate"
+  signature: "Tensor (Tensor x, Tensor update, Int64ListPoolAllocator start, Int64ListPoolAllocator stop, Int64ListPoolAllocator step, *, Bool inplace=False) => SliceUpdate"
   bind_python: True
 
 - name: "logical_slice"
@@ -933,7 +933,7 @@
   bind_python: True
 
 - name: "logical_slice_assign"
-  signature: "Void (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
+  signature: "Void (Tensor ref, Tensor value, Int64ListPoolAllocator start, Int64ListPoolAllocator stop, Int64ListPoolAllocator step) => LogicalSliceAssign"
   bind_python: True
 
 - name: "squeeze"

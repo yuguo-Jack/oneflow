@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 
+#include <ext/pool_allocator.h>
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
@@ -46,6 +47,10 @@ namespace user_op {
   OF_PP_MAKE_TUPLE_SEQ(at_list_int32, std::vector<int32_t>, AttrType::kAtListInt32) \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int64, std::vector<int64_t>, AttrType::kAtListInt64) \
   OF_PP_MAKE_TUPLE_SEQ(at_list_float, std::vector<float>, AttrType::kAtListFloat)
+
+#define LIST_POOL_ALLOCATOR_ATTR_SEQ                                                               \
+  OF_PP_MAKE_TUPLE_SEQ(at_list_int32_pool_allocator, int32_t, AttrType::kAtListInt32PoolAllocator) \
+  OF_PP_MAKE_TUPLE_SEQ(at_list_int64_pool_allocator, int64_t, AttrType::kAtListInt64PoolAllocator)
 
 #define LIST_ENUM_ATTR_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(at_list_data_type, std::vector<DataType>, AttrType::kAtListDataType)
@@ -82,6 +87,17 @@ struct GetCppType;
   };
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_ATTR_TYPE, ATTR_SEQ);
 #undef SPECIALIZE_GET_ATTR_TYPE
+
+#define SPECIALIZE_GET_ATTR_POOL_ALLOCATOR_TYPE(field, data_type, type_proto)    \
+  template<>                                                                     \
+  struct GetAttrType<std::vector<data_type, __gnu_cxx::__pool_alloc<data_type>>> \
+      : std::integral_constant<AttrType, type_proto> {};                         \
+  template<>                                                                     \
+  struct GetCppType<type_proto> {                                                \
+    typedef std::vector<data_type, __gnu_cxx::__pool_alloc<data_type>> type;     \
+  };
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_ATTR_POOL_ALLOCATOR_TYPE, LIST_POOL_ALLOCATOR_ATTR_SEQ);
+#undef SPECIALIZE_GET_ATTR_POOL_ALLOCATOR_TYPE
 
 class AttrVal {
  public:

@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FUNCTIONAL_FUNCTION_LIBRARY_H_
 #define ONEFLOW_CORE_FUNCTIONAL_FUNCTION_LIBRARY_H_
 
+#include <ext/pool_allocator.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/functional/packed_functor.h"
 
