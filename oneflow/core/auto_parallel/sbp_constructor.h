@@ -17,7 +17,7 @@ limitations under the License.
 #define SBP_CONSTRUCTOR_
 
 #ifndef ENABLE_AUTO_PARALLEL
-#define ENABLE_AUTO_PARALLEL
+//#define ENABLE_AUTO_PARALLEL
 #endif
 
 #include "sbp_graph.h"

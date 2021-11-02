@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -56,7 +57,9 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ::oneflow::profiler::TraceKernelForwardDataContentStart(ctx, this);
   Forward(ctx, BnInOp2Blob);
+  ::oneflow::profiler::TraceKernelForwardDataContentEnd(ctx, this);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
