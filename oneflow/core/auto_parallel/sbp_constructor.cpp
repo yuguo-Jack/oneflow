@@ -527,22 +527,6 @@ Maybe<void> SbpConstructor::InferOpSbpSignature(
   };
   // functions to get order value, the most important value to decide SBP
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
-  // functions designed by ourselves
-  auto OrderValue4HasBatchAxis = [&](const std::string& bn,
-                                     const SbpParallel& sbp_parallel) -> int32_t {
-    const auto& batch_axis = *CHECK_JUST(BatchAxis4BnInOp(bn));
-    return -1
-           * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
-              && sbp_parallel.split_parallel().axis() == batch_axis.value());
-  };
-  auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
-                                       const SbpParallel& sbp_parallel) -> int32_t {
-    const auto& batch_axis = *CHECK_JUST(BatchAxis4BnInOp(ibn));
-    return -2
-           * (batch_axis.has_value() == false
-              && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
-              && sbp_parallel.has_split_parallel() == false);
-  };
   // Give Sbp candidate highest priority if requested by user
   auto OrderValue4SbpHint = [&](const std::string& ibn,
                                 const SbpParallel& sbp_parallel) -> int32_t {
@@ -556,14 +540,7 @@ Maybe<void> SbpConstructor::InferOpSbpSignature(
       for (const auto& ibn : op_.input_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
-        order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
         order_value += OrderValue4SbpHint(ibn, sbp_parallel_it->second);
-      }
-      for (const auto& obn : op_.output_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
       }
       return order_value;
     };
