@@ -350,9 +350,19 @@ void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
   set_stream(stream);
   instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(this);
   *mut_parallel_desc() = parallel_desc;
+  if (likely(instr_msg->phy_instr_operand())) {
+    CHECK(phy_instr_mirrored_objects_.empty());
+    std::function<void(MirroredObject*)> Collect = [&](MirroredObject* mirrored_object) {
+      phy_instr_mirrored_objects_.push_back(mirrored_object);
+    };
+    instr_msg->phy_instr_operand()->ForEachMut2MirroredObject(Collect);
+    instr_msg->phy_instr_operand()->ForEachMutMirroredObject(Collect);
+    instr_msg->phy_instr_operand()->ForEachConstMirroredObject(Collect);
+  }
 }
 
 void Instruction::Delete() {
+  if (likely(instr_msg().phy_instr_operand())) { phy_instr_mirrored_objects_.clear(); }
   instr_msg().instr_type_id().instruction_type().DeleteInstructionStatusIf(this);
   clear_instr_msg();
   mut_in_edges()->Clear();

@@ -204,6 +204,9 @@ class MirroredObject final : public intrusive::Base {
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
+  Instruction* last_phy_instruction() const { return last_phy_instruction_; }
+  void set_last_phy_instruction(Instruction* ptr) { last_phy_instruction_ = ptr; }
+
  private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
@@ -213,12 +216,14 @@ class MirroredObject final : public intrusive::Base {
         mirrored_object_id_(),
         rw_mutexed_object_(),
         deleting_access_(),
+        last_phy_instruction_(nullptr),
         global_device_id_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   FlatMsg<MirroredObjectId> mirrored_object_id_;
   intrusive::shared_ptr<RwMutexedObject> rw_mutexed_object_;
   RwMutexedObjectAccess* deleting_access_;
+  Instruction* last_phy_instruction_;
 
  public:
   // skiplist hooks

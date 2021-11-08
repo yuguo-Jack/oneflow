@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/instruction.cfg.h"
+#include "absl/container/inlined_vector.h"
 
 namespace oneflow {
 namespace vm {
@@ -218,6 +219,7 @@ class InstructionEdge final : public intrusive::Base {
 };
 
 struct Stream;
+class MirroredObject;
 class Instruction final : public intrusive::Base {
  public:
   // types
@@ -334,6 +336,11 @@ class Instruction final : public intrusive::Base {
   MirroredObject* mut_value_mirrored_object(const MutOperand& mut_operand);
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+  static constexpr int kInlinedMirroredObjectCap = 8;
+  const absl::InlinedVector<MirroredObject*, kInlinedMirroredObjectCap>&
+  phy_instr_mirrored_objects() const {
+    return phy_instr_mirrored_objects_;
+  }
 
  private:
   template<int64_t (*TransformLogicalObjectId)(int64_t)>
@@ -368,6 +375,7 @@ class Instruction final : public intrusive::Base {
         stream_(),
         mirrored_object_id2access_(),
         access_list_(),
+        phy_instr_mirrored_objects_(),
         in_edges_(),
         out_edges_(),
         instruction_hook_(),
@@ -386,6 +394,7 @@ class Instruction final : public intrusive::Base {
   MirroredObjectId2RwMutexedObjectAccess mirrored_object_id2access_;
   // lists
   RwMutexedObjectAccessList access_list_;
+  absl::InlinedVector<MirroredObject*, kInlinedMirroredObjectCap> phy_instr_mirrored_objects_;
   InEdgeList in_edges_;
   OutEdgeList out_edges_;
 
