@@ -1,0 +1,22 @@
+*.cu @liujuncheng @guo-ran @MARD1NO
+*.py @daquexian @jackalcooper
+/oneflow/core/cuda @liujuncheng
+/oneflow/core/eager @lixinqi @daquexian
+/oneflow/core/framework @chengtbf
+/oneflow/core/functional @hjchen2
+/oneflow/core/graph @chengtbf
+/oneflow/core/ndarray @lixinqi
+/oneflow/core/object_msg @lixinqi
+/oneflow/core/platform @jackalcooper
+/oneflow/core/ep @liujuncheng
+/oneflow/core/rpc @jackalcooper
+/oneflow/core/stream @liujuncheng
+/oneflow/core/transport @chengtbf
+/oneflow/core/vm @lixinqi
+/oneflow/xrt @hjchen2
+/ci @jackalcooper
+/cmake @jackalcooper
+/.github @jackalcooper
+/tools @jackalcooper
+/docs @doombeaker @jackalcooper
+/oneflow/extension @strint
