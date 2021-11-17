@@ -33,11 +33,7 @@ add_docstr(
         sbp (oneflow.sbp or tuple of oneflow.sbp, optional): the desired sbp of returned tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False
 
-<<<<<<< HEAD
     Note:
-=======
-    Noted:
->>>>>>> 50903bd26437f2192a78cc4d05252c02aa848072
         The Keyword Argument device is mutually exclusive with placement and sbp.
         Consistent tensor only can be constructed from tensor.
 
@@ -122,31 +118,10 @@ add_docstr(
 )
 
 add_docstr(
-<<<<<<< HEAD
     oneflow.Tensor.unfold,
     """
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.unfold.html#torch.Tensor.unfold.
-=======
-    oneflow.Tensor.negative,
-    """
-    See :func:`oneflow.negative`
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.neg,
-    """
-    See :func:`oneflow.neg`
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.unfold,
-    """
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.unfold.html#torch.Tensor.unfold
->>>>>>> 50903bd26437f2192a78cc4d05252c02aa848072
 
     Returns a view of the original tensor which contains all slices of `size` size from `self`
     tensor in the dimension `dimension`.
@@ -214,7 +189,6 @@ add_docstr(
     See :func:`oneflow.permute`
     """,
 )
-<<<<<<< HEAD
 
 add_docstr(
     oneflow.Tensor.abs,
@@ -691,7 +665,3 @@ add_docstr(
         non_blocking (bool): if True and this copy is between CPU and GPU, the copy may occur asynchronously with respect to the host. For other cases, this argument has no effect.
     """,
 )
-
-
-=======
->>>>>>> 50903bd26437f2192a78cc4d05252c02aa848072
