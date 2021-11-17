@@ -50,7 +50,11 @@ class MultiClientSessionContext {
   bool is_inited_;
   HashMap<std::string, std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>>
       graph_name2free_eager_tensors_;
+<<<<<<< HEAD
   std::vector<std::weak_ptr<NNGraph>> graphs_;
+=======
+  std::vector<std::shared_ptr<NNGraph>> graphs_;
+>>>>>>> 50903bd26437f2192a78cc4d05252c02aa848072
 };
 
 }  // namespace oneflow

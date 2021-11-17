@@ -50,6 +50,7 @@ def bmm_op(input, mat2):
 @register_tensor_op("bmm")
 def bmm_op_tensor(input, mat2):
     """
+<<<<<<< HEAD
     Performs a batch matrix-matrix product of matrices stored in input and mat2.
 
     input and mat2 must be 3-D tensors each containing the same number of matrices.
@@ -64,6 +65,12 @@ def bmm_op_tensor(input, mat2):
 
     Keyword Arguments:
         out (Tensor, optional): the output tensor.
+=======
+
+    bmm() -> Tensor
+
+    See :func:`oneflow.bmm`
+>>>>>>> 50903bd26437f2192a78cc4d05252c02aa848072
 
     """
     return flow._C.batch_matmul(input, mat2)
