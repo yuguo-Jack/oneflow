@@ -416,6 +416,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    T *out_dptr = out->mut_dptr();
 
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
 
@@ -464,7 +465,11 @@ class ConvCpuKernel final : public user_op::OpKernel {
               tmp_output);
           
           // place tmp_output
-          
+          int tmp_output_index = 0;
+          const int count = out->shape().Count(0) / out->shape().At(0) / out->shape().At(1);
+          for(int index = 0; index < count; index++){
+            out_dptr[i * out->shape().Count(1) + g * out->shape().Count(2) + index] = tmp_output[tmp_output_index++];
+          }
           free(tmp_output);
         }
       }
