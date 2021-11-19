@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -306,6 +307,7 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
   std::vector<int32_t> strides_3d_;
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
+  int32_t groups;
 
   enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
   int32_t idx_offset_;
@@ -349,24 +351,33 @@ std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelCom
     state->idx_offset_ = 1;
   }
 
+  state->groups = ctx->Attr<int32_t>("groups");
+
   auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
     DimVector ret_vec(shape.dim_vec());
     int32_t ndims = ret_vec.size() - 2;
     ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
     return Shape(ret_vec);
   };
+  Shape input_shape = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape();
+  input_shape.At(1) /= state->groups;
   state->in_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape(), state->idx_offset_);
+      Gen5DShape(input_shape, state->idx_offset_);
+  Shape out_shape = ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape();
+  out_shape.At(1) /= state->groups;
   state->out_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape(), state->idx_offset_);
+      Gen5DShape(out_shape, state->idx_offset_);
+  Shape weight_shape = ctx->TensorDesc4ArgNameAndIndex(weight_name, 0)->shape();
+  weight_shape.At(0) /= state->groups;
   state->weight_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(weight_name, 0)->shape(), state->idx_offset_);
+      Gen5DShape(weight_shape, state->idx_offset_);
 
   auto Gen3DVec = [](const std::vector<int32_t>& origin_vec) -> std::vector<int32_t> {
     std::vector<int32_t> ret_vec = origin_vec;
     ret_vec.insert(ret_vec.begin(), 3 - ret_vec.size(), 1);
     return ret_vec;
   };
+
   state->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
   state->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
   state->is_dynamic_ = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->is_dynamic();
@@ -409,45 +420,53 @@ class ConvCpuKernel final : public user_op::OpKernel {
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
 
     bool is_bias_mul_inited = false;
-    for (int64_t i = 0; i < in->shape().At(0); ++i) {
-      conv_state->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_state->in_5d_shape_),
-                               ShapeView(conv_state->weight_5d_shape_),
-                               ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
-                               conv_state->dilation_rate_3d_.data(),
-                               conv_state->padding_before_3d_.data(), col_buf_dptr);
+    for (int32_t g = 0; g < conv_state->groups; g++){
+      for (int64_t i = 0; i < in->shape().At(0); ++i) {
+        conv_state->im2col_func_(GetImgDptr<T>(in, i * in->shape().Count(1) + g * in->shape().Count(2)), ShapeView(conv_state->in_5d_shape_),
+                                ShapeView(conv_state->weight_5d_shape_),
+                                ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
+                                conv_state->dilation_rate_3d_.data(),
+                                conv_state->padding_before_3d_.data(), col_buf_dptr);
+        T* tmp_output = new T[out->shape().Count(0) / conv_state->groups];
 
-      // channels first: out = weight * col_buf
-      // channels last:  out = (weight * col_buf)(T)
-      int32_t idx_offset = conv_state->idx_offset_;
-      conv_state->forward_func_(
-          CblasNoTrans, CblasNoTrans,
-          conv_state->weight_5d_shape_.At(0),                           // filter
-          conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
-          conv_state->weight_5d_shape_.Count(1),                        // ci * kd * kh * kw
-          static_cast<T>(1), weight->dptr<T>(), col_buf_dptr, static_cast<T>(0),
-          GetImgMutDptr<T>(out, i));
-
-      const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-      if (bias != nullptr) {
-        int64_t num_of_col_buf = CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset);
-        int64_t num_of_bias_mul =
-            (tmp_buffer->shape().elem_cnt() - num_of_col_buf * sizeof(T)) / sizeof(T);
-        CHECK_GT(num_of_bias_mul, 0);
-        T* bias_mul_dptr = col_buf_dptr + num_of_col_buf;
-        if (!is_bias_mul_inited) {
-          InitBiasMulBuf(bias_mul_dptr, num_of_bias_mul);
-          is_bias_mul_inited = true;
-        }
-
-        // channels first:  out += bias * bias_mul
-        // channels last:   out += (bias * bias_mul)(T)
+        // channels first: out = weight * col_buf
+        // channels last:  out = (weight * col_buf)(T)
+        int32_t idx_offset = conv_state->idx_offset_;
         conv_state->forward_func_(
             CblasNoTrans, CblasNoTrans,
             conv_state->weight_5d_shape_.At(0),                           // filter
             conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
-            1,                                                            // 1
-            static_cast<T>(1), bias->dptr<T>(), bias_mul_dptr, static_cast<T>(1),
-            GetImgMutDptr<T>(out, i));
+            conv_state->weight_5d_shape_.Count(1),                        // ci * kd * kh * kw
+            static_cast<T>(1), GetImgDptr<T>(weight, i * weight->shape().Count(0) + g * weight->shape().Count(1)), col_buf_dptr, static_cast<T>(0),
+            tmp_output);
+
+        const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+        if (bias != nullptr) {
+          int64_t num_of_col_buf = CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset);
+          num_of_col_buf /= conv_state->groups;
+          int64_t num_of_bias_mul =
+              (tmp_buffer->shape().elem_cnt() - num_of_col_buf * sizeof(T)) / sizeof(T);
+          CHECK_GT(num_of_bias_mul, 0);
+          T* bias_mul_dptr = col_buf_dptr + num_of_col_buf;
+          if (!is_bias_mul_inited) {
+            InitBiasMulBuf(bias_mul_dptr, num_of_bias_mul);
+            is_bias_mul_inited = true;
+          }
+
+          // channels first:  out += bias * bias_mul
+          // channels last:   out += (bias * bias_mul)(T)
+          conv_state->forward_func_(
+              CblasNoTrans, CblasNoTrans,
+              conv_state->weight_5d_shape_.At(0),                           // filter
+              conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
+              1,                                                            // 1
+              static_cast<T>(1), GetImgDptr<T>(bias, i * bias->shape().Count(0) + g), bias_mul_dptr, static_cast<T>(1),
+              tmp_output);
+          
+          // place tmp_output
+          
+          free(tmp_output);
+        }
       }
     }
   }
@@ -456,8 +475,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                         \
   REGISTER_USER_KERNEL(#op_name)                                                            \
       .SetCreateFn<ConvCpuKernel<dtype, ndims>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                       \
-                       & (user_op::HobAttr<int32_t>("groups") == 1)                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU))                      \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         size_t tmp_buffer_size = 0;                                                         \
@@ -541,8 +559,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_DATA_GRAD_KERNEL(op_name, dtype)                                     \
   REGISTER_USER_KERNEL(#op_name)                                                           \
       .SetCreateFn<ConvDataGradCpuKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
-                       & (user_op::HobAttr<int32_t>("groups") == 1)                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU))                     \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
         size_t tmp_buffer_size = 0;                                                        \
@@ -603,8 +620,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_FILTER_GRAD_KERNEL(op_name, dtype)                                        \
   REGISTER_USER_KERNEL(#op_name)                                                                \
       .SetCreateFn<ConvFilterGradCpuKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       & (user_op::HobAttr<int32_t>("groups") == 1)                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU))                          \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
         size_t tmp_buffer_size = 0;                                                             \
