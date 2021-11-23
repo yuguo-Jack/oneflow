@@ -131,7 +131,7 @@ void RpcServer::Init() {
   Add([this](CtrlCall<CtrlMethod::kPushKV>* call) {
     const std::string& k = call->request().key();
     const std::string& v = call->request().val();
-    CHECK(kv_.emplace(k, v).second);
+    CHECK(kv_.emplace(k, v).second) << "k=" << k;
 
     auto pending_kv_calls_it = pending_kv_calls_.find(k);
     if (pending_kv_calls_it != pending_kv_calls_.end()) {
