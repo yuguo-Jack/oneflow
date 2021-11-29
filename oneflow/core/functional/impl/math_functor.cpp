@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cstdint>
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -1178,6 +1179,45 @@ class SelectTopNFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MeshgridFunctor {
+ public:
+  MeshgridFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("meshgrid")
+                               .Input("in", n)
+                               .Output("out", n)
+                               .Build());
+    }
+  }
+
+  Maybe<TensorTuple> operator()(const one::TensorTuple& in) const {
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*ops_.at(in.size()), in);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+
+};
+
+class MeshgridGradFunctor {
+ public:
+  MeshgridGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("meshgrid_grad").Input("out").Input("dy").Input("in").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const int32_t& index) const {
+    MutableAttrMap attr;
+    JUST(attr.SetAttr<int32_t>("index", index));
+    const auto& dx = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy}));
+    return dx;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class MinimumFunctor {
  public:
   MinimumFunctor() {
@@ -1532,6 +1572,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
+  m.add_functor<MeshgridFunctor>("Meshgrid");
+  m.add_functor<MeshgridGradFunctor>("MeshgridGrad");
   m.add_functor<MinimumFunctor>("Minimum");
   m.add_functor<MaximumFunctor>("Maximum");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
