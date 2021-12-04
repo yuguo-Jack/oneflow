@@ -260,4 +260,52 @@ def NormalizationAddReluPattern : Pattern<
   [(IsTraingTrue $bn_training)]
 >;
 
+def QuantizationAwareTrainingConvBNPattern : : Pattern<
+  /* match */ (
+    OneFlow_Conv2DOp (
+      OneFlow_NormalizationOp:$results
+            $bn_x,
+            $bn_moving_mean,
+            $bn_moving_variance,
+            $bn_gamma,
+            $bn_beta,
+            $bn__add_to_output, // TODO: check this is none
+            $bn_op_name,
+            $bn_device_tag,
+            $bn_device_name,
+            $bn_scope_symbol_id,
+            $bn_hierarchy,
+            $operand_segment_sizes,
+            $result_segment_sizes,
+            $bn_axis,
+            $bn_epsilon,
+            $bn_training,
+            $bn_momentum
+    ),
+    $conv2d_in,
+    $conv2d_weight,
+    $conv2d_bias,
+    $conv2d_bias_multiplier,
+    $conv2d_op_name,
+    $conv2d_device_tag,
+    $conv2d_device_name,
+    $conv2d_scope_symbol_id,
+    $conv2d_hierarchy,
+    $conv2d_filters,
+    $conv2d_padding_before,
+    $conv2d_data_format,
+    $conv2d_kernel_size,
+    $conv2d_strides,
+    $conv2d_dilation_rate,
+    $conv2d_group
+  ),
+  /* replace */ [(
+    // add quantization conv bn sub graph
+    
+  ),
+  (replaceWithValue $fuse_results__0),
+  ],
+  [(IsTraingTrue $bn_training)]
+>
+
 #endif // ONEFLOW_PATTERNS
