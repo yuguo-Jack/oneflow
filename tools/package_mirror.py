@@ -42,7 +42,8 @@ def convert_url_to_oss_key(url):
     assert not parsed.fragment
     assert parsed.path.startswith("/")
     path = parsed.path[1::]
-    ret = os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
+    # ret = os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
+    ret = "/".join(["third_party_mirror", parsed.scheme, parsed.netloc, path])
     assert convert_url_to_oss_key1(url) == ret
     return ret
 

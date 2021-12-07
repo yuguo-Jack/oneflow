@@ -9,16 +9,16 @@ set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
 set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/51cef2651.tar.gz)
 use_mirror(VARIABLE OPENCV_URL URL ${OPENCV_URL})
 
-if(WIN32)
-# pass
-else()
-    include(GNUInstallDirs)
-    set(OPENCV_BUILD_INCLUDE_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
-    set(OPENCV_BUILD_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
-    set(OPENCV_BUILD_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
-    set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
-    set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
-endif()
+# if(WIN32)
+# # pass
+# else()
+include(GNUInstallDirs)
+set(OPENCV_BUILD_INCLUDE_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
+set(OPENCV_BUILD_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(OPENCV_BUILD_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
+set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
+set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
+# endif()
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})
     list(APPEND OPENCV_STATIC_LIBRARIES ${OPENCV_LIBRARY_DIR}/${LIBRARY_NAME})
@@ -144,6 +144,7 @@ ExternalProject_Add(opencv
 )
 
 # put opencv includes in the 'THIRD_PARTY_DIR'
+message(STATUS "ZZZZZZZZ ${OPENCV_BUILD_INCLUDE_DIR}")
 add_copy_headers_target(NAME opencv SRC ${OPENCV_BUILD_INCLUDE_DIR} DST ${OPENCV_INCLUDE_DIR} DEPS opencv INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/opencv_headers.txt")
 
 add_copy_headers_target(NAME libpng SRC ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng DST ${LIBPNG_INCLUDE_DIR} DEPS opencv INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/libpng_headers.txt")

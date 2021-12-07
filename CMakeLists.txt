@@ -80,7 +80,10 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
   endif()
 else()
-  message(WARNING "Unknown compiler \"${CMAKE_CXX_COMPILER_ID}\".")
+  # message(WARNING "Unknown compiler \"${CMAKE_CXX_COMPILER_ID}\".")
+  # message(WARNING "Unknown compiler \"${CMAKE_CXX_COMPILER_VERSION}\".")
+  # TODO version check
+  message(STATUS "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 endif()
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
