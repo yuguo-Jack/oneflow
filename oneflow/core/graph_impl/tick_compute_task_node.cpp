@@ -34,7 +34,7 @@ class TickCompTaskNode final : public CompTaskNode {
 };
 
 void TickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 1, 1);
+  ProduceRegst("out", false, 4, 4);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
