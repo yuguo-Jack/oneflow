@@ -28,6 +28,7 @@ add_public_tablegen_target(MLIROneFlowPassIncGen)
 
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_interface(OneFlowInterfaces)
+add_mlir_interface(OneFlowSystemOpInterfaces)
 
 set(LLVM_TARGET_DEFINITIONS OneFlowOpGetGen.td)
 
@@ -56,6 +57,7 @@ add_mlir_dialect(
         MLIROneFlowPatternsIncGen
         MLIROneFlowPassIncGen
         MLIROneFlowInterfacesIncGen
+        MLIROneFlowSystemOpInterfacesIncGen
         MLIROneFlowOpGroupDefsIncGen
         MLIROneFlowOpGroupDeclsIncGen
 )

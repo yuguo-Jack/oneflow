@@ -313,3 +313,4 @@ static LogicalResult verify(mlir::oneflow::ReturnOp op) {
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.cpp.inc"
 #include "OneFlow/OneFlowInterfaces.cpp.inc"
+#include "OneFlow/OneFlowSystemOpInterfaces.cpp.inc"

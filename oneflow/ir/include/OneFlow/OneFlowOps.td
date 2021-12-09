@@ -5,6 +5,7 @@ include "OneFlow/OneFlowDialect.td"
 include "OneFlow/OneFlowEnums.td"
 include "OneFlow/OneFlowInterfaces.td"
 include "OneFlow/OneFlowBase.td"
+include "OneFlow/OneFlowSystemOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
@@ -125,7 +126,7 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
   );
 }
 
-def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
+def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", [DeclareOpInterfaceMethods<PlaceholderSystemOpCompatibleInterface>]> {
   let summary = "";
   let input = (ins AnyType:$input);
   let output = (outs AnyType:$output);
@@ -141,6 +142,11 @@ def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
       "::oneflow::OperatorConf":$op_conf
     )>
   ];
+  let extraClassDeclaration = [{
+    static const ::oneflow::InputOpConf& GetOneOfConf(const ::oneflow::OperatorConf& op_conf) {
+      return op_conf.input_conf();
+    }
+  }];
 }
 
 def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
