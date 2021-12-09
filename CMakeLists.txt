@@ -53,6 +53,10 @@ if (APPLE)
   set(WITH_ONEDNN OFF)
 endif()
 
+if (WIN32)
+    set(BUILD_CUDA OFF)
+endif()
+
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CUDNN_STATIC OFF CACHE BOOL "")
 else ()

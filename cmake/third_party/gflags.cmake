@@ -34,7 +34,7 @@ ExternalProject_Add(gflags
     PREFIX gflags
     URL ${gflags_URL}
     URL_MD5 9677cc51d63642ba3d5f2a57a1fa2bd0
-    UPDATE_COMMAND bash -c "rm -f BUILD || true"
+    # UPDATE_COMMAND bash -c "rm -f BUILD || true"
     BUILD_IN_SOURCE 1
     BUILD_BYPRODUCTS ${GFLAGS_STATIC_LIBRARIES}
     CMAKE_CACHE_ARGS
