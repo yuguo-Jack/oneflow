@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/user/data/dataset.h"
 #include "oneflow/user/data/parser.h"
 #include "oneflow/core/common/buffer.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace data {
@@ -40,9 +41,23 @@ class DataReader {
   }
 
   void Read(user_op::KernelComputeContext* ctx) {
+    // OF_PROFILER_RANGE_GUARD("DataReader::Read");
     CHECK(load_thrd_.joinable()) << "You should call StartLoadThread before read data";
-    auto batch = FetchBatchData();
-    parser_->Parse(batch, ctx);
+    // auto batch = FetchBatchData();
+    // parser_->Parse(batch, ctx);
+    BatchType batch;
+    {
+      OF_PROFILER_RANGE_GUARD("DataReader::FetchBatchData");
+      batch = FetchBatchData();
+    }
+    {
+      OF_PROFILER_RANGE_GUARD("OFRecordParser");
+      parser_->Parse(batch, ctx);
+    }
+    {
+      OF_PROFILER_RANGE_GUARD("batch.reset()");
+      batch.clear();
+    }
   }
 
   void Close() {
