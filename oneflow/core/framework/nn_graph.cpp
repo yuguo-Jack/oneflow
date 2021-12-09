@@ -66,7 +66,6 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
 }  // namespace
 
 NNGraph::~NNGraph() {
-  VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
   CHECK_JUST(Close());
 }
 

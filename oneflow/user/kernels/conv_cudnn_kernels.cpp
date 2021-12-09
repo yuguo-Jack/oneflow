@@ -255,17 +255,18 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
 
     const void* alpha = CudnnSPOnePtr<T>();
     const void* beta;
-    if (ctx->has_input("_add_to_output", 0)) {
-      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      CHECK_EQ(add_to_output->data_type(), dx->data_type());
-      CHECK_EQ(add_to_output->shape(), dx->shape());
-      Memcpy<DeviceType::kCUDA>(
-          ctx->stream(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
-          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
-      beta = CudnnSPOnePtr<T>();
-    } else {
-      beta = CudnnSPZeroPtr<T>();
-    }
+    // if (ctx->has_input("_add_to_output", 0)) {
+    //   const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+    //   CHECK_EQ(add_to_output->data_type(), dx->data_type());
+    //   CHECK_EQ(add_to_output->shape(), dx->shape());
+    //   Memcpy<DeviceType::kCUDA>(
+    //       ctx->stream(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
+    //       add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+    //   beta = CudnnSPOnePtr<T>();
+    // } else {
+    //   beta = CudnnSPZeroPtr<T>();
+    // }
+    beta = CudnnSPZeroPtr<T>();
 
     OF_CUDNN_CHECK(cudnnConvolutionBackwardData(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), alpha, args.wdesc.Get(),
