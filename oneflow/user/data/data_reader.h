@@ -65,7 +65,7 @@ class DataReader {
     bool buffer_drained = false;
     while (!buffer_drained) {
       BatchType abandoned_batch;
-      auto status = batch_buffer_.TryReceive(abandoned_batch);
+      auto status = batch_buffer_.TryReceive(&abandoned_batch);
       CHECK_NE(status, BufferStatus::kBufferStatusErrorClosed);
       buffer_drained = (status == BufferStatus::kBufferStatusEmpty);
     }
@@ -86,7 +86,7 @@ class DataReader {
  private:
   BatchType FetchBatchData() {
     BatchType batch;
-    CHECK_EQ(batch_buffer_.Pull(batch), BufferStatus::kBufferStatusSuccess);
+    CHECK_EQ(batch_buffer_.Pull(&batch), BufferStatus::kBufferStatusSuccess);
     return batch;
   }
 
