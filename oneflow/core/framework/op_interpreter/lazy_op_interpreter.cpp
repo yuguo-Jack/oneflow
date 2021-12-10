@@ -314,7 +314,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(op_conf.name(), obn));
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
   TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(op_conf.name(), obn));
-  LOG(INFO) << " cclog: Record eager variable tensor: " << reinterpret_cast<uint64_t>(input_tensor)
+  LOG(INFO) << " cclog: Record eager variable tensor: "
+            << reinterpret_cast<uint64_t>(input_tensor.get())
             << " with lbn : " << GenLogicalBlobName(op_conf.name(), obn);
   LOG(INFO) << " cclog: Record lazy variable tensor: "
             << reinterpret_cast<uint64_t>((*outputs)[0].get())
