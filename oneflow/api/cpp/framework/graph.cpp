@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/scope.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/graph.h"
@@ -41,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
@@ -191,10 +193,20 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
         of::LazyMode::Guard lazy_mode_disabled_guard{false};
 
         of::VariableOpConf variable_conf = op_conf.variable_conf();
-        variable_op_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Rand(
+        const auto& variable_tensor = JUST(of::one::functional::Rand(
             of::Shape(variable_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(variable_conf.data_type()))),
             *device_.device_, nullptr, false));
+        variable_op_name_to_tensor_[op_conf.name()] = variable_tensor;
+
+        const void* buf_ptr = nullptr;
+        const auto& callback =
+            std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+              CHECK_JUST(oneflow::BlobBufferCopyUtil<void>::From(
+                  of_blob_ptr, buf_ptr, variable_tensor->shape()->elem_cnt()));
+            });
+        JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
+
         PrintTensor(Tensor(variable_op_name_to_tensor_[op_conf.name()]));
       }
       return of::Maybe<void>::Ok();

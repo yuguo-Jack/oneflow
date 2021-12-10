@@ -102,7 +102,7 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
-def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -> None:
+def save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -> None:
     os.makedirs(dir_name, exist_ok=True)
     meta_info = variable_meta_info_pb.VariableMetaInfo()
     meta_info.shape.dim[:] = tensor.shape
@@ -181,7 +181,7 @@ def tensor_getstate(self):
             consistent_src_dsk_rank is None
             or consistent_src_dsk_rank == flow.env.get_rank()
         ):
-            _save_tensor_to_disk(tensor, abs_dir_name)
+            save_tensor_to_disk(tensor, abs_dir_name)
 
         return {"path": rel_dir_name}
     else:

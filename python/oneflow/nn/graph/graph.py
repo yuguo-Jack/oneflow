@@ -15,6 +15,7 @@ limitations under the License.
 """
 import os
 import time
+import pathlib
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
@@ -23,6 +24,7 @@ from google.protobuf import text_format
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.amp import GradScaler, StaticGradScaler
@@ -321,21 +323,28 @@ class Graph(object):
                 assert block.type == BlockType.MODULE
                 block.debug(v_level, ranks, mode)
 
-    def save(self, path: str):
+    def save(self, path: Union[str, pathlib.Path]) -> None:
         r"""
         """
         if not self._is_compiled:
             raise RuntimeError("graph must be compiled first.")
 
-        if os.path.exists(path):
-            if not os.path.isdir(path):
-                raise RuntimeError(f"{path} is not a directory.")
+        if isinstance(path, str):
+            path = pathlib.Path(path)
+
+        if path.exists():
+            if not path.is_dir():
+                raise ValueError(
+                    "path {} is not a directory, please use a directory to save the graph."
+                )
         else:
-            os.mkdir(path)
+            path.mkdir(parents=True)
 
         # TODO: save model parameters
         serialized_job = str(text_format.MessageToString(self._forward_job_proto))
-        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, path)
+        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path / "model.pb"))
+        for x in self._state():
+            check_point_v2.save_tensor_to_disk(x.origin, path / x.name)
 
 
     def __repr__(self):
