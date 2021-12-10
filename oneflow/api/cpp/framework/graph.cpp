@@ -113,16 +113,17 @@ std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2>& has
 
 }  // namespace
 
-Graph::Graph(const std::string& model_path, const Device& device) : device_(device) {
+Graph::Graph(const std::string& model_path, const Device& device)
+    : device_(device), model_path_(model_path) {
   // TODO(zzk0): model_path is a directory, need to concatenate filename
   // we need a mlir model name.
-  // of::LoadJobFromIR(&job_, model_path).GetOrThrow();
+  of::LoadJobFromIR(&job_, model_path + "model.mlir").GetOrThrow();
 
-  {
-    // std::ifstream input("/home/zhouzekai/oneflow/oneflow/ir/test/saved_model/job.pb");
-    std::ifstream input("/home/zhouzekai/oneflow-serving/saved_model.pb");
-    job_.ParseFromIstream(&input);
-  }
+  // {
+  //   // std::ifstream input("/home/zhouzekai/oneflow/oneflow/ir/test/saved_model/job.pb");
+  //   std::ifstream input("/home/zhouzekai/oneflow-serving/saved_model.pb");
+  //   job_.ParseFromIstream(&input);
+  // }
 
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
@@ -199,11 +200,14 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
             *device_.device_, nullptr, false));
         variable_op_name_to_tensor_[op_conf.name()] = variable_tensor;
 
-        const void* buf_ptr = nullptr;
+        std::ifstream input(model_path_ + "/" + op_conf.name());
+        const void* buf_ptr = input.rdbuf();
         const auto& callback =
             std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
               CHECK_JUST(oneflow::BlobBufferCopyUtil<void>::From(
-                  of_blob_ptr, buf_ptr, variable_tensor->shape()->elem_cnt()));
+                  of_blob_ptr, buf_ptr,
+                  variable_tensor->shape()->elem_cnt()
+                      * oneflow::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
             });
         JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
 

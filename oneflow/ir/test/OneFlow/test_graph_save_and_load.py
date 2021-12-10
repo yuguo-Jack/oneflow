@@ -15,10 +15,19 @@ from oneflow.core.job import job_pb2 as job_pb
 from networks.resnet50 import resnet50
 
 
+class M(flow.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = flow.nn.Parameter(flow.ones(2, 2))
+
+    def forward(self, x):
+        return x + self.weight
+
+
 class InferGraph(flow.nn.Graph):
     def __init__(self, placement_arg=None):
         super().__init__()
-        model = resnet50()
+        model = M()
         if placement_arg is not None:
             if "placement" in placement_arg:
                 model.to_consistent(**placement_arg)
@@ -28,6 +37,7 @@ class InferGraph(flow.nn.Graph):
 
     def build(self, image):
         logits = self.model(image.to("cuda"))
+        return logits
         pred = logits.softmax()
         return pred
 
@@ -41,7 +51,7 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         }
         graph = InferGraph(placement_arg)
         image_placeholder = flow.empty(
-            (1, 3, 224, 224),
+            2, 2,
             dtype=flow.float32,
             placement=flow.placement("cpu", {0: [0]}),
             sbp=flow.sbp.broadcast,
@@ -73,6 +83,7 @@ class GraphSaveTestCase(flow.unittest.TestCase):
 
         for (op, op_) in zip(op_list, op_list_):
             self.assertTrue(op == op_)
+            print(op)
             # if op != op_:
             #     print(op)
             #     print("-" * 20)

@@ -24,16 +24,19 @@ limitations under the License.
 namespace oneflow_api {
 
 TEST(Api, graph_test) {
-  EnvScope scope;
+  // EnvScope scope;
 
-  Graph graph = Load("used_name.pb");
-  std::vector<Tensor> inputs;
-  inputs.emplace_back(Tensor(Shape{1, 3, 224, 224}));
-
-  std::vector<Tensor> outputs = graph.Forward(inputs);
-  Shape shape = outputs.at(0).shape();
-  ASSERT_EQ(shape.At(0), 1);
-  ASSERT_EQ(shape.At(1), 1000);
+  // Graph graph = Load("saved_model");
+  // std::vector<Tensor> inputs;
+  // inputs.emplace_back(Tensor(Shape{2, 2}));
+  //
+  // Tensor output = graph.Forward(inputs).at(0);
+  // Shape shape = output.shape();
+  // ASSERT_EQ(shape.At(0), 2);
+  // ASSERT_EQ(shape.At(1), 2);
+  // std::array<float, 4> buf{};
+  // output.copy_to(buf.data());
+  // std::cout << buf[0] << ", " << buf[1] << std::endl;
 }
 
 }  // namespace oneflow_api

@@ -876,7 +876,7 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
     llvm::raw_string_ostream os_mlir(mlir);
     module->print(os_mlir);
     const auto& job_name = job->job_conf().job_name();
-    std::string filename = path + "/" + job_name + ".mlir";
+    std::string filename = path + "/model.mlir";
     std::ofstream fs(filename, std::ios::trunc);
     if (!fs.is_open()) {
       llvm::errs() << "fail to open file " << filename;

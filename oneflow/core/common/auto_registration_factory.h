@@ -37,6 +37,7 @@ struct AutoRegistrationFactory {
 
   struct CreatorRegisterType {
     CreatorRegisterType(Key k, Creator v) {
+      std::cout << "key: " << k << std::endl;
       CHECK((AutoRegistrationFactory<Key, Base, Args...>::Get()
                  .mutable_creators()
                  ->emplace(k, v)
