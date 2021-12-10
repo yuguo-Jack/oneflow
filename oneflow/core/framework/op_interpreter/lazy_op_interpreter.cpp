@@ -261,6 +261,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
 
   const std::string& opt_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (!opt_lbn.empty()) {
+    LOG(INFO) << " cclog: Lucky! Find eager variable tensor: "
+              << reinterpret_cast<uint64_t>(input_tensor.get()) << " with lbn : " << opt_lbn;
     // NOTE(chengcheng): This eager tensor has been fed as variable op before, so we just use the
     //  lbn, and will NOT create duplicate variable op again.
     (*outputs)[0] = input_tensor;
@@ -312,6 +314,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(op_conf.name(), obn));
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
   TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(op_conf.name(), obn));
+  LOG(INFO) << " cclog: Record eager variable tensor: " << reinterpret_cast<uint64_t>(input_tensor)
+            << " with lbn : " << GenLogicalBlobName(op_conf.name(), obn);
+  LOG(INFO) << " cclog: Record lazy variable tensor: "
+            << reinterpret_cast<uint64_t>((*outputs)[0].get())
+            << " with lbn : " << GenLogicalBlobName(op_conf.name(), obn);
   return Maybe<void>::Ok();
 }
 
