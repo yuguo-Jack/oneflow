@@ -39,20 +39,6 @@ namespace one {
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 
 template<typename T>
-inline Maybe<void> SyncCopyFromBufferToMirroredTensor(
-    const std::shared_ptr<MirroredTensor>& t, T* buffer) {
-  PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->AccessBlobByCallback(
-        t,
-        [buffer, shape, dtype](uint64_t ofblob_ptr) {
-          CHECK_JUST(of::BlobBufferCopyUtil<void>::From(ofblob_ptr, buffer,
-                                                        shape.Count(0) * GetDTypeSize(dtype)));
-        },
-        "mut");
-  }).GetOrThrow();
-}
-
-template<typename T>
 inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
     Maybe<void> (*Copy)(uint64_t, const NumPyArrayPtr&), const std::string& modifier,

@@ -342,9 +342,9 @@ class Graph(object):
 
         # TODO: save model parameters
         serialized_job = str(text_format.MessageToString(self._forward_job_proto))
-        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path / "model.pb"))
+        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
         for x in self._state():
-            check_point_v2.save_tensor_to_disk(x.origin, path / x.name)
+            check_point_v2.save_tensor_to_disk(x.origin, path / f'{x.name_prefix}{x.name}')
 
 
     def __repr__(self):
