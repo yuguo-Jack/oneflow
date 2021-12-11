@@ -49,7 +49,7 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         graph._compile(image_placeholder)
         graph.save("saved_model")
 
-        saved_path = os.path.join("saved_model", graph.name + ".mlir")
+        saved_path = os.path.join("saved_model", "model.mlir")
         serialized_job = oneflow._oneflow_internal.nn.graph.LoadSerializedJobFromIR(
             saved_path
         )

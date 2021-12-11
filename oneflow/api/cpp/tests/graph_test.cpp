@@ -29,7 +29,7 @@ TEST(Api, graph_test) {
   const std::string file_name = __FILE__;
   const std::string directory = file_name.substr(0, file_name.rfind('/'));
 
-  Graph graph = Load(directory + "graph_test_model");
+  Graph graph = Load(directory + "/graph_test_model");
   std::vector<Tensor> inputs;
   inputs.emplace_back(Shape{2, 2});
   inputs[0].zeros_();

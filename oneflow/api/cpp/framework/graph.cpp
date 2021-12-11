@@ -117,7 +117,7 @@ Graph::Graph(const std::string& model_path, const Device& device)
     : device_(device), model_path_(model_path) {
   // TODO(zzk0): model_path is a directory, need to concatenate filename
   // we need a mlir model name.
-  of::LoadJobFromIR(&job_, model_path + "model.mlir").GetOrThrow();
+  of::LoadJobFromIR(&job_, model_path + "/model.mlir").GetOrThrow();
 
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
