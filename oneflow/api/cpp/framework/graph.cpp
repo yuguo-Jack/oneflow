@@ -119,12 +119,6 @@ Graph::Graph(const std::string& model_path, const Device& device)
   // we need a mlir model name.
   of::LoadJobFromIR(&job_, model_path + "model.mlir").GetOrThrow();
 
-  // {
-  //   // std::ifstream input("/home/zhouzekai/oneflow/oneflow/ir/test/saved_model/job.pb");
-  //   std::ifstream input("/home/zhouzekai/oneflow-serving/saved_model.pb");
-  //   job_.ParseFromIstream(&input);
-  // }
-
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
 }
@@ -200,17 +194,6 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
             *device_.device_, nullptr, false));
         variable_op_name_to_tensor_[op_conf.name()] = variable_tensor;
 
-        std::ifstream input(model_path_ + "/" + op_conf.name());
-        const void* buf_ptr = input.rdbuf();
-        const auto& callback =
-            std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-              CHECK_JUST(oneflow::BlobBufferCopyUtil<void>::From(
-                  of_blob_ptr, buf_ptr,
-                  variable_tensor->shape()->elem_cnt()
-                      * oneflow::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
-            });
-        JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
-
         PrintTensor(Tensor(variable_op_name_to_tensor_[op_conf.name()]));
       }
       return of::Maybe<void>::Ok();
@@ -237,7 +220,24 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::LoadCheckpoint() { return of::Maybe<void>::Ok(); }
+of::Maybe<void> Graph::LoadCheckpoint() {
+  for (const auto& variable_op_name_and_tensor : variable_op_name_to_tensor_) {
+    const auto& variable_op_name = variable_op_name_and_tensor.first;
+    const auto& variable_tensor = variable_op_name_and_tensor.second;
+    std::ifstream input(model_path_ + "/" + variable_op_name, std::ios::binary);
+    const void* buf_ptr = input.rdbuf();
+    const auto& callback =
+        std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+          CHECK_JUST(oneflow::BlobBufferCopyUtil<void>::From(
+              of_blob_ptr, buf_ptr,
+              variable_tensor->shape()->elem_cnt()
+                  * oneflow::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
+        });
+    JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
+  }
+
+  return of::Maybe<void>::Ok();
+}
 
 of::Maybe<void> Graph::RegisterTensors() {
   {
