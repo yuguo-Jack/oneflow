@@ -5,10 +5,16 @@ set(LZ4_LIBRARY_DIR ${THIRD_PARTY_DIR}/lz4/lib)
 
 set(LZ4_URL https://github.com/lz4/lz4/archive/v1.9.2.tar.gz)
 use_mirror(VARIABLE LZ4_URL URL ${LZ4_URL})
-set(LZ4_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/lz4/src/lz4/lib)
+
+if(WIN32)
+    set(LZ4_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/lz4/src/lz4/)
+    set(LZ4_LIBRARY_NAMES lz4.lib)
+else()
+    set(LZ4_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/lz4/src/lz4/lib)
+    set(LZ4_LIBRARY_NAMES liblz4.a)
+endif()
 
 set(LZ4_BUILD_LIBRARY_DIR ${LZ4_BUILD_DIR})
-set(LZ4_LIBRARY_NAMES liblz4.a)
 
 
 foreach(LIBRARY_NAME ${LZ4_LIBRARY_NAMES})
@@ -16,13 +22,23 @@ foreach(LIBRARY_NAME ${LZ4_LIBRARY_NAMES})
     list(APPEND LZ4_BUILD_STATIC_LIBRARIES ${LZ4_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-set(LZ4_HEADERS
-    "${LZ4_BUILD_DIR}/lz4frame.h"
-    "${LZ4_BUILD_DIR}/lz4frame_static.h"
-    "${LZ4_BUILD_DIR}/lz4.h"
-    "${LZ4_BUILD_DIR}/lz4hc.h"
-    "${LZ4_BUILD_DIR}/xxhash.h"
-)
+if(WIN32)
+    set(LZ4_HEADERS
+        "${LZ4_BUILD_DIR}/lib/lz4frame.h"
+        "${LZ4_BUILD_DIR}/lib/lz4frame_static.h"
+        "${LZ4_BUILD_DIR}/lib/lz4.h"
+        "${LZ4_BUILD_DIR}/lib/lz4hc.h"
+        "${LZ4_BUILD_DIR}/lib/xxhash.h"
+    )
+else()
+    set(LZ4_HEADERS
+        "${LZ4_BUILD_DIR}/lz4frame.h"
+        "${LZ4_BUILD_DIR}/lz4frame_static.h"
+        "${LZ4_BUILD_DIR}/lz4.h"
+        "${LZ4_BUILD_DIR}/lz4hc.h"
+        "${LZ4_BUILD_DIR}/xxhash.h"
+    )
+endif()
 
 set(LZ4_CFLAGS "-O3 -fPIC")
 
@@ -30,17 +46,33 @@ if(THIRD_PARTY)
 
 include(ProcessorCount)
 ProcessorCount(PROC_NUM)
-ExternalProject_Add(lz4
-    PREFIX lz4
-    URL ${LZ4_URL}
-    URL_MD5 3898c56c82fb3d9455aefd48db48eaad
-    UPDATE_COMMAND ""
-    CONFIGURE_COMMAND ""
-    BUILD_IN_SOURCE 1
-    BUILD_COMMAND make -j ${PROC_NUM} lib CFLAGS=${LZ4_CFLAGS}
-    INSTALL_COMMAND ""
-    BUILD_BYPRODUCTS ${LZ4_STATIC_LIBRARIES}
-)
+
+if(WIN32)
+    ExternalProject_Add(lz4
+        PREFIX lz4
+        URL ${LZ4_URL}
+        URL_MD5 3898c56c82fb3d9455aefd48db48eaad
+        UPDATE_COMMAND ""
+        CONFIGURE_COMMAND ""
+        BUILD_IN_SOURCE 1
+        BUILD_COMMAND ${CMAKE_C_COMPILER} -c lib/*.c &&
+                ${CMAKE_AR} *.obj
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS ${LZ4_STATIC_LIBRARIES}
+    )
+else()
+    ExternalProject_Add(lz4
+        PREFIX lz4
+        URL ${LZ4_URL}
+        URL_MD5 3898c56c82fb3d9455aefd48db48eaad
+        UPDATE_COMMAND ""
+        CONFIGURE_COMMAND ""
+        BUILD_IN_SOURCE 1
+        BUILD_COMMAND make -j ${PROC_NUM} lib CFLAGS=${LZ4_CFLAGS}
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS ${LZ4_STATIC_LIBRARIES}
+    )
+endif()
 
 add_custom_target(lz4_create_header_dir
     COMMAND ${CMAKE_COMMAND} -E make_directory ${LZ4_INCLUDE_DIR}
@@ -58,7 +90,7 @@ add_custom_target(lz4_create_library_dir
     COMMAND ${CMAKE_COMMAND} -E make_directory ${LZ4_LIBRARY_DIR}
     DEPENDS lz4)
 
-message(STATUS  ${LZ4_BUILD_STATIC_LIBRARIES})
+message(STATUS  "LZ4++++++++++++++++" ${LZ4_BUILD_STATIC_LIBRARIES})
 add_custom_target(lz4_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LZ4_BUILD_STATIC_LIBRARIES} ${LZ4_LIBRARY_DIR}
     DEPENDS lz4_create_library_dir)

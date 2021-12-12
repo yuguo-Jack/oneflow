@@ -7,6 +7,9 @@ set(LIBJPEG_URL https://github.com/Oneflow-Inc/libjpeg-turbo/archive/3041cf67f.t
 use_mirror(VARIABLE LIBJPEG_URL URL ${LIBJPEG_URL})
 
 if(WIN32)
+    set(LIBJPEG_BUILD_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/libjpeg-turbo/src/libjpeg-turbo)
+    set(LIBJPEG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libjpeg-turbo/src/libjpeg-turbo/${CMAKE_BUILD_TYPE})
+    set(LIBJPEG_LIBRARY_NAMES "turbojpeg-static.lib")
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
     set(LIBJPEG_BUILD_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/libjpeg-turbo/src/libjpeg-turbo)
     set(LIBJPEG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libjpeg-turbo/src/libjpeg-turbo/${CMAKE_BUILD_TYPE})

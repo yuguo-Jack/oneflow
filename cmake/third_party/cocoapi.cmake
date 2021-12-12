@@ -7,7 +7,12 @@ set(COCOAPI_URL https://github.com/Oneflow-Inc/cocoapi/archive/ed842bf.tar.gz)
 use_mirror(VARIABLE COCOAPI_URL URL ${COCOAPI_URL})
 set(COCOAPI_URL_HASH e7e0504231e5614ffaa34f081773f7f1)
 set(COCOAPI_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/cocoapi/src/cocoapi)
-set(COCOAPI_LIBRARY_NAME libcocoapi_static.a)
+
+if(WIN32)
+    set(COCOAPI_LIBRARY_NAME maskApi.lib)
+else()
+    set(COCOAPI_LIBRARY_NAME libcocoapi_static.a)
+endif()
 
 list(APPEND COCOAPI_STATIC_LIBRARIES ${COCOAPI_LIBRARY_DIR}/${COCOAPI_LIBRARY_NAME})
 list(APPEND COCOAPI_BUILD_STATIC_LIBRARIES ${COCOAPI_BASE_DIR}/${COCOAPI_LIBRARY_NAME})
@@ -16,38 +21,55 @@ set(COCOAPI_HEADERS
     "${COCOAPI_BASE_DIR}/common/maskApi.h"
 )
 
+
+message(STATUS "++++++++++++++${CMAKE_AR} ${CMAKE_C_COMPILER}")
+
 if(THIRD_PARTY)
+    if(WIN32)
+        ExternalProject_Add(cocoapi
+            PREFIX cocoapi
+            URL ${COCOAPI_URL}
+            URL_HASH MD5=${COCOAPI_URL_HASH}
+            UPDATE_COMMAND ""
+            CONFIGURE_COMMAND ""
+            BUILD_IN_SOURCE 1
+            BUILD_BYPRODUCTS ${COCOAPI_STATIC_LIBRARIES}
+            BUILD_COMMAND ${CMAKE_C_COMPILER} -c common/maskApi.c &&
+                ${CMAKE_AR} maskApi.obj
+            INSTALL_COMMAND ""
+        )
+    else()
+        ExternalProject_Add(cocoapi
+            PREFIX cocoapi
+            URL ${COCOAPI_URL}
+            URL_HASH MD5=${COCOAPI_URL_HASH}
+            UPDATE_COMMAND ""
+            CONFIGURE_COMMAND ""
+            BUILD_IN_SOURCE 1
+            BUILD_BYPRODUCTS ${COCOAPI_STATIC_LIBRARIES}
+            BUILD_COMMAND ${CMAKE_C_COMPILER} -fPIC -O3 -c common/maskApi.c -o maskApi.o &&
+                #${CMAKE_AR} rcs ${COCOAPI_LIBRARY_NAME} maskApi.o
+                ${CMAKE_AR} ${COCOAPI_LIBRARY_NAME} maskApi.o
+            INSTALL_COMMAND ""
+        )
+    endif()
+    add_custom_target(cocoapi_create_header_dir
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${COCOAPI_INCLUDE_DIR}
+        DEPENDS cocoapi)
 
-ExternalProject_Add(cocoapi
-    PREFIX cocoapi
-    URL ${COCOAPI_URL}
-    URL_HASH MD5=${COCOAPI_URL_HASH}
-    UPDATE_COMMAND ""
-    CONFIGURE_COMMAND ""
-    BUILD_IN_SOURCE 1
-    BUILD_BYPRODUCTS ${COCOAPI_STATIC_LIBRARIES}
-    BUILD_COMMAND ${CMAKE_C_COMPILER} -fPIC -O3 -c common/maskApi.c -o maskApi.o &&
-        ${CMAKE_AR} rcs ${COCOAPI_LIBRARY_NAME} maskApi.o
-    INSTALL_COMMAND ""
-)
+    add_custom_target(cocoapi_copy_headers_to_destination
+        DEPENDS cocoapi_create_header_dir)
 
-add_custom_target(cocoapi_create_header_dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${COCOAPI_INCLUDE_DIR}
-    DEPENDS cocoapi)
+    foreach(header_file ${COCOAPI_HEADERS})
+        add_custom_command(TARGET cocoapi_copy_headers_to_destination PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${COCOAPI_INCLUDE_DIR})
+    endforeach()
 
-add_custom_target(cocoapi_copy_headers_to_destination
-    DEPENDS cocoapi_create_header_dir)
+    add_custom_target(cocoapi_create_library_dir
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${COCOAPI_LIBRARY_DIR}
+        DEPENDS cocoapi)
 
-foreach(header_file ${COCOAPI_HEADERS})
-    add_custom_command(TARGET cocoapi_copy_headers_to_destination PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${COCOAPI_INCLUDE_DIR})
-endforeach()
-
-add_custom_target(cocoapi_create_library_dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${COCOAPI_LIBRARY_DIR}
-    DEPENDS cocoapi)
-
-add_custom_target(cocoapi_copy_libs_to_destination
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${COCOAPI_BUILD_STATIC_LIBRARIES} ${COCOAPI_LIBRARY_DIR}
-    DEPENDS cocoapi_create_library_dir)
+    add_custom_target(cocoapi_copy_libs_to_destination
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${COCOAPI_BUILD_STATIC_LIBRARIES} ${COCOAPI_LIBRARY_DIR}
+        DEPENDS cocoapi_create_library_dir)
 endif(THIRD_PARTY)
