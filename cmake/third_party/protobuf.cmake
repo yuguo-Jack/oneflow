@@ -17,6 +17,7 @@ use_mirror(VARIABLE PROTOBUF_URL URL ${PROTOBUF_URL})
 if(WIN32)
     set(PROTOBUF_LIBRARY_NAMES libprotobufd.lib)
     set(PROTOC_EXECUTABLE_NAME protoc.exe)
+    set(PROTOBUF_BUILD_SHARED_LIBS OFF)
     set(PROTOBUF_ADDITIONAL_CMAKE_OPTIONS -Dprotobuf_MSVC_STATIC_RUNTIME:BOOL=ON -A x64)
 else()
     if(BUILD_SHARED_LIBS)
@@ -42,7 +43,7 @@ endforeach()
 set(PROTOBUF_PROTOC_EXECUTABLE ${PROTOBUF_BINARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 
 if (THIRD_PARTY)
-
+message(STATUS "protobuf ++++++++++ ${PROTOBUF_BUILD_SHARED_LIBS}")
 ExternalProject_Add(protobuf
     PREFIX protobuf
     DEPENDS zlib

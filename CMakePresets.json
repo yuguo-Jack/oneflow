@@ -7,8 +7,8 @@
   },
   "configurePresets": [
     {
-      "name": "Win64-Release",
-      "displayName": "Windows x64 Release",
+      "name": "Win64-Debug",
+      "displayName": "Windows x64 Debug",
       "description": "面向具有 Visual Studio 开发环境的 Windows。",
       "generator": "Visual Studio 16 2019",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
@@ -17,26 +17,7 @@
         "strategy": "external"
       },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-        "CMAKE_TOOLCHAIN_FILE": "C:/src/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "THIRD_PARTY_MIRROR": "aliyun",
-        "PIP_INDEX_MIRROR": "https://pypi.tuna.tsinghua.edu.cn/simple"
-      },
-      "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
-    },
-    {
-      "name": "Win32-Release",
-      "displayName": "Windows X86 Release",
-      "description": "面向具有 Visual Studio 开发环境的 Windows。",
-      "generator": "Visual Studio 16 2019",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "architecture": {
-        "value": "win32",
-        "strategy": "external"
-      },
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
         "CMAKE_TOOLCHAIN_FILE": "C:/src/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "THIRD_PARTY_MIRROR": "aliyun",

@@ -43,7 +43,9 @@ ExternalProject_Add(grpc
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     BUILD_BYPRODUCTS ${GRPC_STATIC_LIBRARIES}
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc_unsecure && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc++_unsecure
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . -j ${PROC_NUM} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} --target grpc
+        && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} --target grpc_unsecure 
+        && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} --target grpc++_unsecure
     CMAKE_CACHE_ARGS
         -DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER}
         -DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}

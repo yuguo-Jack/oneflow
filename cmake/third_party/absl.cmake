@@ -2,7 +2,8 @@ include(ExternalProject)
 include(GNUInstallDirs)
 
 SET(ABSL_PROJECT absl)
-SET(ABSL_TAR_URL https://github.com/Oneflow-Inc/abseil-cpp/archive/d0.tar.gz)
+#SET(ABSL_TAR_URL https://github.com/Oneflow-Inc/abseil-cpp/archive/d0.tar.gz)
+SET(ABSL_TAR_URL https://github.com/abseil/abseil-cpp/archive/fb7dd24b18e82893e5922be5d1c8ae0f3fe3c9fa.tar.gz)
 use_mirror(VARIABLE ABSL_TAR_URL URL ${ABSL_TAR_URL})
 SET(ABSL_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/absl/src/absl)
 SET(ABSL_INSTALL ${THIRD_PARTY_DIR}/absl)
@@ -31,7 +32,8 @@ if(THIRD_PARTY)
   ExternalProject_Add(${ABSL_PROJECT}
     PREFIX absl
     URL ${ABSL_TAR_URL}
-    URL_MD5 20126998c9b17e5f7a93711972f03f79
+    # URL_MD5 20126998c9b17e5f7a93711972f03f79
+    URL_MD5 538743c7fad562a8a18b43500620879b
     UPDATE_COMMAND ""
     BUILD_BYPRODUCTS ${ABSL_STATIC_LIBRARIES}
     CMAKE_ARGS
