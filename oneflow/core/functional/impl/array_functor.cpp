@@ -1665,7 +1665,7 @@ class TensorGetItemFunctor {
       int64_t dim = expand_dims.at(i);
       expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
     }
-    int64_t ndims = expand_input->shape()->NumAxes();
+    int64_t ndims = expand_input->ndim();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
 
@@ -1716,7 +1716,7 @@ class TensorSetItemFunctor {
     if (expand_dims.size()) {
       slice_indices = *JUST(RemoveExpandDimSlice(slice_indices, expand_dims));
     }
-    int64_t ndims = x->shape()->NumAxes();
+    int64_t ndims = x->ndim();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     // Not support combined indexing now
     if (!tensor_indices.empty()) {
@@ -1743,9 +1743,9 @@ class TensorSetItemFunctor {
 
     if (tensor_indices.size() == ndims) {  // advance indexing
       std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
-      if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
+      if (indices->nelement() == 0) { return Maybe<void>::Ok(); }
       indices = JUST(functional::Transpose(indices, {1, 0}));
-      value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
+      value_tensor = JUST(functional::Expand(value_tensor, {indices->dim(0)}));
       JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
     } else {                              // slice update
       if (target_shape.NumAxes() != 0 &&  // NOLINT
