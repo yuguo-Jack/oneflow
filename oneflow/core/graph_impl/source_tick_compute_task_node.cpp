@@ -33,7 +33,7 @@ class SourceTickCompTaskNode final : public CompTaskNode {
 };
 
 void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 4, 4);
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 2, 2);
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
