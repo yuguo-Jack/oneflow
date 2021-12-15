@@ -13,25 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include "oneflow/core/device/cuda_event.h"
+#ifndef ONEFLOW_CORE_VM_EVENT_H_
+#define ONEFLOW_CORE_VM_EVENT_H_
 
 namespace oneflow {
+namespace vm {
 
-#ifdef WITH_CUDA
+class Event {
+ public:
+  virtual ~Event() = default;
+  Event(const Event&) = delete;
+  Event(Event&&) = delete;
 
-CudaEvent::CudaEvent(int device_id, unsigned int flags) : vm::Event(), device_id_(device_id) {
-  CudaCurrentDeviceGuard guard(device_id_);
-  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags));
-}
+  Event& operator=(const Event&) = delete;
+  Event& operator=(Event&&) = delete;
 
-CudaEvent::~CudaEvent() {
-  CudaCurrentDeviceGuard guard(device_id_);
-  OF_CUDA_CHECK(cudaEventDestroy(event_));
-}
+ protected:
+  Event() = default;
+};
 
-bool CudaEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
-
-#endif
-
+}  // namespace vm
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_VM_EVENT_H_
