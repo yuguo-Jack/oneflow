@@ -30,6 +30,10 @@ void TraceKernelForwardDataContentStart(KernelContext* kernel_ctx, const Kernel*
 
 void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* kernel);
 
+void TraceCommKernelRuntimeStart( KernelContext* kernel_ctx, const Kernel* kernel);
+
+void TraceCommKernelRuntimeEnd(KernelContext* kernel_ctx, const Kernel* kernel);
+
 }  // namespace profiler
 
 }  // namespace oneflow

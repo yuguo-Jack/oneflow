@@ -111,9 +111,10 @@ def all_gather(tensor_list, tensor):
         placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0)
     )
     tensor = tensor.to_consistent(sbp=flow.sbp.broadcast)
-    assert len(tensor_list) == flow.env.get_world_size()
-    for i in range(tensor.shape[0]):
-        tensor_list[i] = tensor[i].to_local()
+    return tensor.to_local()
+#    assert len(tensor_list) == flow.env.get_world_size()
+#    for i in range(tensor.shape[0]):
+#        tensor_list[i] = tensor[i].to_local()
 
 
 def broadcast(tensor, src):

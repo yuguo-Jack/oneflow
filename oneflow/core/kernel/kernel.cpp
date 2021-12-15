@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/kernel/kernel_observer.h"
+#include "oneflow/core/profiler/kernel.h"
 
 namespace oneflow {
 
@@ -49,7 +50,9 @@ void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
 
 void Kernel::Launch(KernelContext* ctx) const {
   ctx->WillForward(ctx, this);
+ //::oneflow::profiler::TraceCommKernelRuntimeStart(ctx,this);
   Forward(ctx);
+ // ::oneflow::profiler::TraceCommKernelRuntimeEnd(ctx,this);
   ctx->DidForward(ctx, this);
 }
 

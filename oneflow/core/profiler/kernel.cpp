@@ -40,6 +40,8 @@ COMMAND(Init());
 #if defined(WITH_CUDA)
 thread_local cudaEvent_t cuda_memory_bandwidth_profile_start_event = nullptr;
 thread_local cudaEvent_t cuda_memory_bandwidth_profile_end_event = nullptr;
+thread_local cudaEvent_t cuda_comm_stream_profile_start_event = nullptr;
+thread_local cudaEvent_t cuda_comm_stream_profile_end_event = nullptr;
 #endif  // WITH_CUDA
 
 }  // namespace
@@ -99,6 +101,49 @@ void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* k
     }
   }
 #endif  // WITH_CUDA
+}
+
+void TraceCommKernelRuntimeStart(KernelContext* kernel_ctx, const Kernel* kernel) {
+
+  if(kernel->op_conf().has_collective_boxing_generic_conf())
+  {
+    CHECK(cuda_comm_stream_profile_start_event == nullptr);
+    CHECK(cuda_comm_stream_profile_end_event == nullptr);
+    auto* cuda_device_ctx = dynamic_cast<CudaStreamContext*>(kernel_ctx->stream_ctx());
+    if (cuda_device_ctx) {
+        OF_CUDA_CHECK(cudaEventCreate(&cuda_comm_stream_profile_start_event));
+        OF_CUDA_CHECK(cudaEventCreate(&cuda_comm_stream_profile_end_event));
+        OF_CUDA_CHECK(cudaEventRecord(cuda_comm_stream_profile_start_event,
+                                      cuda_device_ctx->cuda_stream()));
+      }
+
+  }
+}
+void TraceCommKernelRuntimeEnd(KernelContext* kernel_ctx, const Kernel* kernel) {
+
+  if(kernel->op_conf().has_collective_boxing_generic_conf()){
+    auto* cuda_device_ctx = dynamic_cast<CudaStreamContext*>(kernel_ctx->stream_ctx());
+    cudaEvent_t start_event = cuda_comm_stream_profile_start_event;
+    cudaEvent_t end_event = cuda_comm_stream_profile_end_event;
+    cuda_comm_stream_profile_start_event = nullptr;
+    cuda_comm_stream_profile_end_event = nullptr;
+    if (cuda_device_ctx) {
+      CHECK_NOTNULL(start_event);
+      CHECK_NOTNULL(end_event);
+      OF_CUDA_CHECK(cudaEventRecord(end_event, cuda_device_ctx->cuda_stream()));
+
+      const std::string op_name = kernel->op_conf().name();
+      kernel_ctx->device_ctx()->AddCallBack([start_event, end_event, op_name]() {
+        float elapsed_ms = 0;
+        OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, start_event, end_event));
+        OF_CUDA_CHECK(cudaEventDestroy(start_event));
+        OF_CUDA_CHECK(cudaEventDestroy(end_event));
+
+        std::cout << "PROFILER::KERNEL:boxing  op_name: " << op_name
+                  << " elapsed(ms): " << elapsed_ms<< std::endl;
+      });
+    }
+}
 }
 
 }  // namespace profiler

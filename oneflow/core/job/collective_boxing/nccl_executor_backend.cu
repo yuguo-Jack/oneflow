@@ -24,9 +24,13 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/device/cuda_util.h"
 
+#include <cuda_runtime_api.h>
+#include <driver_types.h>
 #include <nccl.h>
 
+#include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
 
 namespace oneflow {
@@ -265,6 +269,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
                           const std::shared_ptr<RequestStore>& request_store,
                           const std::vector<RequestId>& request_ids) {
   CHECK_LE(request_ids.size(), kMultiCopyParamsMaxSize);
+  std::cout<<"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<std::endl;
   RequestEntry* first_request_entry = request_store->MutRequestEntry(request_ids.front());
   const ncclDataType_t nccl_data_type =
       GetNcclDataType(first_request_entry->desc().op_desc().data_type());
@@ -326,6 +331,21 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
                          const std::vector<std::unique_ptr<StreamCtx>>& device_id2stream_ctx,
                          const std::shared_ptr<RequestStore>& request_store,
                          const std::vector<RequestId>& request_ids) {
+  
+  cudaEvent_t start_event[comm_group.local_rank_count()];
+  cudaEvent_t end_event[comm_group.local_rank_count()];
+  std::string global_op_name;
+  int64_t global_elem_cnt;
+  float time[comm_group.local_rank_count()];
+  for(int32_t local_rank=0; local_rank < comm_group.local_rank_count(); ++local_rank){
+    const CommRank& comm_rank = comm_group.GetCommRank(local_rank);
+    const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
+    OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
+    OF_CUDA_CHECK(cudaEventCreate(&start_event[comm_rank.device_id()]));
+    OF_CUDA_CHECK(cudaEventCreate(&end_event[comm_rank.device_id()]));
+    cudaEventSynchronize(end_event[comm_rank.device_id()]);
+    OF_CUDA_CHECK(cudaEventRecord(start_event[comm_rank.device_id()], stream_ctx->stream()));
+  }
   OF_NCCL_CHECK(ncclGroupStart());
   for (int32_t local_rank = 0; local_rank < comm_group.local_rank_count(); ++local_rank) {
     const CommRank& comm_rank = comm_group.GetCommRank(local_rank);
@@ -343,6 +363,25 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
           const int64_t elem_cnt = request_entry->elem_cnt();
           const ncclDataType_t nccl_data_type = GetNcclDataType(op_desc.data_type());
           const int32_t num_ranks = comm_group.global_rank_count();
+          const std::string op_name = op_desc.name();
+          global_op_name= op_name;
+          global_elem_cnt = elem_cnt;
+
+          std::cout<<"---------------------------------------------------------------------"<<std::endl;
+          switch(op_type){
+            case 0: std::cout<<"op_type:"<<"kOpTypeInvalid"<<std::endl;break;
+            case 1: std::cout<<"op_type:"<<"kOpTypeAllReduce"<<std::endl;break;
+            case 2: std::cout<<"op_type:"<<"kOpTypeReduceScatter"<<std::endl;break;
+            case 3: std::cout<<"op_type:"<<"kOpTypeAllGather"<<std::endl;break;
+            case 4: std::cout<<"op_type:"<<"kOpTypeReduce"<<std::endl;break;
+            case 5: std::cout<<"op_type:"<<"kOpTypeBroadcast"<<std::endl;break;
+            case 6: std::cout<<"op_type:"<<"kOpTypeAll2All"<<std::endl;break;
+        }
+ //         std::cout<<"op_name:"<<op_name<<std::endl;
+ //         std::cout<<"nccl_data_type"<< nccl_data_type <<std::endl;
+ //         std::cout<<"elem_cnt:"<<elem_cnt<<std::endl;
+          std::cout<<"tensor shape():"<<op_desc.shape()<<std::endl;          
+
           if (op_type == OpType::kOpTypeAllReduce) {
             OF_NCCL_CHECK(ncclAllReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                         GetNcclReduceOp(op_desc.reduce_method()), comm,
@@ -387,6 +426,16 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
         });
   }
   OF_NCCL_CHECK(ncclGroupEnd());
+  for(int32_t local_rank=0; local_rank < comm_group.local_rank_count(); ++local_rank){
+    const CommRank& comm_rank = comm_group.GetCommRank(local_rank);
+    const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
+    OF_CUDA_CHECK(cudaEventRecord(end_event[comm_rank.device_id()], stream_ctx->stream()));
+    cudaEventSynchronize(end_event[comm_rank.device_id()]);
+    OF_CUDA_CHECK(cudaEventElapsedTime(&time[comm_rank.device_id()], start_event[comm_rank.device_id()], end_event[comm_rank.device_id()]));
+    std::cout<< global_op_name <<" communicate "<< global_elem_cnt << " at rank "<< comm_rank.device_id() <<" elapsed(ms) "<< time[comm_rank.device_id()] << std::endl;
+  }
+
+
 }
 
 void AddCallbackAndResetRuntimeRequest(
