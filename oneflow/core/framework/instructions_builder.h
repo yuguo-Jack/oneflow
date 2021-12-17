@@ -50,6 +50,10 @@ class MirroredTensor;
 class ConsistentTensorInferResult;
 }  // namespace one
 
+namespace vm {
+class Event;
+}
+
 class NNGraphIf;
 
 namespace detail {
@@ -409,7 +413,15 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
   Maybe<void> SoftSyncStream(const intrusive::shared_ptr<LocalDepObject>& compute_local_dep_object,
-                             const std::string& modifier, Symbol<Device> op_device);
+                             Symbol<Device> op_device);
+  Maybe<void> StreamEventRecord(const std::shared_ptr<std::shared_ptr<vm::Event>>& event,
+                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                                Symbol<Device> device);
+  Maybe<void> StreamWaitEvent(const std::shared_ptr<std::shared_ptr<vm::Event>>& event,
+                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                              Symbol<Device> device);
+  Maybe<void> StreamSynchronize(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                                Symbol<Device> dst_device);
 
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,

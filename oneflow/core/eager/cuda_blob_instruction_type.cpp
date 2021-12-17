@@ -56,7 +56,7 @@ class GpuRecordEventInstructionType : public RecordEventInstructionType {
   GpuRecordEventInstructionType() = default;
   ~GpuRecordEventInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
-  void InitInstructionStatus(Instruction* instruction) const override {
+  void InitInstructionState(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);

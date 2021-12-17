@@ -19,11 +19,12 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/vm/event.h"
 #include "oneflow/core/common/single_thread_obj_pool.h"
 
 namespace oneflow {
 
-class CudaEvent final {
+class CudaEvent final : public vm::Event {
  public:
   CudaEvent(const CudaEvent&) = delete;
   CudaEvent(CudaEvent&&) = delete;

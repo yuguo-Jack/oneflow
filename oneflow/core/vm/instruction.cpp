@@ -350,12 +350,12 @@ void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
   __Init__();
   reset_instr_msg(instr_msg);
   set_stream(stream);
-  instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(this);
+  instr_msg->instr_type_id().instruction_type().InitInstructionStateIf(this);
   *mut_parallel_desc() = parallel_desc;
 }
 
 void Instruction::Delete() {
-  instr_msg().instr_type_id().instruction_type().DeleteInstructionStatusIf(this);
+  instr_msg().instr_type_id().instruction_type().DeleteInstructionStateIf(this);
   clear_instr_msg();
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
