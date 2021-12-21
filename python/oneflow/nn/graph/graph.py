@@ -453,7 +453,9 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            eager_outputs = self._build_graph(*args)
+            # Use lazy compile pass to do autograd for now.
+            with flow.no_grad():
+                eager_outputs = self._build_graph(*args)
             build_graph_end = time.perf_counter()
             self._print(
                 0,
