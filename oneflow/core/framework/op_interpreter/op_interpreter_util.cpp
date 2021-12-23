@@ -33,7 +33,7 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
+std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(bool is_mirrored) {
   std::shared_ptr<OpExprInterpreter> internal;
   if (is_mirrored) {
     internal = std::make_shared<EagerMirroredInterpreter>();
