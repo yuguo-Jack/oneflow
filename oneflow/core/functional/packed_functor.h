@@ -38,12 +38,9 @@ class PackedFunctor<R(Args...)> {
   PackedFunctor(const std::string& func_name, const std::function<R(Args...)>& impl)
       : func_name_(func_name), impl_(impl) {}
 
-  virtual ~PackedFunctor() = default;
+  ~PackedFunctor() = default;
 
-  template<typename... TArgs>
-  R call(TArgs&&... args) const {
-    return impl_(std::forward<TArgs>(args)...);
-  }
+  R call(Args&&... args) const { return impl_(std::forward<Args>(args)...); }
 
  private:
   std::string func_name_;

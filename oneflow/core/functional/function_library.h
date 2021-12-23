@@ -27,7 +27,7 @@ namespace functional {
 
 class FunctionLibrary {
  public:
-  virtual ~FunctionLibrary() = default;
+  ~FunctionLibrary() = default;
 
   template<typename T>
   struct PackedFuncCreatorMap;
