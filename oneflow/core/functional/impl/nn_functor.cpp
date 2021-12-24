@@ -47,7 +47,12 @@ class BiasAddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& bias, const int32_t& axis) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    int32_t axis_val = axis;
+    if (axis_val < 0) {
+      const int64_t num_axes = x->shape()->NumAxes();
+      axis_val += num_axes;
+    }
+    JUST(attrs.SetAttr<int32_t>("axis", axis_val));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, attrs);
   }
 
@@ -1845,18 +1850,26 @@ class FusedBiasAddDropoutFunctor {
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
-    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
-
-    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
-             return OpInterpUtil::Dispatch<Tensor>(
-                 *random_mask_like_op_, {a},
-                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
-           })
-        .then([&](const std::shared_ptr<one::Tensor>& x) {
-          return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
-                                                fused_bias_add_mask_attrs);
-        })
-        .call();
+    int32_t axis_val = axis;
+    if (axis_val < 0) {
+      const int64_t num_axes = a->shape()->NumAxes();
+      axis_val += num_axes;
+    }
+    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis_val));
+    if (p >= 0.0) {
+      return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+               return OpInterpUtil::Dispatch<Tensor>(
+                   *random_mask_like_op_, {a},
+                   OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+             })
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
+                                                  fused_bias_add_mask_attrs);
+          })
+          .call();
+    } else {
+      return functional::BiasAdd(a, b, axis_val);
+    }
   }
 
  private:
@@ -2101,6 +2114,34 @@ class RoiAlignGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class EmbeddingLookupFunctor {
+ public:
+  EmbeddingLookupFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("embedding_lookup_placeholder").Input("ids").Output("embeddings").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ids, const std::string& name,
+                           const int64_t& embedding_size, const Symbol<DType>& dtype,
+                           const std::string& encoder, const std::string& partitioning,
+                           const std::string& initializer, const std::string& optimizer,
+                           const std::string& backend) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("name", name));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<std::string>("encoder", encoder));
+    JUST(attrs.SetAttr<std::string>("partitioning", partitioning));
+    JUST(attrs.SetAttr<std::string>("initializer", initializer));
+    JUST(attrs.SetAttr<std::string>("optimizer", optimizer));
+    JUST(attrs.SetAttr<std::string>("backend", backend));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {ids}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2170,6 +2211,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NmsFunctor>("Nms");
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
+  m.add_functor<impl::EmbeddingLookupFunctor>("OneEmbeddingLookup");
 };
 
 }  // namespace functional
