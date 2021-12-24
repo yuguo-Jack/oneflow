@@ -1,0 +1,31 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> GenerateRandomBatchPermutationIndicesOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+      *ctx->OutputShape("y", 0) = Shape({ctx->InputShape("x", 0).At(0)});
+      return Maybe<void>::Ok();
+    }
+
+/*static*/ Maybe<void> GenerateRandomBatchPermutationIndicesOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> GenerateRandomBatchPermutationIndicesOp::GetSbp(user_op::SbpContext *ctx) {
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x", 0))
+          .Broadcast(user_op::OpArg("y", 0))
+          .Build();
+      const auto& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("x", 0), i)
+            .Broadcast(user_op::OpArg("y", 0))
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> GenerateRandomBatchPermutationIndicesOp::InferDataType(user_op::InferContext *ctx) {
+      *ctx->OutputDType("y", 0) = DataType::kInt32;
+      return Maybe<void>::Ok();
+    }
+

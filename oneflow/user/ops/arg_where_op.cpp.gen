@@ -1,0 +1,23 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> ArgwhereOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ArgwhereOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ArgwhereOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::D(ctx);
+}
+
+/* static */ Maybe<void> ArgwhereOp::InferDataType(user_op::InferContext *ctx) {
+      const DataType dtype = ctx->Attr<DataType>("dtype");
+      user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
+      *output_desc->mut_data_type() = dtype;
+      user_op::TensorDesc* output_size_desc = ctx->OutputTensorDesc("output_size", 0);
+      *output_size_desc->mut_data_type() = dtype;
+      return Maybe<void>::Ok();
+    }
+

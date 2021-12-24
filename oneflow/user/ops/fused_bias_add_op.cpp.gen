@@ -1,0 +1,134 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> FusedBiasAddGeluOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+      const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
+      const auto& b_tensor_desc = ctx->InputTensorDesc("b", 0);
+      const auto bias_add_axis = ctx->Attr<int32_t>("axis");
+      CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
+      CHECK_GE_OR_RETURN(bias_add_axis, 0);
+      CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
+      CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
+      *ctx->OutputShape("out", 0) = a_tensor_desc.shape();
+      *ctx->OutputIsDynamic("out", 0) = a_tensor_desc.is_dynamic();
+      return Maybe<void>::Ok();
+    }
+
+/*static*/ Maybe<void> FusedBiasAddGeluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> FusedBiasAddGeluOp::GetSbp(user_op::SbpContext *ctx) {
+      const auto axis = ctx->Attr<int32_t>("axis");
+      for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
+           ++i) {
+        if (i == axis) { continue; }
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("a", 0), i)
+            .Broadcast(user_op::OpArg("b", 0))
+            .Split(ctx->outputs(), i)
+            .Build();
+      }
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("b", 0), 0)
+          .Split(user_op::OpArg("a", 0), axis)
+          .Split(ctx->outputs(), axis)
+          .Build();
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> FusedBiasAddGeluOp::InferDataType(user_op::InferContext *ctx) {
+      const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
+      *ctx->OutputDType("out", 0) = a_tensor_desc.data_type();
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> FusedBiasAddGeluGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+      const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
+      const auto& b_tensor_desc = ctx->InputTensorDesc("b", 0);
+      const auto bias_add_axis = ctx->Attr<int32_t>("axis");
+      CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
+      CHECK_GE_OR_RETURN(bias_add_axis, 0);
+      CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
+      CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
+      *ctx->OutputShape("dx", 0) = a_tensor_desc.shape();
+      *ctx->OutputIsDynamic("dx", 0) = a_tensor_desc.is_dynamic();
+      return Maybe<void>::Ok();
+    }
+
+/*static*/ Maybe<void> FusedBiasAddGeluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> FusedBiasAddGeluGradOp::GetSbp(user_op::SbpContext *ctx) {
+      const auto axis = ctx->Attr<int32_t>("axis");
+      for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
+           ++i) {
+        if (i == axis) { continue; }
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("a", 0), i)
+            .Split(user_op::OpArg("dy", 0), i)
+            .Broadcast(user_op::OpArg("b", 0))
+            .Split(ctx->outputs(), i)
+            .Build();
+      }
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("b", 0), 0)
+          .Split(user_op::OpArg("a", 0), axis)
+          .Split(user_op::OpArg("dy", 0), axis)
+          .Split(ctx->outputs(), axis)
+          .Build();
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> FusedBiasAddGeluGradOp::InferDataType(user_op::InferContext *ctx) {
+      const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
+      *ctx->OutputDType("dx", 0) = a_tensor_desc.data_type();
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> FusedBiasAddMaskScaleOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+      const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
+      const auto& mask_tensor_desc = ctx->InputTensorDesc("mask", 0);
+      const auto& b_tensor_desc = ctx->InputTensorDesc("b", 0);
+      const auto bias_add_axis = ctx->Attr<int32_t>("axis");
+      CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
+      CHECK_GE_OR_RETURN(bias_add_axis, 0);
+      CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
+      CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
+      CHECK_EQ_OR_RETURN(a_tensor_desc.shape(), mask_tensor_desc.shape());
+      *ctx->OutputShape("out", 0) = a_tensor_desc.shape();
+      *ctx->OutputIsDynamic("out", 0) = a_tensor_desc.is_dynamic();
+      return Maybe<void>::Ok();
+    }
+
+/*static*/ Maybe<void> FusedBiasAddMaskScaleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> FusedBiasAddMaskScaleOp::GetSbp(user_op::SbpContext *ctx) {
+      const auto axis = ctx->Attr<int32_t>("axis");
+      std::vector<user_op::OpArg> split_args;
+      split_args.emplace_back("a", 0);
+      split_args.emplace_back("mask", 0);
+      split_args.emplace_back("out", 0);
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        split_args.emplace_back("_add_to_output", 0);
+      }
+      for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
+           ++i) {
+        if (i == axis) { continue; }
+        ctx->NewBuilder().Split(split_args, i).Broadcast(user_op::OpArg("b", 0)).Build();
+      }
+      ctx->NewBuilder().Split(user_op::OpArg("b", 0), 0).Split(split_args, axis).Build();
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> FusedBiasAddMaskScaleOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+      user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
+      CHECK_OR_RETURN(mask_modifier != nullptr);
+      mask_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> FusedBiasAddMaskScaleOp::InferDataType(user_op::InferContext *ctx) {
+      const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
+      *ctx->OutputDType("out", 0) = a_tensor_desc.data_type();
+      return Maybe<void>::Ok();
+    }
+

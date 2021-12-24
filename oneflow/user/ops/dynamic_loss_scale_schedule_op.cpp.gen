@@ -1,0 +1,22 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> DynamicLossScaleScheduleOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> DynamicLossScaleScheduleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> DynamicLossScaleScheduleOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::D(ctx);
+}
+
+/* static */ Maybe<void> DynamicLossScaleScheduleOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> DynamicLossScaleScheduleOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+

@@ -1,0 +1,82 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> SliceOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferSliceOpTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> SliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SliceOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSliceOpSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> SliceOp::InferDataType(user_op::InferContext *ctx) {
+return InferSliceOpDataType(ctx);
+}
+
+/* static */ Maybe<void> SliceGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferSliceGradOpTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> SliceGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SliceGradOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSliceGradOpSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> SliceGradOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InferSliceGradInputArgModifier(ctx);
+}
+
+/* static */ Maybe<void> SliceGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferSliceGradDataType(ctx);
+}
+
+/* static */ Maybe<void> LogicalSliceAssignOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferLogicalSliceAssignTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> LogicalSliceAssignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> LogicalSliceAssignOp::GetSbp(user_op::SbpContext *ctx) {
+return GetLogicalSliceAssignSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> LogicalSliceAssignOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InferLogicalSliceAssignInputArgModifier(ctx);
+}
+
+/* static */ Maybe<void> LogicalSliceAssignOp::InferDataType(user_op::InferContext *ctx) {
+return InferLogicalSliceAssignDataType(ctx);
+}
+
+/* static */ Maybe<void> LogicalSliceOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferLogicalSliceTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> LogicalSliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> LogicalSliceOp::GetSbp(user_op::SbpContext *ctx) {
+return GetLogicalSliceSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> LogicalSliceOp::InferDataType(user_op::InferContext *ctx) {
+return InferLogicalSliceDataType(ctx);
+}
+
+/* static */ Maybe<void> SliceUpdateOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferSliceUpdateOpTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> SliceUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SliceUpdateOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSliceUpdateOpSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> SliceUpdateOp::InferDataType(user_op::InferContext *ctx) {
+return InferSliceUpdateOpDataType(ctx);
+}
+

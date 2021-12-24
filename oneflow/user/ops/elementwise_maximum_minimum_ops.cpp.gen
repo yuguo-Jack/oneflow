@@ -1,0 +1,60 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> ElementwiseMaximumOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> ElementwiseMaximumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ElementwiseMaximumOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> ElementwiseMaximumOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> ElementwiseMaximumBackwardOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ElementwiseMaximumBackwardOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ElementwiseMaximumBackwardOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> ElementwiseMaximumBackwardOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> ElementwiseMinimumOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> ElementwiseMinimumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ElementwiseMinimumOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> ElementwiseMinimumOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> ElementwiseMinimumBackwardOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ElementwiseMinimumBackwardOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ElementwiseMinimumBackwardOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> ElementwiseMinimumBackwardOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+

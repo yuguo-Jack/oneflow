@@ -1,0 +1,35 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> BinaryCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> BinaryCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BinaryCrossEntropyOp::GetSbp(user_op::SbpContext *ctx) {}
+
+/* static */ Maybe<void> BinaryCrossEntropyOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+      user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
+      CHECK_OR_RETURN(target_modifier != nullptr);
+      target_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> BinaryCrossEntropyOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> BinaryCrossEntropyGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BinaryCrossEntropyGradOp::GetSbp(user_op::SbpContext *ctx) {}
+
+/* static */ Maybe<void> BinaryCrossEntropyGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferGradDataType(ctx);
+}
+

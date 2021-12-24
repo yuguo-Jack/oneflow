@@ -1,0 +1,88 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> AdaptiveAvgPool1DOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferFWTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdaptiveAvgPool1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AdaptiveAvgPool1DOp::GetSbp(user_op::SbpContext *ctx) {
+return FwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool1DOp::InferDataType(user_op::InferContext *ctx) {
+return InferFWDataType(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool1DGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferBWTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdaptiveAvgPool1DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AdaptiveAvgPool1DGradOp::GetSbp(user_op::SbpContext *ctx) {
+return BwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool1DGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferBWDataType(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool2DOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferFWTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdaptiveAvgPool2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AdaptiveAvgPool2DOp::GetSbp(user_op::SbpContext *ctx) {
+return FwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool2DOp::InferDataType(user_op::InferContext *ctx) {
+return InferFWDataType(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool2DGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferBWTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdaptiveAvgPool2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AdaptiveAvgPool2DGradOp::GetSbp(user_op::SbpContext *ctx) {
+return BwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool2DGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferBWDataType(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool3DOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferFWTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdaptiveAvgPool3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AdaptiveAvgPool3DOp::GetSbp(user_op::SbpContext *ctx) {
+return FwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool3DOp::InferDataType(user_op::InferContext *ctx) {
+return InferFWDataType(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool3DGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferBWTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdaptiveAvgPool3DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AdaptiveAvgPool3DGradOp::GetSbp(user_op::SbpContext *ctx) {
+return BwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> AdaptiveAvgPool3DGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferBWDataType(ctx);
+}
+

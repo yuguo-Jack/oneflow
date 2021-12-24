@@ -1,0 +1,58 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> AssignOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AssignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AssignOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> AssignOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> AssignOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> AssignIfOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AssignIfOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AssignIfOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> AssignIfOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> AssignIfOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> AssignIfNotOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AssignIfNotOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> AssignIfNotOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> AssignIfNotOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> AssignIfNotOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+

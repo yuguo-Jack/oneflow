@@ -1,0 +1,18 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> CastOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return TensorDescInfer(ctx);
+}
+
+/*static*/ Maybe<void> CastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> CastOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> CastOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+

@@ -1,0 +1,110 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> ScalarAddOp::InferLogicalTensorDesc(user_op::InferContext *ctx) { \
+        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);             \
+        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);     \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/*static*/ Maybe<void> ScalarAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ScalarAddOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbp4ScalarMath(ctx);
+}
+
+/* static */ Maybe<void> ScalarAddOp::InferDataType(user_op::InferContext *ctx) {   \
+        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);             \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/* static */ Maybe<void> ScalarFloordivOp::InferLogicalTensorDesc(user_op::InferContext *ctx) { \
+        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);             \
+        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);     \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/*static*/ Maybe<void> ScalarFloordivOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ScalarFloordivOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbp4ScalarMath(ctx);
+}
+
+/* static */ Maybe<void> ScalarFloordivOp::InferDataType(user_op::InferContext *ctx) {   \
+        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);             \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/* static */ Maybe<void> ScalarFmodOp::InferLogicalTensorDesc(user_op::InferContext *ctx) { \
+        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);             \
+        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);     \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/*static*/ Maybe<void> ScalarFmodOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ScalarFmodOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbp4ScalarMath(ctx);
+}
+
+/* static */ Maybe<void> ScalarFmodOp::InferDataType(user_op::InferContext *ctx) {   \
+        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);             \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/* static */ Maybe<void> ScalarMulOp::InferLogicalTensorDesc(user_op::InferContext *ctx) { \
+        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);             \
+        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);     \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/*static*/ Maybe<void> ScalarMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ScalarMulOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbp4ScalarMul(ctx);
+}
+
+/* static */ Maybe<void> ScalarMulOp::InferDataType(user_op::InferContext *ctx) {   \
+        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);             \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/* static */ Maybe<void> ScalarPowOp::InferLogicalTensorDesc(user_op::InferContext *ctx) { \
+        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);             \
+        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);     \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/*static*/ Maybe<void> ScalarPowOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ScalarPowOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbp4ScalarMath(ctx);
+}
+
+/* static */ Maybe<void> ScalarPowOp::InferDataType(user_op::InferContext *ctx) {   \
+        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);             \
+        return Maybe<void>::Ok();                                           \
+      }
+
+/* static */ Maybe<void> ScalarPowGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+      return Maybe<void>::Ok();
+    }
+
+/*static*/ Maybe<void> ScalarPowGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ScalarPowGradOp::GetSbp(user_op::SbpContext *ctx) {
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> ScalarPowGradOp::InferDataType(user_op::InferContext *ctx) {
+      CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+      return Maybe<void>::Ok();
+    }
+

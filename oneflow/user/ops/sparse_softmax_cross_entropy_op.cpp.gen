@@ -1,0 +1,74 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> SparseSoftmaxCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<sbp_sig>(ctx);
+}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {      \
+        user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0); \
+        CHECK_OR_RETURN(label_modifier != nullptr);                                    \
+        label_modifier->set_requires_grad(false);                                      \
+        return Maybe<void>::Ok();                                                      \
+      }
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyMsOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> SparseSoftmaxCrossEntropyMsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyMsOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<sbp_sig>(ctx);
+}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyMsOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {      \
+        user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0); \
+        CHECK_OR_RETURN(label_modifier != nullptr);                                    \
+        label_modifier->set_requires_grad(false);                                      \
+        return Maybe<void>::Ok();                                                      \
+      }
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyMsOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> SparseSoftmaxCrossEntropyGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyGradOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<sbp_sig>(ctx);
+}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeGrad(ctx);
+}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyMsGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> SparseSoftmaxCrossEntropyMsGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyMsGradOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<sbp_sig>(ctx);
+}
+
+/* static */ Maybe<void> SparseSoftmaxCrossEntropyMsGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeGrad(ctx);
+}
+

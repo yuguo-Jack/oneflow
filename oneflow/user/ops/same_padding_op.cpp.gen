@@ -1,0 +1,78 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> SamePaddingOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return SamePaddingTensorDescInferFn(ctx);
+}
+
+/*static*/ Maybe<void> SamePaddingOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SamePaddingOp::GetSbp(user_op::SbpContext *ctx) {
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("x_like", 0).shape().NumAxes();
+      const std::string& data_format = ctx->Attr<std::string>("data_format");
+      ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("y", 0), 0).Build();
+      const int32_t channel_idx = ChannelIdx(data_format, num_axes);
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), channel_idx)
+          .Split(user_op::OpArg("y", 0), channel_idx)
+          .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x", 0))
+          .PartialSum(user_op::OpArg("y", 0))
+          .Build();
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> SamePaddingOp::InferDataType(user_op::InferContext *ctx) {
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> SamePaddingGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
+      *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
+      return Maybe<void>::Ok();
+    }
+
+/*static*/ Maybe<void> SamePaddingGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> SamePaddingGradOp::GetSbp(user_op::SbpContext *ctx) {
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("x_like", 0).shape().NumAxes();
+      const std::string& data_format = ctx->Attr<std::string>("data_format");
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x_like", 0), 0)
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("dx", 0), 0)
+          .Build();
+      const int32_t channel_idx = ChannelIdx(data_format, num_axes);
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x_like", 0), channel_idx)
+          .Split(user_op::OpArg("dy", 0), channel_idx)
+          .Split(user_op::OpArg("dx", 0), channel_idx)
+          .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x_like", 0))
+          .PartialSum(user_op::OpArg("dy", 0))
+          .PartialSum(user_op::OpArg("dx", 0))
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("x_like", 0))
+          .PartialSum(user_op::OpArg("dy", 0))
+          .PartialSum(user_op::OpArg("dx", 0))
+          .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x_like", 0))
+          .Broadcast(user_op::OpArg("dy", 0))
+          .Broadcast(user_op::OpArg("dx", 0))
+          .Build();
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> SamePaddingGradOp::InferDataType(user_op::InferContext *ctx) {
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
+      return Maybe<void>::Ok();
+    }
+

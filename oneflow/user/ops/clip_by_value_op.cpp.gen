@@ -1,0 +1,88 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> ClipByScalarOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferClipTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ClipByScalarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ClipByScalarOp::GetSbp(user_op::SbpContext *ctx) {
+return GetClipSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarOp::InferDataType(user_op::InferContext *ctx) {
+return InferClipTensorDataType(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarMinOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferClipTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ClipByScalarMinOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ClipByScalarMinOp::GetSbp(user_op::SbpContext *ctx) {
+return GetClipSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarMinOp::InferDataType(user_op::InferContext *ctx) {
+return InferClipTensorDataType(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarMaxOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferClipTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ClipByScalarMaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ClipByScalarMaxOp::GetSbp(user_op::SbpContext *ctx) {
+return GetClipSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarMaxOp::InferDataType(user_op::InferContext *ctx) {
+return InferClipTensorDataType(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferClipGradTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ClipByScalarGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ClipByScalarGradOp::GetSbp(user_op::SbpContext *ctx) {
+return GetClipGradSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferClipGradDataType(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarMinGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferClipGradTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ClipByScalarMinGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ClipByScalarMinGradOp::GetSbp(user_op::SbpContext *ctx) {
+return GetClipGradSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarMinGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferClipGradDataType(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarMaxGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferClipGradTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ClipByScalarMaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ClipByScalarMaxGradOp::GetSbp(user_op::SbpContext *ctx) {
+return GetClipGradSbpSignature(ctx);
+}
+
+/* static */ Maybe<void> ClipByScalarMaxGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferClipGradDataType(ctx);
+}
+

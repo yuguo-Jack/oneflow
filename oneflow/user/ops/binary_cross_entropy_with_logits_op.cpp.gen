@@ -1,0 +1,43 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> BinaryCrossEntropyWithLogitsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::GetSbp(user_op::SbpContext *ctx) {
+      if (ctx->user_op_conf().has_input("pos_weight", 0)) {
+        builder.Broadcast(user_op::OpArg("pos_weight", 0));
+      }
+    }
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+      user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
+      CHECK_OR_RETURN(target_modifier != nullptr);
+      target_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::GetSbp(user_op::SbpContext *ctx) {
+      if (ctx->user_op_conf().has_input("pos_weight", 0)) {
+        builder.Broadcast(user_op::OpArg("pos_weight", 0));
+      }
+    }
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferGradDataType(ctx);
+}
+

@@ -1,0 +1,24 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> ReshapeOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return LogicalTensorDescInferFn(ctx);
+}
+
+/* static */ Maybe<void> ReshapeOp::InferPhysicalTensorDesc(user_op::InferContext *ctx) {
+return TensorDescInferFn(ctx);
+}
+
+/* static */ Maybe<void> ReshapeOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> ReshapeOp::InferNdSbp(user_op::InferNdSbpFnContext *ctx) {
+return InferNdSbpFn(ctx);
+}
+
+/* static */ Maybe<void> ReshapeOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+

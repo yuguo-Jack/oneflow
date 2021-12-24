@@ -1,0 +1,88 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> ReduceAnyOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceAnyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceAnyOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<binary_func>(ctx);
+}
+
+/* static */ Maybe<void> ReduceAnyOp::InferDataType(user_op::InferContext *ctx) {
+return InferLogicalDataType(ctx);
+}
+
+/* static */ Maybe<void> ReduceAllOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceAllOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceAllOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<binary_func>(ctx);
+}
+
+/* static */ Maybe<void> ReduceAllOp::InferDataType(user_op::InferContext *ctx) {
+return InferLogicalDataType(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceMinOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceMinOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<binary_func>(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> ReduceProdOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceProdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceProdOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<binary_func>(ctx);
+}
+
+/* static */ Maybe<void> ReduceProdOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> ReduceSumOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceSumOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<binary_func>(ctx);
+}
+
+/* static */ Maybe<void> ReduceSumOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceMaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceMaxOp::GetSbp(user_op::SbpContext *ctx) {
+return GetSbpFn<binary_func>(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+

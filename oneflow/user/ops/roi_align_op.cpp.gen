@@ -1,0 +1,36 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> RoiAlignOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferRoiAlignTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> RoiAlignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> RoiAlignOp::GetSbp(user_op::SbpContext *ctx) {
+return RoiAlignSbpFn(ctx);
+}
+
+/* static */ Maybe<void> RoiAlignOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return RoiAlignArgModifier(ctx);
+}
+
+/* static */ Maybe<void> RoiAlignOp::InferDataType(user_op::InferContext *ctx) {
+return InferRoiAlignDataType(ctx);
+}
+
+/* static */ Maybe<void> RoiAlignGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferRoiAlignGradTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> RoiAlignGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> RoiAlignGradOp::GetSbp(user_op::SbpContext *ctx) {
+return RoiAlignGradSbpFn(ctx);
+}
+
+/* static */ Maybe<void> RoiAlignGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferRoiAlignGradDataType(ctx);
+}
+

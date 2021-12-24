@@ -1,0 +1,130 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> DimScatterAddLikeOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> DimScatterAddLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> DimScatterAddLikeOp::GetSbp(user_op::SbpContext *ctx) {
+return SetSbpLike(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddLikeOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddLikeOp::InferDataType(user_op::InferContext *ctx) {
+return InferDtype(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> DimScatterAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> DimScatterAddOp::GetSbp(user_op::SbpContext *ctx) {
+return SetSbpScatter(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddOp::InferDataType(user_op::InferContext *ctx) {
+return InferDtype(ctx);
+}
+
+/* static */ Maybe<void> DimScatterUpdateOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> DimScatterUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> DimScatterUpdateOp::GetSbp(user_op::SbpContext *ctx) {
+return SetSbpScatter(ctx);
+}
+
+/* static */ Maybe<void> DimScatterUpdateOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> DimScatterUpdateOp::InferDataType(user_op::InferContext *ctx) {
+return InferDtype(ctx);
+}
+
+/* static */ Maybe<void> DimScatterMulOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> DimScatterMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> DimScatterMulOp::GetSbp(user_op::SbpContext *ctx) {
+return SetSbpScatter(ctx);
+}
+
+/* static */ Maybe<void> DimScatterMulOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> DimScatterMulOp::InferDataType(user_op::InferContext *ctx) {
+return InferDtype(ctx);
+}
+
+/* static */ Maybe<void> DimScatterUpdateScalarOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferScalarTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> DimScatterUpdateScalarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> DimScatterUpdateScalarOp::GetSbp(user_op::SbpContext *ctx) {
+return SetSbpScatter(ctx);
+}
+
+/* static */ Maybe<void> DimScatterUpdateScalarOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputScalarArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> DimScatterUpdateScalarOp::InferDataType(user_op::InferContext *ctx) {
+return InferScalarDtype(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddScalarOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferScalarTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> DimScatterAddScalarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> DimScatterAddScalarOp::GetSbp(user_op::SbpContext *ctx) {
+return SetSbpScatter(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddScalarOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputScalarArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddScalarOp::InferDataType(user_op::InferContext *ctx) {
+return InferScalarDtype(ctx);
+}
+
+/* static */ Maybe<void> DimScatterMulScalarOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferScalarTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> DimScatterMulScalarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> DimScatterMulScalarOp::GetSbp(user_op::SbpContext *ctx) {
+return SetSbpScatter(ctx);
+}
+
+/* static */ Maybe<void> DimScatterMulScalarOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return InputScalarArgModifierFn(ctx);
+}
+
+/* static */ Maybe<void> DimScatterMulScalarOp::InferDataType(user_op::InferContext *ctx) {
+return InferScalarDtype(ctx);
+}
+

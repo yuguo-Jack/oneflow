@@ -1,0 +1,32 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> TanhOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> TanhOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> TanhOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> TanhOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _gradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _gradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _gradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _gradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+

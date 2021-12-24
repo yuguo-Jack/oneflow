@@ -1,0 +1,158 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> ReduceMinDeviceStageOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceDeviceStageLogicalTensorDescFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinDeviceStageOp::InferPhysicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceDeviceStagePhysicalTensorDescFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinDeviceStageOp::GetSbp(user_op::SbpContext *ctx) {
+return GetReduceDeviceStageSbpFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinDeviceStageOp::InferDataType(user_op::InferContext *ctx) {
+return InferReduceDeviceStageDtypeFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxDeviceStageOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceDeviceStageLogicalTensorDescFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxDeviceStageOp::InferPhysicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceDeviceStagePhysicalTensorDescFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxDeviceStageOp::GetSbp(user_op::SbpContext *ctx) {
+return GetReduceDeviceStageSbpFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxDeviceStageOp::InferDataType(user_op::InferContext *ctx) {
+return InferReduceDeviceStageDtypeFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinDeviceStageGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceDeviceStageGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceMinDeviceStageGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceMinDeviceStageGradOp::GetSbp(user_op::SbpContext *ctx) {
+return GetReduceDeviceStageGradSbpFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinDeviceStageGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferReduceDeviceStageGradDtypeFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxDeviceStageGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceDeviceStageGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceMaxDeviceStageGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceMaxDeviceStageGradOp::GetSbp(user_op::SbpContext *ctx) {
+return GetReduceDeviceStageGradSbpFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxDeviceStageGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferReduceDeviceStageGradDtypeFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinGlobalStageOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceGlobalStageTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceMinGlobalStageOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceMinGlobalStageOp::GetSbp(user_op::SbpContext *ctx) {                  \
+        ctx->NewBuilder()                                                         \
+            .Split(user_op::OpArg("in", 0), 0)                                    \
+            .Split(user_op::OpArg("device_count", 0), 0)                          \
+            .Split(user_op::OpArg("out", 0), 0)                                   \
+            .Split(user_op::OpArg("mask", 0), 0)                                  \
+            .Build();                                                             \
+        return Maybe<void>::Ok();                                                 \
+      }
+
+/* static */ Maybe<void> ReduceMinGlobalStageOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) { \
+        user_op::InputArgModifier* device_count_modifier =                        \
+            GetInputArgModifierFn("device_count", 0);                             \
+        device_count_modifier->set_requires_grad(false);                          \
+        return Maybe<void>::Ok();                                                 \
+      }
+
+/* static */ Maybe<void> ReduceMinGlobalStageOp::InferDataType(user_op::InferContext *ctx) {
+return InferReduceGlobalStageDtypeFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxGlobalStageOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceGlobalStageTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceMaxGlobalStageOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceMaxGlobalStageOp::GetSbp(user_op::SbpContext *ctx) {                  \
+        ctx->NewBuilder()                                                         \
+            .Split(user_op::OpArg("in", 0), 0)                                    \
+            .Split(user_op::OpArg("device_count", 0), 0)                          \
+            .Split(user_op::OpArg("out", 0), 0)                                   \
+            .Split(user_op::OpArg("mask", 0), 0)                                  \
+            .Build();                                                             \
+        return Maybe<void>::Ok();                                                 \
+      }
+
+/* static */ Maybe<void> ReduceMaxGlobalStageOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) { \
+        user_op::InputArgModifier* device_count_modifier =                        \
+            GetInputArgModifierFn("device_count", 0);                             \
+        device_count_modifier->set_requires_grad(false);                          \
+        return Maybe<void>::Ok();                                                 \
+      }
+
+/* static */ Maybe<void> ReduceMaxGlobalStageOp::InferDataType(user_op::InferContext *ctx) {
+return InferReduceGlobalStageDtypeFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMinGlobalStageGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceGlobalStageGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceMinGlobalStageGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceMinGlobalStageGradOp::GetSbp(user_op::SbpContext *ctx) {    \
+        ctx->NewBuilder()                                           \
+            .Split(user_op::OpArg("out_diff", 0), 0)                \
+            .Split(user_op::OpArg("mask", 0), 0)                    \
+            .Split(user_op::OpArg("device_count", 0), 0)            \
+            .Split(user_op::OpArg("in_diff", 0), 0)                 \
+            .Build();                                               \
+        return Maybe<void>::Ok();                                   \
+      }
+
+/* static */ Maybe<void> ReduceMinGlobalStageGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferReduceGlobalStageGradDtypeFn(ctx);
+}
+
+/* static */ Maybe<void> ReduceMaxGlobalStageGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferReduceGlobalStageGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> ReduceMaxGlobalStageGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> ReduceMaxGlobalStageGradOp::GetSbp(user_op::SbpContext *ctx) {    \
+        ctx->NewBuilder()                                           \
+            .Split(user_op::OpArg("out_diff", 0), 0)                \
+            .Split(user_op::OpArg("mask", 0), 0)                    \
+            .Split(user_op::OpArg("device_count", 0), 0)            \
+            .Split(user_op::OpArg("in_diff", 0), 0)                 \
+            .Build();                                               \
+        return Maybe<void>::Ok();                                   \
+      }
+
+/* static */ Maybe<void> ReduceMaxGlobalStageGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferReduceGlobalStageGradDtypeFn(ctx);
+}
+
