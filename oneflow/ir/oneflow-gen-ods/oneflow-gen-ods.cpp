@@ -475,6 +475,7 @@ void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
 }
 
 bool ShouldGenEmptyBody(const ::oneflow::user_op::OpRegistryResult& r) {
+  return false;
   const bool has_base_class = IsIdempotentOp(r.op_type_name) || IsInvolutionOp(r.op_type_name)
                               || IsAdaptivePoolOp(r.op_type_name) || IsPoolOp(r.op_type_name);
   if (has_base_class) { CHECK(HasOneFlow_BasicBaseOpHasFn(r)) << r.op_type_name; }
