@@ -8704,7 +8704,7 @@ def OneFlow_CumsumOp : OneFlow_BaseOp<"cumsum", [NoSideEffect, DeclareOpInterfac
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$dim
+    SI64Attr:$dim
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
