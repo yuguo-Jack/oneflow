@@ -1141,7 +1141,7 @@ def RandomUniformIntInitializerImpl(
 
 
 def RngTruncatedNormal(mean, std, length, rng):
-    truncated_value = 2 * std
+    truncated_value = 2 ** std
     data = np.empty(length)
     generated = 0
     ratio = 1.2
