@@ -16,8 +16,8 @@ limitations under the License.
 import oneflow as flow
 
 
-def meshgrid_op(*tensors, indexing="ij"):
-    return flow._C.meshgrid(tensors, indexing)
+def meshgrid_op(*tensors):
+    return flow._C.meshgrid(tensors)
 
 
 if __name__ == "__main__":

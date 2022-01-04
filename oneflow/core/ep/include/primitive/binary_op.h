@@ -24,30 +24,21 @@ namespace ep {
 namespace primitive {
 
 enum class BinaryOp {
-  // Math
   kAdd,
   kSub,
   kMul,
   kDiv,
   kMax,
   kMin,
-  kPow,
-  // Comparision
   kEqual,
   kNotEqual,
   kLessThan,
   kLessEqual,
   kGreaterThan,
   kGreaterEqual,
-  // Logical
   kLogicalAnd,
   kLogicalOr,
   kLogicalXor,
-  // Unary Backward
-  kReluBackwardWithDyY,
-  kSigmoidBackwardWithDyY,
-  kGeluBackwardWithDyX,
-
 };
 
 }

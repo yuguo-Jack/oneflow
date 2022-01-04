@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/api/common/device.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/str_util.h"
@@ -28,10 +29,10 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<Device>, std::shared_ptr<Symbol<Device>>>(m, "device")
       .def(py::init([](const std::string& type_or_type_with_device_id) {
-        return Device::ParseAndNew(type_or_type_with_device_id).GetOrThrow();
+        return DeviceExportUtil::ParseAndNew(type_or_type_with_device_id).GetOrThrow();
       }))
       .def(py::init([](const std::string& type, int64_t device_id) {
-        return Device::New(type, device_id).GetOrThrow();
+        return DeviceExportUtil::New(type, device_id).GetOrThrow();
       }))
       .def_property_readonly("type", [](const Symbol<Device>& d) { return d->type(); })
       .def_property_readonly("index", [](const Symbol<Device>& d) { return d->device_id(); })

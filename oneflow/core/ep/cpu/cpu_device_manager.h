@@ -25,10 +25,9 @@ namespace ep {
 class CpuDeviceManager : public DeviceManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceManager);
-  CpuDeviceManager(DeviceManagerRegistry* registry);
-  ~CpuDeviceManager() override;
+  CpuDeviceManager() = default;
+  virtual ~CpuDeviceManager() = default;
 
-  DeviceManagerRegistry* registry() const override;
   std::shared_ptr<Device> GetDevice(size_t device_index) override;
   size_t GetDeviceCount(size_t primary_device_index) override;
   size_t GetDeviceCount() override;
@@ -38,7 +37,6 @@ class CpuDeviceManager : public DeviceManager {
  private:
   std::mutex device_mutex_;
   std::shared_ptr<Device> device_;
-  DeviceManagerRegistry* registry_;
 };
 
 }  // namespace ep

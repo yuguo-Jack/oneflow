@@ -839,6 +839,7 @@ def layer_norm(
             op_builder.Input("beta", [beta])
         if gamma is not None:
             op_builder.Input("gamma", [gamma])
+            op_builder.Output("normalized")
         op_builder.Attr("center", center)
         op_builder.Attr("scale", scale)
         op_builder.Attr("begin_norm_axis", begin_norm_axis)
@@ -854,7 +855,6 @@ def layer_norm_grad(
     x: oneflow._oneflow_internal.BlobDesc,
     mean: oneflow._oneflow_internal.BlobDesc,
     inv_variance: oneflow._oneflow_internal.BlobDesc,
-    gamma: oneflow._oneflow_internal.BlobDesc = None,
     begin_norm_axis: int = 1,
     name: str = "LayerNormGrad",
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -865,14 +865,13 @@ def layer_norm_grad(
         x (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
         mean (oneflow._oneflow_internal.BlobDesc): Mean over neurons.
         inv_variance (oneflow._oneflow_internal.BlobDesc): Variance over neurons.
-        gamma (oneflow._oneflow_internal.BlobDesc): Scale parameter.
         begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
         oneflow._oneflow_internal.BlobDesc: Gradient with respect to input `Blob`.
     """
-    op_builder = (
+    op = (
         flow.user_op_builder(name)
         .Op("layer_norm_grad")
         .Input("dy", [dy])
@@ -880,19 +879,17 @@ def layer_norm_grad(
         .Input("mean", [mean])
         .Input("inv_variance", [inv_variance])
         .Output("dx")
+        .Attr("begin_norm_axis", begin_norm_axis)
+        .Attr("epsilon", 1e-05)
+        .Build()
     )
-    if gamma is not None:
-        op_builder.Input("gamma", [gamma])
-    op_builder.Attr("begin_norm_axis", begin_norm_axis)
-    op_builder.Attr("epsilon", 1e-05)
-    return op_builder.Build().InferAndTryRun().SoleOutputBlob()
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 def layer_norm_param_grad(
     dy: oneflow._oneflow_internal.BlobDesc,
-    x: oneflow._oneflow_internal.BlobDesc,
-    mean: oneflow._oneflow_internal.BlobDesc,
-    inv_variance: oneflow._oneflow_internal.BlobDesc,
+    norm: oneflow._oneflow_internal.BlobDesc,
+    gamma: oneflow._oneflow_internal.BlobDesc,
     begin_params_axis: int = -1,
     name: str = "LayerNormParamGrad",
 ) -> Tuple[
@@ -904,14 +901,14 @@ def layer_norm_param_grad(
 
     Args:
         dy (oneflow._oneflow_internal.BlobDesc): Upstream derivstives.
-        x (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
-        mean (oneflow._oneflow_internal.BlobDesc): Mean over neurons.
-        inv_variance (oneflow._oneflow_internal.BlobDesc): Variance over neurons.
+        norm (oneflow._oneflow_internal.BlobDesc): Normalized output.
+        gamma (oneflow._oneflow_internal.BlobDesc): Scale parameter.
         begin_params_axis (int, optional): From which parameters to begin with. Defaults to -1.
         name (Optional[str], optional): This layer's name. Defaults to 'LayerNormParamGrad'.
 
     Returns:
         Tuple[oneflow._oneflow_internal.BlobDesc]:
+                normalized_diff: Gradient with respect to input `Blob`.
                 beta_diff: Gradient with respect to shift parameter beta.
                 gamma_diff: Gradient with respect to scale parameter gamma.
     """
@@ -919,16 +916,22 @@ def layer_norm_param_grad(
         flow.user_op_builder(name)
         .Op("layer_norm_param_grad")
         .Input("dy", [dy])
-        .Input("x", [x])
-        .Input("mean", [mean])
-        .Input("inv_variance", [inv_variance])
+        .Input("normalized", [norm])
+        .Input("gamma", [gamma])
+        .Output("normalized_diff")
         .Output("beta_diff")
         .Output("gamma_diff")
+        .Output("reduce_buf")
         .Attr("begin_params_axis", begin_params_axis)
         .Build()
     )
-    (beta_diff, gamma_diff,) = op.InferAndTryRun().RemoteBlobList()
-    return (beta_diff, gamma_diff)
+    (
+        normalized_diff,
+        beta_diff,
+        gamma_diff,
+        reduce_buf,
+    ) = op.InferAndTryRun().RemoteBlobList()
+    return (normalized_diff, beta_diff, gamma_diff)
 
 
 def _get_batch_normalization_variables(

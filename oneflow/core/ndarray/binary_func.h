@@ -143,13 +143,12 @@ template<typename T>
 struct BinaryFuncPow final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
 #if defined(__CUDACC__)
-    return powf(x, y);
+    return pow(x, y);
 #else
     return std::pow(x, y);
 #endif
   }
 };
-
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncPow);
 
 template<>
@@ -168,7 +167,7 @@ struct BinaryFuncPow<double> final {
 template<>
 struct BinaryFuncPow<float> final {
   static __device__ __forceinline__ float Invoke(const float x, const float y) {
-    return powf(x, y);
+    return __powf(x, y);
   }
 };
 
@@ -176,7 +175,7 @@ template<>
 struct BinaryFuncPow<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
-    return __float2half(powf(__half2float(x), __half2float(y)));
+    return __float2half(__powf(__half2float(x), __half2float(y)));
 #else
     NO_HALF_UTIL_FOUND;
 #endif

@@ -29,14 +29,13 @@ namespace ep {
 class CudaDevice : public Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDevice);
-  explicit CudaDevice(int device_index, DeviceManager* device_manager);
-  ~CudaDevice() override;
+  explicit CudaDevice(int device_index);
+  virtual ~CudaDevice();
 
   void SetAsActiveDevice() override;
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
   size_t device_index() const override { return device_index_; }
-  DeviceManager* device_manager() const override { return device_manager_; }
 
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
@@ -57,7 +56,6 @@ class CudaDevice : public Device {
   std::vector<Event*> events_;
   unsigned int event_flags_;
   cudaDeviceProp properties_;
-  DeviceManager* device_manager_;
 };
 
 }  // namespace ep

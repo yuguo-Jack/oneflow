@@ -454,10 +454,9 @@ struct LocalCallOpKernelUtil final {
       JUST(ResetTempStorageBlob(operand));
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
     }
-    user_op::OpKernelState* state = nullptr;
-    user_op::OpKernelCache* cache = nullptr;
-    TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
-    OpKernelCompute(operand, device_ctx, state, cache);
+    user_op::OpKernelState* state;
+    TryInitOpKernelState(operand, device_ctx, &state);
+    OpKernelCompute(operand, device_ctx, state);
     if (unlikely(operand->need_temp_storage())) {
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     }
@@ -489,19 +488,15 @@ struct LocalCallOpKernelUtil final {
     return operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
   }
 
-  static inline void TryInitOpKernelStateAndCache(LocalCallOpKernelPhyInstrOperand* operand,
-                                                  DeviceCtx* device_ctx,
-                                                  user_op::OpKernelState** state,
-                                                  user_op::OpKernelCache** cache) {
+  static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
+                                          DeviceCtx* device_ctx, user_op::OpKernelState** state) {
     if (likely(operand->op_interp_ctx().state)) {
       *state = operand->op_interp_ctx().state.get();
-      // set state to nullptr so that state initialization in TryInitOpKernelStateAndCache will be
-      // skipped.
-      state = nullptr;
+      return;
     }
-    operand->mut_opkernel()->TryInitOpKernelStateAndCache(
+    operand->mut_opkernel()->TryInitOpKernelState(
         operand->user_opkernel(), device_ctx, operand->inputs().get(), operand->outputs().get(),
-        operand->consistent_tensor_infer_result().get(), state, cache);
+        operand->consistent_tensor_infer_result().get(), state);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
@@ -520,13 +515,12 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline void OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
-                                     DeviceCtx* device_ctx, user_op::OpKernelState* state,
-                                     const user_op::OpKernelCache* cache) {
+                                     DeviceCtx* device_ctx, user_op::OpKernelState* state) {
     auto* opkernel = operand->mut_opkernel();
     auto* compute_ctx =
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
-    operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    operand->user_opkernel()->Compute(compute_ctx, state);
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
   }

@@ -27,8 +27,7 @@ import atexit
 
 IS_WINDOWS = sys.platform == "win32"
 
-# pytorch's check interval is 5.0 seconds
-MP_STATUS_CHECK_INTERVAL = 10.0
+MP_STATUS_CHECK_INTERVAL = 60.0
 r"""Interval (in seconds) to check status of processes to avoid hanging in
     multiprocessing data loading. This is mainly used in getting data from
     another process, in which case we need to periodically check whether the

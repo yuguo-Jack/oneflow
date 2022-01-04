@@ -78,14 +78,23 @@ class SGD(Optimizer):
                         param
                     )
         self._momentum_sgd = (
-            flow.stateful_op("momentum_update")
+            flow.builtin_op("momentum_update")
             .Input("model")
             .Input("model_diff")
             .Input("momentum")
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
+            .Attr("weight_decay", 0.0)
             .Build()
         )
         self._sgd = (
-            flow.stateful_op("sgd_update").Input("model").Input("model_diff").Build()
+            flow.builtin_op("sgd_update")
+            .Input("model")
+            .Input("model_diff")
+            .Attr("weight_decay", 0.0)
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
+            .Build()
         )
 
     def step(self, closure: Callable = None):
@@ -100,20 +109,16 @@ class SGD(Optimizer):
                         continue
                     if param_group["momentum"] == 0.0:
                         scale = param_group["scale"]
-                        flow._C.dispatch_sgd_update(
-                            self._sgd,
-                            (param, param.grad),
-                            learning_rate=lr,
-                            scale=scale,
-                        )
+                        self._sgd(param, param.grad, learning_rate_val=lr, scale=scale)
                     else:
                         momentum_buf = self._state[param]["momentum_buf"]
                         scale = param_group["scale"]
                         beta = param_group["momentum"]
-                        flow._C.dispatch_momentum_update(
-                            self._momentum_sgd,
-                            (param, param.grad, momentum_buf),
-                            learning_rate=lr,
+                        self._momentum_sgd(
+                            param,
+                            param.grad,
+                            momentum_buf,
+                            learning_rate_val=lr,
                             scale=scale,
                             beta=beta,
                         )

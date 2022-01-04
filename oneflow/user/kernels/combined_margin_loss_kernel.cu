@@ -67,10 +67,10 @@ __global__ void GpuBackward(const int64_t n, const int64_t num_classes, const in
   }
 }
 
-class CombinedMarginLossOpKernelCache final : public user_op::OpKernelCache {
+class CombinedMarginLossOpKernelState final : public user_op::OpKernelState {
  public:
-  CombinedMarginLossOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~CombinedMarginLossOpKernelCache() override = default;
+  CombinedMarginLossOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~CombinedMarginLossOpKernelState() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -80,9 +80,11 @@ class CombinedMarginLossOpKernelCache final : public user_op::OpKernelCache {
   const int64_t upper_;
 };
 
-std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelCache(
-    user_op::KernelCacheContext* ctx, const std::string& in_arg_name) {
-  if (ctx->parallel_ctx().parallel_num() == 1) { return nullptr; }
+std::shared_ptr<user_op::OpKernelState> CreateCombinedMarginLossOpKernelState(
+    user_op::KernelInitContext* ctx, const std::string& in_arg_name) {
+  if (ctx->parallel_ctx().parallel_num() == 1) {
+    return std::shared_ptr<user_op::OpKernelState>(nullptr);
+  }
 
   const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
   if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 1
@@ -93,11 +95,11 @@ std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelCache(
     const auto depth = ctx->Attr<int64_t>("depth");
     CHECK_EQ(depth, in_logical_desc->shape().At(1));
     BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
-    return std::make_shared<CombinedMarginLossOpKernelCache>(
+    return std::make_shared<CombinedMarginLossOpKernelState>(
         bs.At(ctx->parallel_ctx().parallel_id()).begin(),
         bs.At(ctx->parallel_ctx().parallel_id()).end());
   } else {
-    return nullptr;
+    return std::shared_ptr<user_op::OpKernelState>(nullptr);
   }
 }
 
@@ -109,16 +111,14 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGpuKernel() = default;
   ~CombinedMarginLossGpuKernel() override = default;
 
-  using user_op::OpKernel::InitOpKernelCache;
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
-    return CreateCombinedMarginLossOpKernelCache(ctx, "x");
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return CreateCombinedMarginLossOpKernelState(ctx, "x");
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -127,11 +127,11 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
     const float m2 = ctx->Attr<float>("m2");
     const float m3 = ctx->Attr<float>("m3");
     int64_t lower_bound = 0;
-    if (cache != nullptr) {
-      auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
-      CHECK_NOTNULL(kernel_cache);
-      CHECK_EQ(x->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
-      lower_bound = kernel_cache->lower();
+    if (state != nullptr) {
+      auto* kernel_state = dynamic_cast<CombinedMarginLossOpKernelState*>(state);
+      CHECK_NOTNULL(kernel_state);
+      CHECK_EQ(x->shape().Count(1), kernel_state->upper() - kernel_state->lower());
+      lower_bound = kernel_state->lower();
     }
     if (m1 == 1.0 && m2 == 0.0) {
       GpuForward<T, K, true><<<BlocksNum4ThreadsNum(x->shape().elem_cnt()), kCudaThreadsNumPerBlock,
@@ -168,16 +168,14 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGradGpuKernel() = default;
   ~CombinedMarginLossGradGpuKernel() override = default;
 
-  using user_op::OpKernel::InitOpKernelCache;
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
-    return CreateCombinedMarginLossOpKernelCache(ctx, "dy");
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return CreateCombinedMarginLossOpKernelState(ctx, "dy");
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* theta = ctx->Tensor4ArgNameAndIndex("theta", 0);
@@ -186,11 +184,11 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
     const float m2 = ctx->Attr<float>("m2");
     const float m3 = ctx->Attr<float>("m3");
     int64_t lower_bound = 0;
-    if (cache != nullptr) {
-      auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
-      CHECK_NOTNULL(kernel_cache);
-      CHECK_EQ(dy->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
-      lower_bound = kernel_cache->lower();
+    if (state != nullptr) {
+      auto* kernel_state = dynamic_cast<CombinedMarginLossOpKernelState*>(state);
+      CHECK_NOTNULL(kernel_state);
+      CHECK_EQ(dy->shape().Count(1), kernel_state->upper() - kernel_state->lower());
+      lower_bound = kernel_state->lower();
     }
     if (m1 == 1.0 && m2 == 0.0) {
       GpuBackward<T, K, true>

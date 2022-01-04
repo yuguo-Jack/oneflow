@@ -10,9 +10,6 @@ def OneFlow_Dialect : Dialect {
         This dialect is the IR of OneFlow.
     }];
     let cppNamespace = "::mlir::oneflow";
-    let dependentDialects = [
-        "StandardOpsDialect"
-    ];
 }
 
 #endif // ONEFLOW_DIALECT

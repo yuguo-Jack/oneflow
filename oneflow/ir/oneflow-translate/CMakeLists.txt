@@ -37,7 +37,6 @@ target_link_libraries(oneflow-translate
   PRIVATE
   ${dialect_libs}
   ${translation_libs}
-  PUBLIC
   MLIRTranslation
   MLIROneFlowTranslation
   ${oneflow_libs}

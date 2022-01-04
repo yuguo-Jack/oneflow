@@ -17,7 +17,7 @@ limitations under the License.
 #ifdef __linux__
 
 #include "oneflow/core/hardware/net_socket_device_descriptor.h"
-#include "nlohmann/json.hpp"
+#include <json.hpp>
 
 namespace oneflow {
 

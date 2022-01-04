@@ -22,14 +22,12 @@ limitations under the License.
 namespace oneflow {
 
 user_op::GetSbpFn GenLossForwardDefaultGetSbpFn(
-    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder,
-                             user_op::SbpContext* ctx)>& f =
-        [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {});
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
+        [](user_op::UserOpSbpSignatureBuilder& builder) {});
 
 user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
-    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder,
-                             user_op::SbpContext* ctx)>& f =
-        [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {});
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
+        [](user_op::UserOpSbpSignatureBuilder& builder) {});
 
 }  // namespace oneflow
 

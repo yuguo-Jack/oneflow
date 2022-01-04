@@ -16,6 +16,23 @@ limitations under the License.
 from typing import Optional, Sequence
 
 import oneflow as flow
+from oneflow.nn.module import Module
+
+
+class TensorBufferToTensor(Module):
+    def __init__(self, dtype, instance_shape):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("tensor_buffer_to_tensor")
+            .Input("in")
+            .Output("out")
+            .Attr("dtype", dtype)
+            .Attr("instance_shape", instance_shape)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
 
 
 def tensor_buffer_to_tensor_op(x, dtype: flow.dtype, instance_shape: Sequence[int]):
@@ -48,9 +65,22 @@ def tensor_buffer_to_tensor_op(x, dtype: flow.dtype, instance_shape: Sequence[in
         oneflow.Size([4, 16, 64, 64])
 
     """
-    return flow._C.tensor_buffer_to_tensor(
-        x, dtype=dtype, instance_shape=instance_shape
-    )
+    return TensorBufferToTensor(dtype=dtype, instance_shape=instance_shape)(x)
+
+
+class TensorToTensorBuffer(Module):
+    def __init__(self, instance_dims):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("tensor_to_tensor_buffer")
+            .Input("in")
+            .Output("out")
+            .Attr("instance_dims", instance_dims)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
 
 
 def tensor_to_tensor_buffer(x, instance_dims: int):
@@ -80,7 +110,25 @@ def tensor_to_tensor_buffer(x, instance_dims: int):
         oneflow.Size([4, 16, 64, 64])
     
     """
-    return flow._C.tensor_to_tensor_buffer(x, instance_dims)
+    return TensorToTensorBuffer(instance_dims=instance_dims)(x)
+
+
+class GenTensorBuffer(Module):
+    def __init__(self, shape, shape_list, value_list, data_type, dynamic_out):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("gen_tensor_buffer")
+            .Output("out")
+            .Attr("shape", shape)
+            .Attr("shape_list", shape_list)
+            .Attr("value_list", value_list)
+            .Attr("data_type", data_type)
+            .Attr("dynamic_out", dynamic_out)
+            .Build()
+        )
+
+    def forward(self):
+        return self._op()[0]
 
 
 def gen_tensor_buffer(
@@ -90,9 +138,7 @@ def gen_tensor_buffer(
     data_type: Optional[flow.dtype] = flow.float32,
     dynamic_out: Optional[bool] = False,
 ):
-    return flow._C.gen_tensor_buffer(
-        shape, shape_list, value_list, data_type, dynamic_out
-    )
+    return GenTensorBuffer(shape, shape_list, value_list, data_type, dynamic_out)()
 
 
 if __name__ == "__main__":

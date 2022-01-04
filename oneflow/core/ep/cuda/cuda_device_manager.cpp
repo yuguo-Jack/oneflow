@@ -23,17 +23,12 @@ namespace oneflow {
 
 namespace ep {
 
-CudaDeviceManager::CudaDeviceManager(DeviceManagerRegistry* registry) : registry_(registry) {}
-CudaDeviceManager::~CudaDeviceManager() = default;
-
-DeviceManagerRegistry* CudaDeviceManager::registry() const { return registry_; }
-
 std::shared_ptr<Device> CudaDeviceManager::GetDevice(size_t device_index) {
   std::lock_guard<std::mutex> lock(devices_mutex_);
   if (device_index < devices_.size() && devices_.at(device_index)) {
     return devices_.at(device_index);
   }
-  auto device = std::make_shared<CudaDevice>(device_index, this);
+  auto device = std::make_shared<CudaDevice>(device_index);
   if (device_index >= devices_.size()) { devices_.resize(device_index + 1); }
   devices_.at(device_index) = device;
   return device;
@@ -59,6 +54,8 @@ size_t CudaDeviceManager::GetActiveDeviceIndex() {
 void CudaDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
   OF_CUDA_CHECK(cudaSetDevice(static_cast<int>(device_index)));
 }
+
+REGISTER_EP_DEVICE_MANAGER(DeviceType::kCUDA, CudaDeviceManager);
 
 }  // namespace ep
 

@@ -28,8 +28,8 @@ def ccrelu(x, name):
     return (
         flow.user_op_builder(name)
         .Op("ccrelu")
-        .Input("x", [x])
-        .Output("y")
+        .Input("in", [x])
+        .Output("out")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

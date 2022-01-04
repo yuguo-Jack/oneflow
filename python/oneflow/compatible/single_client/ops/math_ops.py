@@ -594,8 +594,8 @@ def relu(
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
         .Op("relu")
-        .Input("x", [x])
-        .Output("y")
+        .Input("in", [x])
+        .Output("out")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

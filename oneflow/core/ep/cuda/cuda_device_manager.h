@@ -27,10 +27,9 @@ namespace ep {
 class CudaDeviceManager : public DeviceManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDeviceManager);
-  CudaDeviceManager(DeviceManagerRegistry* registry);
-  ~CudaDeviceManager() override;
+  CudaDeviceManager() = default;
+  virtual ~CudaDeviceManager() = default;
 
-  DeviceManagerRegistry* registry() const override;
   std::shared_ptr<Device> GetDevice(size_t device_index) override;
   size_t GetDeviceCount(size_t primary_device_index) override;
   size_t GetDeviceCount() override;
@@ -40,7 +39,6 @@ class CudaDeviceManager : public DeviceManager {
  private:
   std::mutex devices_mutex_;
   std::vector<std::shared_ptr<Device>> devices_;
-  DeviceManagerRegistry* registry_;
 };
 
 }  // namespace ep

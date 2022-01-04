@@ -17,7 +17,7 @@ limitations under the License.
 
 #ifdef WITH_RDMA
 
-#include "nlohmann/json.hpp"
+#include <json.hpp>
 
 namespace oneflow {
 

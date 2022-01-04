@@ -135,9 +135,8 @@ class UserOpInferContext final : public user_op::InferContext {
     auto InitTensorDesc = [&](const ArgVec& arg_vec, const PbRpf<std::string>& bns) {
       CHECK_EQ(arg_vec.size(), bns.size());
       for (int32_t i = 0; i < arg_vec.size(); ++i) {
-        const auto& bn_i = bns.Get(i);
         BlobDesc* blob = GetBlobDesc4BnInOp(bns.Get(i));
-        CHECK(blob != nullptr) << bn_i;
+        CHECK_NOTNULL(blob);
         arg2tensor_desc_.emplace(arg_vec.at(i), GenTensorDescFromBlobDesc(blob));
       }
     };
@@ -153,7 +152,8 @@ class UserOpInferContext final : public user_op::InferContext {
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                  int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return &(it->second);

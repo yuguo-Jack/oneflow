@@ -469,10 +469,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
  private:
   template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionBegin(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
+  Maybe<intrusive::shared_ptr<LocalDepObject>> MakeCriticalSectionBegin(
+      const one::EagerBlobObjectListPtr& eager_blob_objects);
 
   template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionEnd(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
+  Maybe<void> MakeCriticalSectionEnd(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                                     const std::shared_ptr<SharedEventRecord>& event_record);
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;

@@ -106,11 +106,13 @@ class AdamW(Optimizer):
                 self._state[param]["exp_avg"] = flow.experimental.zeros_like(param)
                 self._state[param]["exp_avg_sq"] = flow.experimental.zeros_like(param)
         self._op = (
-            flow.stateful_op("adam_update")
+            flow.builtin_op("adam_update")
             .Input("model")
             .Input("model_diff")
             .Input("m")
             .Input("v")
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
             .Build()
         )
 
@@ -127,7 +129,7 @@ class AdamW(Optimizer):
                 loss = closure()
             for param_group in self.param_groups:
                 kwargs = {
-                    "learning_rate": param_group["lr"],
+                    "learning_rate_val": param_group["lr"],
                     "scale": param_group["scale"],
                     "weight_decay": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
@@ -139,8 +141,6 @@ class AdamW(Optimizer):
                         continue
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
-                    flow._C.dispatch_adam_update(
-                        self._op, (param, param.grad, m_tensor, v_tensor), **kwargs
-                    )
+                    self._op(param, param.grad, m_tensor, v_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss

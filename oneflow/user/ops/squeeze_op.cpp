@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -41,7 +40,21 @@ Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector
 
 }  // namespace
 
-/*static*/ Maybe<void> SqueezeOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> SqueezeTensorDescInferFn(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
+  AxisVector fixed_axes_vec;
+  JUST(TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape.NumAxes(),
+                                       &fixed_axes_vec));
+
+  DimVector dim_vec = in_shape.dim_vec();
+  JUST(CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec));
+  dim_vec.erase(std::remove(dim_vec.begin(), dim_vec.end(), -1), dim_vec.end());
+  *out_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SqueezeGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   AxisVector fixed_axes_vec;
   JUST(TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"),
@@ -61,26 +74,17 @@ Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SqueezeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
-  AxisVector fixed_axes_vec;
-  JUST(TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape.NumAxes(),
-                                       &fixed_axes_vec));
 
-  DimVector dim_vec = in_shape.dim_vec();
-  JUST(CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec));
-  dim_vec.erase(std::remove(dim_vec.begin(), dim_vec.end(), -1), dim_vec.end());
-  *out_shape = Shape(dim_vec);
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SqueezeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-/*static*/ Maybe<void> SqueezeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  return Maybe<void>::Ok();
-}
+REGISTER_USER_OP("squeeze")
+    .Input("in")
+    .Output("out")
+    .Attr<std::vector<int32_t>>("axes")
+    .SetTensorDescInferFn(SqueezeTensorDescInferFn)
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(SqueezeGetSbpFn);
 
 REGISTER_USER_OP_GRAD("squeeze").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {

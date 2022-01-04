@@ -28,6 +28,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
 }
 
+REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
+REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
+
 }  // namespace oneflow
 
 #endif  // WITH_MLIR

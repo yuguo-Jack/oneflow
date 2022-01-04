@@ -117,14 +117,21 @@ class SGD(Optimizer):
                 self._state[param] = dict()
 
         self._momentum_sgd = (
-            flow.stateful_op("momentum_update")
+            flow.builtin_op("momentum_update")
             .Input("model")
             .Input("model_diff")
             .Input("momentum")
+            .Attr("l1", 0.0)
+            .Attr("weight_decay", 0.0)
             .Build()
         )
         self._sgd = (
-            flow.stateful_op("sgd_update").Input("model").Input("model_diff").Build()
+            flow.builtin_op("sgd_update")
+            .Input("model")
+            .Input("model_diff")
+            .Attr("weight_decay", 0.0)
+            .Attr("l1", 0.0)
+            .Build()
         )
 
     def step(self, closure: Callable = None):
@@ -139,18 +146,17 @@ class SGD(Optimizer):
                     if param.grad is None:
                         continue
                     if param_group["momentum"] == 0.0:
-                        flow._C.dispatch_sgd_update(
-                            self._sgd, (param, param.grad), learning_rate=lr, l2=l2
-                        )
+                        self._sgd(param, param.grad, learning_rate_val=lr, l2=l2)
                     else:
                         if "momentum_buf" not in self._state[param]:
                             self._state[param]["momentum_buf"] = flow.zeros_like(param)
                         momentum_buf = self._state[param]["momentum_buf"]
                         beta = param_group["momentum"]
-                        flow._C.dispatch_momentum_update(
-                            self._momentum_sgd,
-                            (param, param.grad, momentum_buf),
-                            learning_rate=lr,
+                        self._momentum_sgd(
+                            param,
+                            param.grad,
+                            momentum_buf,
+                            learning_rate_val=lr,
                             l2=l2,
                             beta=beta,
                         )
@@ -184,7 +190,3 @@ class SGD(Optimizer):
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs
-
-    @property
-    def support_sparse(self):
-        return True

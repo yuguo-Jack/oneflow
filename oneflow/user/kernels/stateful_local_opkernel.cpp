@@ -202,10 +202,9 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   }
 };
 
-class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitContext,
-                                                 public user_op::KernelCacheContext {
+class LocalUserKernelInitContext final : public user_op::KernelInitContext {
  public:
-  explicit LocalUserKernelInitAndCacheContext(
+  explicit LocalUserKernelInitContext(
       DeviceCtx* device_ctx, const std::string& device_tag,
       const user_op::UserOpConfWrapper* user_op_conf,
       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
@@ -219,7 +218,7 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
         composed_attrs_(composed_attrs) {
     base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
-  ~LocalUserKernelInitAndCacheContext() override = default;
+  ~LocalUserKernelInitContext() override = default;
 
   ep::Stream* stream() override {
     CHECK(device_ctx_);
@@ -464,31 +463,23 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
   return Maybe<void>::Ok();
 }
 
-void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
+void StatefulLocalOpKernel::TryInitOpKernelState(
     const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
     EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-    user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
-  LocalUserKernelInitAndCacheContext init_and_cache_ctx(
-      device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
-      inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
-  if (state != nullptr) {
-    auto it = op_kernel_state_map_.find(op_kernel);
-    if (it != op_kernel_state_map_.end()) {
-      *state = it->second.get();
-    } else {
-      auto created_state = op_kernel->CreateOpKernelState(&init_and_cache_ctx);
-      op_kernel_state_map_.emplace(op_kernel, created_state);
-      *state = created_state.get();
-    }
+    user_op::OpKernelState** state) {
+  auto it = op_kernel_state_map_.find(op_kernel);
+  if (it != op_kernel_state_map_.end()) {
+    *state = it->second.get();
+    return;
   }
 
-  {
-    auto& cache_in_map = op_kernel_cache_map_[op_kernel];
-    op_kernel->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
-                                 &cache_in_map);
-    *cache = cache_in_map.get();
-  }
+  LocalUserKernelInitContext init_ctx(
+      device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
+      inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
+  auto created_state = op_kernel->CreateOpKernelState(&init_ctx);
+  op_kernel_state_map_.emplace(op_kernel, created_state);
+  *state = created_state.get();
 }
 
 const user_op::InferTmpSizeFn& StatefulLocalOpKernel::GetInferTmpSizeFn(

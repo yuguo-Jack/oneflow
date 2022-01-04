@@ -155,18 +155,24 @@ class RMSprop(Optimizer):
                 self._state[param] = dict()
 
         self._centered_rmsprop = (
-            flow.stateful_op("rmsprop_update")
+            flow.builtin_op("rmsprop_update")
             .Input("model")
             .Input("model_diff")
             .Input("mean_square")
             .Input("mean_gradient")
+            .Attr("centered", True)
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
             .Build()
         )
         self._rmsprop = (
-            flow.stateful_op("rmsprop_update")
+            flow.builtin_op("rmsprop_update")
             .Input("model")
             .Input("model_diff")
             .Input("mean_square")
+            .Attr("centered", False)
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
             .Build()
         )
 
@@ -183,7 +189,7 @@ class RMSprop(Optimizer):
                 loss = closure()
             for param_group in self.param_groups:
                 kwargs = {
-                    "learning_rate": param_group["lr"],
+                    "learning_rate_val": param_group["lr"],
                     "epsilon": param_group["eps"],
                     "decay_rate": param_group["alpha"],
                     "l2": param_group["weight_decay"],
@@ -200,16 +206,11 @@ class RMSprop(Optimizer):
                         if "grad_avg" not in self._state[param]:
                             self._state[param]["grad_avg"] = flow.zeros_like(param)
                         mg_tensor = self._state[param]["grad_avg"]
-                        flow._C.dispatch_rmsprop_update(
-                            self._centered_rmsprop,
-                            (param, param.grad, ms_tensor, mg_tensor),
-                            centered=True,
-                            **kwargs,
+                        self._centered_rmsprop(
+                            param, param.grad, ms_tensor, mg_tensor, **kwargs
                         )
                     else:
-                        flow._C.dispatch_rmsprop_update(
-                            self._rmsprop, (param, param.grad, ms_tensor), **kwargs
-                        )
+                        self._rmsprop(param, param.grad, ms_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss
 
