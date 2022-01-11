@@ -65,23 +65,10 @@ struct PlacementSymbolExportUtil {
     return ParallelDesc::New(symbol_id, symbol_pb).GetPtrOrThrow();
   }
 
-  static Maybe<ParallelDesc> CreatePlacementSymbol(
-      const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-      const std::shared_ptr<Shape>& hierarchy) {
-    const auto parallel_conf =
-        MakeParallelConf(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
-    std::shared_ptr<ParallelDesc> parallel_desc;
-    JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-      return Maybe<void>::Ok();
-    }));
-    return parallel_desc;
-  }
-
   static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
       const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
       const std::shared_ptr<Shape>& hierarchy) {
-    return CreatePlacementSymbol(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
+    return ParallelDesc::New(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
   }
 
   static Maybe<Symbol<ParallelDesc>> CreatePlacementSymbol(
@@ -167,7 +154,7 @@ struct PlacementSymbolExportUtil {
       if (device_tag == "gpu") {
         const int64_t gpu_device_num = GetGpuDeviceNum();
         CHECK_NE(gpu_device_num, 0)
-            << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
+            << "Can\'t construct placement with \"cuda\" type because there is no CUDA device!";
         device_num = std::min(device_num, gpu_device_num);
       }
       std::vector<std::string> machine_device_ids;
