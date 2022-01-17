@@ -104,8 +104,6 @@ namespace oneflow {
   const user_op::TensorDesc& input_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   const std::vector<int32_t>& logical_out_shape =
       ctx->Attr<std::vector<int32_t>>("logical_out_shape");
-  const std::vector<int32_t>& logical_expand_shape =
-      ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
 
   int offset = input_tensor.shape().NumAxes() - logical_out_shape.size();
   FOR_RANGE(int64_t, i, 0, logical_out_shape.size()) {
