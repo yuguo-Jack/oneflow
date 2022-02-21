@@ -18,23 +18,44 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_METHODS_H_
 
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/attr_map.h"
 
 namespace oneflow {
 namespace one {
 
 class Tensor;
 
-Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
-
 namespace view {
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                        const Stride& target_strides, int64_t storage_offset);
+                        int64_t storage_offset);
+
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        const Stride& target_stride, int64_t storage_offset);
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
 
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
+                     const std::vector<int32_t>& expand_shape);
+
+Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
+                      const std::vector<int32_t>& squeeze_dims);
+
+Maybe<Tensor> ExpandDims(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
+
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps);
+
+Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
+                     const int64_t& length);
+
+Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
+
+Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAttrMap& attrs);
+
+Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const std::shared_ptr<Tensor>& dx,
+                       const int32_t offset, const int32_t dim1, const int32_t dim2);
+
 
 }  // namespace view
 }  // namespace one

@@ -5629,7 +5629,8 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMe
   let attrs = (ins
     SI64ArrayAttr:$start,
     SI64ArrayAttr:$stop,
-    SI64ArrayAttr:$step
+    SI64ArrayAttr:$step,
+    SI64ArrayAttr:$stride
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

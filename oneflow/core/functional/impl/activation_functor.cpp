@@ -37,7 +37,8 @@ namespace impl {
 class ReluFunctor {
  public:
   ReluFunctor() { op_ = CHECK_JUST(one::OpBuilder("relu").Input("x", 1).Output("y", 1).Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
+    auto x = input->contiguous();
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -71,7 +72,7 @@ class PReluFunctor {
     int num_params = alpha->dim(0);
     CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
         << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), alpha->contiguous()});
   }
 
  private:
@@ -91,7 +92,8 @@ class PReluGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
                                 const std::shared_ptr<Tensor>& alpha) const {
-    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha});
+    return OpInterpUtil::Dispatch<one::TensorTuple>(
+        *op_, {dy->contiguous(), x->contiguous(), alpha->contiguous()});
   }
 
  private:
@@ -108,7 +110,7 @@ class HardTanhFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("min_val", min_val));
     JUST(attrs.SetAttr<double>("max_val", max_val));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -126,7 +128,7 @@ class HardTanhGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("min_val", min_val));
     JUST(attrs.SetAttr<double>("max_val", max_val));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y->contiguous(), dy->contiguous()}, attrs);
   }
 
  private:
@@ -139,7 +141,7 @@ class EluFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -155,7 +157,7 @@ class EluGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous(), dy->contiguous()}, attrs);
   }
 
  private:
@@ -172,11 +174,11 @@ class CeluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      outputs->at(0) = x->contiguous();
+      JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}, attrs);
     }
   }
 
@@ -193,7 +195,7 @@ class CeluGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous(), dy->contiguous()}, attrs);
   }
 
  private:
@@ -229,8 +231,8 @@ class GluFunctor {
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     return sequence_function(functional::Sigmoid)
-        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
-        .call(split_x->at(1));
+        .then(std::bind(functional::Mul, split_x->at(0)->contiguous(), std::placeholders::_1))
+        .call(split_x->at(1)->contiguous());
   }
 };
 
@@ -245,10 +247,10 @@ class HardSigmoidFunctor {
       JUST(CheckInplaceValid(input));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = input;
-      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), AttrMap{}));
+      JUST(OpInterpUtil::Dispatch(*op_, {input->contiguous()}, outputs.get(), AttrMap{}));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()});
     }
   }
 
@@ -292,13 +294,13 @@ class SoftmaxFunctorBase {
 
       return sequence_function(functional::Transpose)
           .then([&](const std::shared_ptr<one::Tensor>& x) {
-            return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()});
           })
           .then(std::bind(functional::Transpose, std::placeholders::_1, input_perm))
-          .call(input, input_perm);
+          .call(input->contiguous(), input_perm);
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()});
   }
 
  protected:
@@ -323,7 +325,7 @@ class SoftmaxGradFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y->contiguous(), dy->contiguous()});
   }
 
  private:
@@ -359,7 +361,7 @@ class LeakyReluFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -375,7 +377,7 @@ class LeakyReluGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy, const float& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous(), dy->contiguous()}, attrs);
   }
 
  private:

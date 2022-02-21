@@ -111,7 +111,6 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
         JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
     tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
   }
-
   if (block_host_until_done) {
     NumPyArrayPtr array_ptr(array);
     const auto& Callback = [array_ptr, Copy](uint64_t ofblob_ptr) {

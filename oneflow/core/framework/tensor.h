@@ -59,6 +59,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_local() const { return !is_consistent(); }
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
+  virtual bool is_contiguous() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
@@ -88,6 +89,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
+  virtual std::shared_ptr<Tensor> contiguous() const = 0;
 
   // Setters for autograd
   virtual Maybe<void> set_requires_grad(bool requires_grad) = 0;
@@ -99,7 +101,6 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<const AutogradMeta> autograd_meta() const = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
-  virtual bool has_autograd_meta() const = 0;
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
@@ -184,6 +185,10 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
+  bool is_contiguous() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return true;
+  }
   std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
@@ -192,6 +197,9 @@ class StaticZerosTensor final : public Tensor {
   Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  std::shared_ptr<Tensor> contiguous() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
 
   // Setters for autograd
   Maybe<void> set_requires_grad(bool requires_grad) override {
@@ -220,10 +228,6 @@ class StaticZerosTensor final : public Tensor {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
-  }
-  bool has_autograd_meta() const override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return false;
   }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -334,10 +338,12 @@ class Parameter final : public TensorIf<Parameter> {
   bool requires_grad() const override { return tensor_->requires_grad(); }
   bool is_leaf() const override { return true; }
   bool retain_grad() const override { return tensor_->retain_grad(); }
+  bool is_contiguous() const override { return tensor_->is_contiguous(); }
   Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
   Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
   Maybe<Tensor> clone() const override { return tensor_->clone(); }
+  std::shared_ptr<Tensor> contiguous() const override;
 
   Maybe<void> set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
@@ -356,7 +362,6 @@ class Parameter final : public TensorIf<Parameter> {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     return tensor_->mut_autograd_meta();
   }
-  bool has_autograd_meta() const override { return tensor_->has_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     return tensor_->set_autograd_meta(autograd_meta);
   }
@@ -422,6 +427,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override { return this->detach(); }
@@ -444,7 +450,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
-  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
+  bool is_contiguous() const override { return impl_->is_contiguous(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
@@ -533,6 +539,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -558,7 +565,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
-  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
+  bool is_contiguous() const override { return impl_->is_contiguous(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {

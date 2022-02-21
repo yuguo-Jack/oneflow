@@ -42,32 +42,21 @@ Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
                     || tensor_dtype == DataType::kFloat16)
         << "RuntimeError: only Tensors of floating point can require gradients";
   }
-  requires_grad_ = requires_grad;
-  if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+  autograd_meta_->set_requires_grad(requires_grad);
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> TensorImpl::acc_grad() const {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->acc_grad();
-}
+Maybe<Tensor> TensorImpl::acc_grad() const { return autograd_meta_->acc_grad(); }
 
-Maybe<TensorArg> TensorImpl::current_grad() const {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->current_grad();
-}
+Maybe<TensorArg> TensorImpl::current_grad() const { return autograd_meta_->current_grad(); }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   return autograd_meta_->set_acc_grad(grad);
 }
 
-Maybe<Tensor> TensorImpl::mut_acc_grad() {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->mut_acc_grad();
-}
+Maybe<Tensor> TensorImpl::mut_acc_grad() { return autograd_meta_->mut_acc_grad(); }
 
 Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   autograd_meta_->set_retain_grad(retain_grad);
   return Maybe<void>::Ok();
 }
@@ -175,20 +164,23 @@ MirroredTensorMeta::MirroredTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
       device_(Symbol<Device>()),
       stride_(std::make_shared<const Stride>()),
-      storage_offset_(0) {}
+      storage_offset_(0) {
+  set_stride(std::make_shared<const Stride>());
+}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device)
-    : TensorMeta(shape, dtype),
-      device_(device),
-      stride_(std::make_shared<const Stride>(*shape)),
-      storage_offset_(0) {}
+    : TensorMeta(shape, dtype), device_(device), storage_offset_(0) {
+  set_stride(std::make_shared<const Stride>(*shape));
+}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device,
                                        const std::shared_ptr<const Stride>& stride,
                                        int64_t storage_offset)
-    : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {}
+    : TensorMeta(shape, dtype), device_(device), storage_offset_(storage_offset) {
+  set_stride(stride);
+}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.

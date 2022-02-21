@@ -68,7 +68,8 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 
 template<typename T>
 void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), BlobNumpyCopyUtil<T>::To, "const",
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor->contiguous(), array.ptr(), BlobNumpyCopyUtil<T>::To,
+                                       "const",
                                        /*block_host_until_done=*/true)
       .GetOrThrow();
 }
@@ -114,10 +115,6 @@ void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& se
   return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
 }
 
-bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  return IsContiguous(tensor).GetOrThrow();
-}
-
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
   return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
@@ -158,13 +155,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_cuda", &Tensor::is_cuda)
       .def_property(
           "grad",
-          [](const Tensor& t) -> std::shared_ptr<Tensor> {
-            if (t.has_autograd_meta()) {
-              return t.acc_grad().GetPtrOrThrow();
-            } else {
-              return std::shared_ptr<Tensor>();
-            }
-          },
+          [](const Tensor& t) -> std::shared_ptr<Tensor> { return t.acc_grad().GetPtrOrThrow(); },
           [](Tensor& t, const std::shared_ptr<Tensor>& grad) {
             if (t.is_leaf()) {
               if (grad != nullptr) {
@@ -191,7 +182,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              const auto& stride = t.stride().GetPtrOrThrow()->StrideVec();
              return py::tuple(py::make_iterator(stride.begin(), stride.end()));
            })
-      .def("is_contiguous", &ApiIsContiguous)
+      .def("is_contiguous", &Tensor::is_contiguous)
       .def_property_readonly("grad_fn", &Tensor::grad_fn_node)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)
