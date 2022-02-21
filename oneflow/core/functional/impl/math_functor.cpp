@@ -2216,7 +2216,7 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
   for (int i = 0; i < out_size.size(); ++i) { osv[i] = out_size[i]; }
   const Shape os(osv);
   // TODO(Liang Depeng): change reshape to veiw
-  result = JUST(functional::Reshape(result, os));
+  result = JUST(functional::View(result, os));
   result = JUST(functional::Permute(result, opermutation));
 
   // finally squeeze summed dimensions if desired
@@ -2227,7 +2227,7 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
     }
     // TODO(Liang Depeng): change reshape to veiw
     const Shape s(sizes);
-    result = JUST(functional::Reshape(result, s));
+    result = JUST(functional::View(result, s));
   }
   return result;
 }

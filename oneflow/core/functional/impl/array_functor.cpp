@@ -2823,7 +2823,8 @@ class RepeatFunctor {
     Shape output_reshape(DimVector(output_reshape_vec.begin(), output_reshape_vec.end()));
     std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
     std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
-    std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor->contiguous(), output_reshape));
+    std::shared_ptr<one::Tensor> result =
+        JUST(Reshape(expanded_tensor->contiguous(), output_reshape));
     return result;
   }
 };

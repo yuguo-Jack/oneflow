@@ -257,7 +257,6 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
 
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
-  
   CHECK_OR_RETURN(input->is_eager() && input->is_local())
       << Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
       << (input->is_lazy() ? "lazy" : "consistent");
@@ -272,7 +271,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   CHECK_OR_RETURN(ends.size() == ndim && steps.size() == ndim)
       << Error::RuntimeError() << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
       << " size is not equal to start.";
-    
+
   DimVector target_dims(ndim);
   StrideVector target_strides(ndim);
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
