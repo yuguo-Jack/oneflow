@@ -24,11 +24,11 @@ import oneflow.unittest
 import os
 
 
-def _test_bn_eval_backward(test_case, axis, dtype):
+def _test_bn_eval_backward(test_case, channel, hw, axis, dtype):
     n = 16
-    c = 64
-    h = 112
-    w = 112
+    c = channel
+    h = hw
+    w = hw
     epsilon = 1e-5
     if dtype == flow.float16:
         np_dtype = np.float16
@@ -72,6 +72,8 @@ def _test_bn_eval_backward(test_case, axis, dtype):
 class BnEvalTestCase(flow.unittest.TestCase):
     def test_bn_eval_graph(test_case):
         arg_dict = OrderedDict()
+        arg_dict["channel"] = [3, 12]
+        arg_dict["hw"] = [112, 16, 3]
         arg_dict["axis"] = [1, 3]
         arg_dict["dtype"] = [flow.float16, flow.float32]
         for kwargs in GenArgDict(arg_dict):
