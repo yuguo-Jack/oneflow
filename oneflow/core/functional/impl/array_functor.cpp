@@ -1010,8 +1010,8 @@ class ScatterNdLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-Optional<const Stride> computeStride(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
-                    const DimVector& target_shape) {
+Optional<const Stride> computeStride(const int64_t elem_count, const DimVector& shape,
+                                     const StrideVector& stride, const DimVector& target_shape) {
   if (elem_count == 0) { return NullOpt; }
 
   int64_t view_d = target_shape.size() - 1;
@@ -1085,10 +1085,11 @@ class ReshapeFunctor {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        Optional<const Stride> infered_stride = computeStride(x->shape()->elem_cnt(), x->shape()->dim_vec(),
-                           JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        if(infered_stride.has_value()){
-          return view::Reshape(x, infered_shape,  *JUST(infered_stride));
+        Optional<const Stride> infered_stride =
+            computeStride(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+                          JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+        if (infered_stride.has_value()) {
+          return view::Reshape(x, infered_shape, *JUST(infered_stride));
         }
       }
     }
@@ -1137,12 +1138,13 @@ class ViewFunctor {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        Optional<const Stride> infered_stride = computeStride(x->shape()->elem_cnt(), x->shape()->dim_vec(),
-                           JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+        Optional<const Stride> infered_stride =
+            computeStride(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+                          JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
         CHECK_OR_RETURN(infered_stride.has_value())
-        << " >> view size is not compatible with input tensor's size and stride (at least one "
-                "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
-        return view::Reshape(x, infered_shape,  *JUST(infered_stride));
+            << " >> view size is not compatible with input tensor's size and stride (at least one "
+               "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
+        return view::Reshape(x, infered_shape, *JUST(infered_stride));
       }
     }
 

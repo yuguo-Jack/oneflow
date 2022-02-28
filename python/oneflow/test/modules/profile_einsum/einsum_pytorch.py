@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import torch
 
 import time
@@ -15,7 +30,12 @@ def parse_option():
     parser.add_argument(
         "--max_size_for_each_dim", type=int, default=100, help="random size range"
     )
-    parser.add_argument("--einsum_testcase", type=str, default="alphaflod_usecase7", help="random size range")
+    parser.add_argument(
+        "--einsum_testcase",
+        type=str,
+        default="alphaflod_usecase7",
+        help="random size range",
+    )
     parser.add_argument("--ellipsis_dims", type=int, default=2, help="cal time iters")
 
     args, unparsed = parser.parse_known_args()
@@ -108,7 +128,7 @@ input_tensors = [torch.rand(*shape, device="cuda") for shape in input_shapes]
 for i in range(args.warm_up_iters + args.run_iters):
     if i == args.warm_up_iters:
         start_time = time.time()
-    torch.cuda.nvtx.range_push('do einsum then to numpy')
+    torch.cuda.nvtx.range_push("do einsum then to numpy")
     out = torch.einsum(equation, *input_tensors)
     out_np = out.cpu().numpy()
     torch.cuda.nvtx.range_pop()
