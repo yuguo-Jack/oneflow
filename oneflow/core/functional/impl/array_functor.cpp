@@ -707,7 +707,6 @@ class SqueezeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-
 class RollFunctor {
  public:
   RollFunctor() { op_ = CHECK_JUST(one::OpBuilder("roll").Input("in").Output("out").Build()); }
@@ -1108,20 +1107,6 @@ class ViewFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
-<<<<<<< HEAD
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        // in some case, view operate is not allowed, so need to check it's validation,
-        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        Optional<const Stride> infered_stride =
-            computeStride(x->shape()->elem_cnt(), x->shape()->dim_vec(),
-                          JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        CHECK_OR_RETURN(infered_stride.has_value())
-            << " >> view size is not compatible with input tensor's size and stride (at least one "
-               "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
-        return view::Reshape(x, infered_shape, *JUST(infered_stride));
-      }
-=======
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
           ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
@@ -1129,7 +1114,6 @@ class ViewFunctor {
           << " >> view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
       return view::Reshape(x, infered_shape, *JUST(infered_stride));
->>>>>>> f7aa51d5d04d8c875078091b3cd8c237a4cefdd6
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);

@@ -30,7 +30,7 @@ namespace oneflow {
 namespace one {
 namespace view {
 
-namespace{
+namespace {
 void CheckIsPerm(const std::vector<int32_t>& perm) {
   std::vector<bool> is_used(perm.size(), false);
   FOR_RANGE(size_t, i, 0, perm.size()) {
@@ -40,9 +40,7 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
     is_used[perm[i]] = true;
   }
 }
-} // namespace
-
-
+}  // namespace
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
   // NOTE: only eager local tensor support view for now
@@ -65,7 +63,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   Stride target_stride(target_shape);
   return BasicView(input, target_shape, target_stride, storage_offset);
 }
-
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, int64_t storage_offset) {
@@ -128,7 +125,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
   return output;
 }
 
-
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
   CHECK_OR_RETURN(IsViewApplicable(input))
@@ -146,7 +142,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   CHECK_OR_RETURN(ends.size() == ndim && steps.size() == ndim)
       << Error::RuntimeError() << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
       << " size is not equal to start.";
-    
+
   DimVector target_dims(ndim);
   StrideVector target_strides(ndim);
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
@@ -234,7 +230,6 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
   return output;
 }
 
-
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims) {
   CHECK_OR_RETURN(IsViewApplicable(input))
@@ -283,8 +278,6 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
   }
   return output;
 }
-
-
 
 Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
                      const std::vector<int32_t>& expand_shape) {
@@ -355,65 +348,6 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
   return output;
 }
 
-<<<<<<< HEAD
-Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
-                    const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
-  CHECK_OR_RETURN(input->is_eager() && input->is_local())
-      << Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
-      << (input->is_lazy() ? "lazy" : "consistent");
-  const auto& shape = input->shape();
-  const auto& strides = JUST(input->stride());
-  const int64_t ndim = starts.size();
-
-  CHECK_OR_RETURN(ndim == shape->NumAxes())
-      << Error::RuntimeError() << "view::Slice(): starts size is expected " << shape->NumAxes()
-      << ", but got " << ndim;
-
-  CHECK_OR_RETURN(ends.size() == ndim && steps.size() == ndim)
-      << Error::RuntimeError() << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
-      << " size is not equal to start.";
-
-  DimVector target_dims(ndim);
-  StrideVector target_strides(ndim);
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
-  for (int i = 0; i < ndim; ++i) {
-    int64_t step = std::min(steps[i], shape->At(i));
-    CHECK_OR_RETURN(step >= 0) << Error::RuntimeError() << "Step must be greater than zero.";
-    int64_t start = std::min(starts[i], shape->At(i));
-    int64_t end = std::min(ends[i], shape->At(i));
-    if (start < 0) { start += shape->At(i); }
-    if (start < 0) start = 0;
-    if (end < 0) { end += shape->At(i); }
-    if (end < start) end = start;
-    int64_t length = start == end ? 0 : (end - start + step - 1) / step;
-    target_dims[i] = length;
-    target_strides[i] = step * strides->At(i);
-    storage_offset += start * strides->At(i);
-  }
-
-  auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
-  if (input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-              in_grads->resize(1);
-              (*in_grads)[0] = JUST(functional::SliceGrad(JUST(VectorAt(out_grads, 0)),
-                                                          Shape(input->shape()->dim_vec()), starts,
-                                                          ends, steps));
-              return Maybe<void>::Ok();
-            });
-    TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::slice_backward", backward_fn,
-                                                            {input}, &outputs));
-  }
-  return output;
-}
-=======
->>>>>>> f7aa51d5d04d8c875078091b3cd8c237a4cefdd6
-
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
                      const int64_t& length) {
   const auto& shape = input->shape();
@@ -460,7 +394,6 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   }
   return output;
 }
-
 
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute) {
   const auto& shape = input->shape();
