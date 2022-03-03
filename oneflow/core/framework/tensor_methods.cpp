@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -66,6 +67,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, int64_t storage_offset) {
+  OF_PROFILER_RANGE_PUSH("Enter BasicView");
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
@@ -84,6 +86,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
   }));
+  OF_PROFILER_RANGE_POP();
   return output;
 }
 
@@ -410,8 +413,9 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
     target_dims[i] = shape->At(permute.at(i));
     stride_vec[i] = strides->At(permute.at(i));
   }
-
+  OF_PROFILER_RANGE_PUSH("Transpose BasicView");
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(stride_vec), storage_offset));
+  OF_PROFILER_RANGE_POP();
   if (input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
