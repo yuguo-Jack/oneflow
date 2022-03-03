@@ -674,11 +674,10 @@ class TransposeFunctor {
           << ndim << " ) but got " << positive_perm[i];
     }
     // currently, view only support eager and local mode
-    if (input->is_local() && !(LazyMode::is_enabled())) {
-      if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
-        return JUST(view::Transpose(input, positive_perm));
-      }
-    }
+    // if (input->is_local() && !(LazyMode::is_enabled())) {
+    // if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
+    if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, positive_perm)); }
+    // }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }

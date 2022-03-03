@@ -76,16 +76,22 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
+  OF_PROFILER_RANGE_PUSH("BasicView EagerMirroredTensorImpl");
   const auto& blob_object = JUST(input->eager_blob_object());
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
       tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
       /*is_leaf=*/!input->requires_grad());
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("BasicView InitEagerBlobObject");
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
+  OF_PROFILER_RANGE_POP();
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
   // run tensor view instruction
+  OF_PROFILER_RANGE_PUSH("BasicView PhysicalRun");
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
   }));
+  OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_POP();
   return output;
 }
@@ -491,8 +497,8 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAt
   return output;
 }
 
-Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input,
-                       const int32_t offset, const int32_t dim1, const int32_t dim2) {
+Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offset,
+                       const int32_t dim1, const int32_t dim2) {
   const auto& shape = input->shape();
   const auto& stride = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
