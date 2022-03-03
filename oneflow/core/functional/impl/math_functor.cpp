@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/profiler/profiler.h"
 
 #include <sstream>
 #include <bitset>
@@ -2345,6 +2346,9 @@ class EinSumFunctor {
  public:
   EinSumFunctor() {}
   Maybe<Tensor> operator()(const std::string& equation, const one::TensorTuple& operands) const {
+    OF_PROFILER_RANGE_GUARD("Enter Einsum Functor");
+
+    OF_PROFILER_RANGE_PUSH("Parse Einsum Equation");
     CHECK_OR_RETURN(operands.size() > 0) << "einsum(): must provide at least one input tensor.";
     // NOTE(Liang Depeng): In order to better understand what einsum is doing,
     //                     the following comments will give a detailed explaination of
@@ -2558,7 +2562,9 @@ class EinSumFunctor {
         label_perm_index[label] = perm_index++;
       }
     }
+    OF_PROFILER_RANGE_POP();
 
+    OF_PROFILER_RANGE_PUSH("Unsequzze and Permute");
     // Here we unsqueeze missing dimensions to make all operands have the same
     // number of dimensions. We take diagonals for repeated labels within the
     // same operand. Finally we permute the operands to align dimensions as
@@ -2576,9 +2582,11 @@ class EinSumFunctor {
         if (label == ELLIPSIS) {
           // Add missing dimensions covered by the ellipsis
           const auto num_missing_dim = ell_num_dim - (original_sizes.size() - labels.size() + 1);
+          OF_PROFILER_RANGE_PUSH("Unsequzze");
           for (auto k = 0; k < num_missing_dim; k++) {
             operand = JUST(functional::Unsqueeze(operand, j));
           }
+          OF_PROFILER_RANGE_POP();
           for (auto k = 0; k < ell_num_dim; k++) { perm_shape[ell_index + k] = j++; }
         } else if (label_dim[label] != -1) {
           // Repeated label, take diagonal
@@ -2587,9 +2595,12 @@ class EinSumFunctor {
               << "einsum() subscript " << einsum_index_to_label(label)
               << " is repeated for operand " << i << " but the sizes don't match, "
               << operand->dim(j) << " != " << operand->dim(dim);
-
+          OF_PROFILER_RANGE_PUSH("Diagonal");
           operand = JUST(functional::Diagonal(operand, 0, dim, j));
+          OF_PROFILER_RANGE_POP();
+          OF_PROFILER_RANGE_PUSH("MovedimInt");
           operand = JUST(functional::MovedimInt(operand, -1, dim));
+          OF_PROFILER_RANGE_POP();
         } else {
           // Lookup output index for label
           label_dim[label] = j;
@@ -2600,11 +2611,15 @@ class EinSumFunctor {
       // Add dimensions for missing labels
       for (int32_t& index : perm_shape) {
         if (index == -1) {
+          OF_PROFILER_RANGE_PUSH("Unsequzze");
           operand = JUST(functional::Unsqueeze(operand, -1));
+          OF_PROFILER_RANGE_POP();
           index = j++;
         }
       }
+      OF_PROFILER_RANGE_PUSH("Permute");
       permuted_operands.emplace_back(JUST(functional::Permute(operand, perm_shape)));
+      OF_PROFILER_RANGE_POP();
 
       // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
       //                     What is going on within this foor loop?
@@ -2623,7 +2638,7 @@ class EinSumFunctor {
       //                        first unsqueeze "ik" to 4 dim, from [2, 5] to [2, 5, 1, 1]
       //                        then permute with `perm_shape`, from [2, 5, 1, 1] to [2, 1, 1, 5]
     }
-
+    OF_PROFILER_RANGE_POP();
     // Check if operands broadcast and keep track of last operand with
     // dimension size != 1 for optimizing reductions
     std::vector<std::size_t> dim_last_op(perm_index, 0);
@@ -2677,9 +2692,13 @@ class EinSumFunctor {
       if (dim_last_op[i] == 0) {
         if (result->dim(dim) == 1) {
           std::vector<int32_t> dims = {dim--};
+          OF_PROFILER_RANGE_PUSH("Squeeze");
           result = JUST(functional::Squeeze(result, dims));
+          OF_PROFILER_RANGE_POP();
         } else {
+          OF_PROFILER_RANGE_PUSH("ReduceSum");
           result = JUST(functional::ReduceSum(result, {dim--}, false));
+          OF_PROFILER_RANGE_POP();
         }
       }
     }
@@ -2693,12 +2712,16 @@ class EinSumFunctor {
       for (int j = dim; j < perm_index; ++j, ++dim) {
         if (dim_last_op[j] < i) {
           std::vector<int32_t> dims = {dim--};
+          OF_PROFILER_RANGE_PUSH("Squeeze");
           operand = JUST(functional::Squeeze(operand, dims));
+          OF_PROFILER_RANGE_POP();
         } else if (dim_last_op[j] == i) {
           if (result->dim(dim) == 1) {
+            OF_PROFILER_RANGE_PUSH("ReduceSum and Squeeze");
             operand = JUST(functional::ReduceSum(operand, {dim}, false));
             std::vector<int32_t> dims = {dim--};
             result = JUST(functional::Squeeze(result, dims));
+            OF_PROFILER_RANGE_POP();
           } else {
             sum_dims.push_back(dim);
           }
@@ -2709,11 +2732,15 @@ class EinSumFunctor {
       if (sum_dims.empty()) {
         result = JUST(functional::Mul(result, operand));
       } else if (sum_dims.size() == result->shape()->NumAxes()) {
+        OF_PROFILER_RANGE_PUSH("Flatten and Dot");
         auto flatten_result = JUST(functional::Flatten(result, 0, -1));
         auto flatten_operand = JUST(functional::Flatten(operand, 0, -1));
         result = JUST(functional::Dot(flatten_result, flatten_operand));
+        OF_PROFILER_RANGE_POP();
       } else {
+        OF_PROFILER_RANGE_PUSH("SumProduct");
         result = JUST(sumproduct_pair(result, operand, sum_dims, false));
+        OF_PROFILER_RANGE_POP();
       }
 
       // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
