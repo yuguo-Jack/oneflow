@@ -178,6 +178,7 @@ from oneflow._C import dot
 from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
+from oneflow._C import contiguous
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
 from oneflow._C import t
@@ -188,6 +189,7 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
+from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
 
@@ -388,7 +390,6 @@ from oneflow.ops.initializer_util import (
     variance_scaling_initializer,
     zeros_initializer,
 )
-
 
 from . import (
     autograd,
