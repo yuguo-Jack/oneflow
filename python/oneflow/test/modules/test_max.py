@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -83,13 +83,6 @@ class TestMaxModule(flow.unittest.TestCase):
         arg_dict["keepdims"] = [False, True]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-
-    def test_max_against_pytorch(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, "max", device=arg[1])
 
 
 if __name__ == "__main__":

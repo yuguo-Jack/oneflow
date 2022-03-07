@@ -28,6 +28,7 @@ limitations under the License.
 namespace oneflow {
 
 class Device;
+class Stream;
 
 namespace user_op {
 
@@ -38,14 +39,14 @@ class SbpContext;
 class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
-class DeviceInferContext;
+class DeviceAndStreamInferContext;
 class ComputeComplexityFnContext;
 class GetNdSbpSignatureListContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
 using DataTypeInferFn = std::function<Maybe<void>(InferContext*)>;
-using DeviceInferFn = std::function<Maybe<Symbol<Device>>(DeviceInferContext*)>;
+using DeviceAndStreamInferFn = std::function<Maybe<Symbol<Stream>>(DeviceAndStreamInferContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using SbpSignatureInferFn = std::function<Maybe<void>(InferSbpSignatureFnContext*)>;
 using InputArgModifier = InputBlobModifier;
@@ -79,7 +80,7 @@ struct OpRegistryResult {
   GetSbpFn get_sbp_fn;
   SbpSignatureInferFn sbp_signature_infer_fn;
   DataTypeInferFn data_type_infer_fn;
-  DeviceInferFn device_infer_fn;
+  DeviceAndStreamInferFn device_and_stream_infer_fn;
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
@@ -132,7 +133,7 @@ class OpRegistry final {
   OpRegistry& SetNdSbpInferFn(NdSbpInferFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
-  OpRegistry& SetDeviceInferFn(DeviceInferFn fn);
+  OpRegistry& SetDeviceAndStreamInferFn(DeviceAndStreamInferFn fn);
   OpRegistry& SetComputeComplexityFn(ComputeComplexityFn fn);
   OpRegistry& SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn fn);
 
