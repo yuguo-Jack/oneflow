@@ -77,6 +77,7 @@ class TestBroadCast(flow.unittest.TestCase):
         flow.comm.broadcast(tensor, 0)
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[1, 2], [3, 4]])))
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestScatter(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
