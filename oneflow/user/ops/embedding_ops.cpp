@@ -77,7 +77,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("ids", 0), 0)
-      .Split(user_op::OpArg("embedding_diff", 0), 0)
+      .Split(user_op::OpArg("embedding_grad", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }
@@ -93,7 +93,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
       user_op::UserOpConfWrapper grad_op =
           builder.Op("embedding_update_placeholder")
               .Input("ids", op.input("ids", 0))
-              .Input("embedding_diff", op.GetGradTensorWithOpOutput("embeddings", 0))
+              .Input("embedding_grad", op.GetGradTensorWithOpOutput("embeddings", 0))
               .Attr<std::string>("embedding_options", op.attr<std::string>("embedding_options"))
               .Build();
       AddOp(grad_op);
