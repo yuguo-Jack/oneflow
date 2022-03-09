@@ -1023,10 +1023,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     // JUST(DoPass("DumpOneEmbeddingOptimizerConfPass"));
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
-    JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
-    JUST(DoPass("GradientAccumulationRewritePass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));

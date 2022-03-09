@@ -45,7 +45,7 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
         def build(self, ids, column_ids):
             (
                 num_unique_matrix,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
                 cur_rank_num_unique,
                 cur_rank_unique_ids,
                 cur_rank_unique_column_ids,
@@ -53,7 +53,7 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
             ) = flow._C.id_shuffle(ids, column_ids, num_columns)
             return (
                 flow.cast(num_unique_matrix, flow.int32),
-                flow.cast(inverse_unique_partion_indices, flow.int32),
+                flow.cast(inverse_unique_partition_indices, flow.int32),
                 flow.cast(cur_rank_num_unique, flow.int32),
                 flow.cast(cur_rank_unique_ids, flow.int32),
                 flow.cast(cur_rank_unique_column_ids, flow.int32),
@@ -63,7 +63,7 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
     graph = TestGraph()
     (
         num_unique_matrix,
-        inverse_unique_partion_indices,
+        inverse_unique_partition_indices,
         cur_rank_num_unique,
         cur_rank_unique_ids,
         cur_rank_unique_column_ids,
@@ -74,12 +74,12 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
     test_case.assertTrue(np.array_equal(np_num_unique, num_unique_matrix[0]))
     test_case.assertTrue(np.array_equal(np_num_unique, cur_rank_num_unique[0]))
     reversed_ids = cur_rank_unique_ids[cur_rank_inverse_indices][
-        inverse_unique_partion_indices
+        inverse_unique_partition_indices
     ]
     test_case.assertTrue(np.array_equal(reversed_ids.numpy(), ids))
     if has_column_id:
         reversed_column_ids = cur_rank_unique_column_ids[cur_rank_inverse_indices][
-            inverse_unique_partion_indices
+            inverse_unique_partition_indices
         ]
         test_case.assertTrue(np.array_equal(reversed_column_ids.numpy(), column_ids))
     # when has_column_id=False, we can not test column ids because in this case same ids not lead to same column id
@@ -110,7 +110,7 @@ def _test_embedding_shuffle(test_case, dtype):
         def build(self, ids, column_ids, data):
             (
                 num_unique_matrix,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
                 _,
                 cur_rank_unique_ids,
                 _,
@@ -121,7 +121,7 @@ def _test_embedding_shuffle(test_case, dtype):
                 unique_embeddings,
                 num_unique_matrix,
                 cur_rank_inverse_indices,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
             )
             return embeddings
 
@@ -140,71 +140,71 @@ def _test_embedding_gradient_shuffle(test_case):
     column_ids = (
         ids % num_columns
     )  # same id must have same column id, so in this case get column_ids from ids
-    embedding_diff = np.random.rand(batch_size, num_columns, embedding_size).astype(
+    embedding_grad = np.random.rand(batch_size, num_columns, embedding_size).astype(
         np.float32
     )
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
     column_ids_tensor = flow.tensor(
         column_ids.astype(np.int32), requires_grad=False
     ).to("cuda")
-    embedding_diff_tensor = flow.tensor(embedding_diff, requires_grad=False).to("cuda")
+    embedding_grad_tensor = flow.tensor(embedding_grad, requires_grad=False).to("cuda")
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids, embedding_diff):
+        def build(self, ids, column_ids, embedding_grad):
             (
                 num_unique_matrix,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
                 _,
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
             ) = flow._C.id_shuffle(ids, column_ids, num_columns)
-            cur_rank_unique_embedding_diff = flow._C.embedding_gradient_shuffle(
-                embedding_diff,
+            cur_rank_unique_embedding_grad = flow._C.embedding_gradient_shuffle(
+                embedding_grad,
                 num_unique_matrix,
                 cur_rank_inverse_indices,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
             )
             return (
-                cur_rank_unique_embedding_diff,
+                cur_rank_unique_embedding_grad,
                 flow.cast(cur_rank_unique_ids, flow.int32),
                 flow.cast(cur_rank_inverse_indices, flow.int32),
-                flow.cast(inverse_unique_partion_indices, flow.int32),
+                flow.cast(inverse_unique_partition_indices, flow.int32),
             )
 
     graph = TestGraph()
     (
-        cur_rank_unique_embedding_diff,
+        cur_rank_unique_embedding_grad,
         cur_rank_unique_ids,
         cur_rank_inverse_indices,
-        inverse_unique_partion_indices,
-    ) = graph(ids_tensor, column_ids_tensor, embedding_diff_tensor)
+        inverse_unique_partition_indices,
+    ) = graph(ids_tensor, column_ids_tensor, embedding_grad_tensor)
     np_unique_ids, np_inverse = np.unique(ids, return_inverse=True)
     np_num_unique = np_unique_ids.size
-    np_cur_rank_unique_embedding_diff = np.zeros(
-        cur_rank_unique_embedding_diff.shape
+    np_cur_rank_unique_embedding_grad = np.zeros(
+        cur_rank_unique_embedding_grad.shape
     ).reshape(-1, embedding_size)
     for k in range(np_num_unique):
-        np_cur_rank_unique_embedding_diff[k, :] = sum(
-            embedding_diff.reshape(-1, embedding_size)[
+        np_cur_rank_unique_embedding_grad[k, :] = sum(
+            embedding_grad.reshape(-1, embedding_size)[
                 np.where(ids.flatten() == np_unique_ids[k])[0]
             ]
         )
     reversed_ids = cur_rank_unique_ids[cur_rank_inverse_indices][
-        inverse_unique_partion_indices
+        inverse_unique_partition_indices
     ]
     test_case.assertTrue(np.array_equal(reversed_ids.numpy(), ids))
     test_case.assertTrue(
         np.allclose(
-            cur_rank_unique_embedding_diff[cur_rank_inverse_indices][
-                inverse_unique_partion_indices
+            cur_rank_unique_embedding_grad[cur_rank_inverse_indices][
+                inverse_unique_partition_indices
             ]
             .numpy()
             .flatten(),
-            np_cur_rank_unique_embedding_diff[np_inverse].flatten(),
+            np_cur_rank_unique_embedding_grad[np_inverse].flatten(),
         )
     )
 

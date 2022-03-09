@@ -9067,6 +9067,63 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$ids,
+    Optional<OneFlow_Tensor>:$column_ids
+  );
+  let output = (outs
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$inverse_unique_partition_indices,
+    OneFlow_Tensor:$cur_rank_num_unique,
+    OneFlow_Tensor:$cur_rank_unique_ids,
+    OneFlow_Tensor:$cur_rank_unique_column_ids,
+    OneFlow_Tensor:$cur_rank_inverse_indices
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "1">:$num_columns
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$cur_rank_embeddings,
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$cur_rank_inverse_indices,
+    OneFlow_Tensor:$inverse_unique_partition_indices
+  );
+  let output = (outs
+    OneFlow_Tensor:$embeddings
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$embedding_grad,
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$cur_rank_inverse_indices,
+    OneFlow_Tensor:$inverse_unique_partition_indices
+  );
+  let output = (outs
+    OneFlow_Tensor:$cur_rank_unique_embedding_grad
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
 // Group: Embedding
@@ -9098,7 +9155,7 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
 def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_placeholder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ids,
-    AnyType:$embedding_diff,
+    AnyType:$embedding_grad,
     Optional<AnyType>:$learning_rate
   );
   let attrs = (ins
@@ -9171,13 +9228,13 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
 
 def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$embedding_diff,
+    OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$num_unique_matrix,
     OneFlow_Tensor:$cur_rank_inverse_indices,
     OneFlow_Tensor:$inverse_unique_partion_indices
   );
   let output = (outs
-    OneFlow_Tensor:$cur_rank_unique_embedding_diff
+    OneFlow_Tensor:$cur_rank_unique_embedding_grad
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9235,7 +9292,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
   let input = (ins
     AnyType:$num_unique_ids,
     AnyType:$unique_embeddings,
-    AnyType:$embedding_diff,
+    AnyType:$embedding_grad,
     Optional<AnyType>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<AnyType>:$skip_if
@@ -9258,7 +9315,7 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
   let input = (ins
     AnyType:$num_unique_ids,
     AnyType:$unique_embeddings,
-    AnyType:$embedding_diff,
+    AnyType:$embedding_grad,
     Optional<AnyType>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<AnyType>:$skip_if
@@ -9282,7 +9339,7 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Dec
   let input = (ins
     AnyType:$num_unique_ids,
     AnyType:$unique_embeddings,
-    AnyType:$embedding_diff,
+    AnyType:$embedding_grad,
     Optional<AnyType>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<AnyType>:$skip_if,
