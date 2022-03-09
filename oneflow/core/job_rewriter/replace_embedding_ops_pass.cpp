@@ -576,8 +576,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     std::string num_unique_matrix_lbn;
 
     BuildIdShuffle(op_node->parallel_desc().parallel_num(), embedding_op, &add_ops,
-                   &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn, &unique_ids_lbn,
-                   &unique_columns_lbn, &reverse_index_lbn, &num_unique_matrix_lbn);
+                   &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
+                   &unique_ids_lbn, &unique_columns_lbn, &reverse_index_lbn,
+                   &num_unique_matrix_lbn);
 
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
