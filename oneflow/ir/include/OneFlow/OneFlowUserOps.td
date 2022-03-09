@@ -9066,14 +9066,13 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
-// Group: Embedding
+// Group: OneEmbedding
 // embedding_lookup_placeholder, embedding_update_placeholder, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, sgd_embedding_update, embedding_put
 // Total: 9
 
-#ifdef GET_ONEFLOW_EMBEDDING_OP_DEFINITIONS
+#ifdef GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
 
 def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_placeholder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -9322,4 +9321,4 @@ def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterface
   let has_data_type_infer_fn = 1;
 }
 
-#endif // GET_ONEFLOW_EMBEDDING_OP_DEFINITIONS
+#endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
