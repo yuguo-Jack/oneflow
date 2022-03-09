@@ -136,7 +136,7 @@ __global__ void OrdinalEncodeDumpKernel(const TableEntry<Key, Index>* table,
 }
 
 template<typename Key, typename Elem, bool return_value>
-__global__ void LookupKernel(uint32_t value_length, uint64_t capacity, const Elem* cache_values,
+__global__ void LookupKernel(uint32_t value_length, const Elem* cache_values,
                              uint32_t values_elem_cnt, const Key* keys, const uint64_t* context,
                              Elem* values, uint32_t* n_missing, Key* missing_keys,
                              uint32_t* missing_indices) {
@@ -154,18 +154,13 @@ __global__ void LookupKernel(uint32_t value_length, uint64_t capacity, const Ele
       }
       continue;
     }
-    if (return_value) {
-      Elem elem{};
-      if (row_id < capacity) { elem = cache_values[row_id * value_length + col_id]; }
-      values[i] = elem;
-    }
+    if (return_value) { values[i] = cache_values[row_id * value_length + col_id]; }
   }
 }
 
 template<typename Elem>
-__global__ void UpdateKernel(uint32_t value_length, uint64_t capacity, Elem* cache_values,
-                             uint32_t values_elem_cnt, const uint64_t* context,
-                             const Elem* values) {
+__global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, uint32_t values_elem_cnt,
+                             const uint64_t* context, const Elem* values) {
   CUDA_1D_KERNEL_LOOP(i, values_elem_cnt) {
     const uint64_t key_id = i / value_length;
     const uint64_t ctx = context[key_id];
@@ -173,11 +168,7 @@ __global__ void UpdateKernel(uint32_t value_length, uint64_t capacity, Elem* cac
     const uint64_t row_id = ctx - 1;
     const uint64_t col_id = i - key_id * value_length;
     const Elem elem = values[i];
-    if (row_id < capacity) {
-      cache_values[row_id * value_length + col_id] = elem;
-    } else {
-      // do nothing;
-    }
+    cache_values[row_id * value_length + col_id] = elem;
   }
 }
 
@@ -264,11 +255,12 @@ class CacheImpl : public Cache {
         options_(options),
         max_query_length_(0) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    const uint64_t values_size = options.capacity * options.value_size;
     if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
-      OF_CUDA_CHECK(cudaMalloc(&values_, options.capacity * options.value_size));
+      OF_CUDA_CHECK(cudaMalloc(&values_, values_size));
     } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
-      OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&values_),
-                                            options.capacity * options.value_size));
+      OF_CUDA_CHECK(
+          NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&values_), values_size));
     } else {
       UNIMPLEMENTED();
     }
@@ -339,9 +331,8 @@ void CacheImpl<Key, Elem>::Test(ep::Stream* stream, uint32_t n_keys, const void*
   encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((LookupKernel<Key, Elem, false>), stream, values_elem_cnt, num_elem_per_value_,
-                  options_.capacity, values_, values_elem_cnt, static_cast<const Key*>(keys),
-                  encoding_buffer_, nullptr, n_missing, static_cast<Key*>(missing_keys),
-                  missing_indices);
+                  values_, values_elem_cnt, static_cast<const Key*>(keys), encoding_buffer_,
+                  nullptr, n_missing, static_cast<Key*>(missing_keys), missing_indices);
 }
 
 template<typename Key, typename Elem>
@@ -354,9 +345,9 @@ void CacheImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t n_keys, const void* 
   encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((LookupKernel<Key, Elem, true>), stream, values_elem_cnt, num_elem_per_value_,
-                  options_.capacity, values_, values_elem_cnt, static_cast<const Key*>(keys),
-                  encoding_buffer_, static_cast<Elem*>(values), n_missing,
-                  static_cast<Key*>(missing_keys), missing_indices);
+                  values_, values_elem_cnt, static_cast<const Key*>(keys), encoding_buffer_,
+                  static_cast<Elem*>(values), n_missing, static_cast<Key*>(missing_keys),
+                  missing_indices);
 }
 
 template<typename Key, typename Elem>
@@ -369,9 +360,8 @@ void CacheImpl<Key, Elem>::Put(ep::Stream* stream, uint32_t n_keys, const void* 
   CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  RUN_CUDA_KERNEL((UpdateKernel<Elem>), stream, values_elem_cnt, num_elem_per_value_,
-                  options_.capacity, values_, values_elem_cnt, encoding_buffer_,
-                  static_cast<const Elem*>(values));
+  RUN_CUDA_KERNEL((UpdateKernel<Elem>), stream, values_elem_cnt, num_elem_per_value_, values_,
+                  values_elem_cnt, encoding_buffer_, static_cast<const Elem*>(values));
 }
 
 template<typename Key, typename Elem>
