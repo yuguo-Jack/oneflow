@@ -230,8 +230,6 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::GetSbp(user_op::SbpContext* ctx) {
-  // ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(),
-  // 0).Broadcast(user_op::OpArg("num_unique_ids", 0)).Build();
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
                      .Split(user_op::OpArg("unique_ids", 0), 0)

@@ -21,10 +21,14 @@ namespace oneflow {
 
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  DimVector out_dim_vec = ctx->InputShape("ids", 0).dim_vec();
+  const Shape& ids_shape = ctx->InputShape("ids", 0);
+  if (ctx->has_input("column_ids", 0)) {
+    const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
+    CHECK_EQ_OR_RETURN(ids_shape, column_ids_shape);
+  }
+  DimVector out_dim_vec = ids_shape.dim_vec();
   embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
   const int64_t embedding_size = options.EmbeddingSize();
-  CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
@@ -36,12 +40,14 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("shadow", 0))
-      .Split(user_op::OpArg("ids", 0), 0)
-      .Split(user_op::OpArg("column_ids", 0), 0)
-      .Split(user_op::OpArg("embeddings", 0), 0)
-      .Build();
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(user_op::OpArg("shadow", 0))
+                     .Split(user_op::OpArg("ids", 0), 0)
+                     .Split(user_op::OpArg("embeddings", 0), 0);
+  if (ctx->user_op_conf().has_input("column_ids", 0)) {
+    builder.Split(user_op::OpArg("column_ids", 0), 0);
+  }
+  builder.Build();
   return Maybe<void>::Ok();
 }
 
@@ -53,9 +59,11 @@ namespace oneflow {
   user_op::InputArgModifier* ids = GetInputArgModifierFn("ids", 0);
   CHECK_OR_RETURN(ids != nullptr);
   ids->set_requires_grad(false);
-  user_op::InputArgModifier* column_ids = GetInputArgModifierFn("column_ids", 0);
-  CHECK_OR_RETURN(column_ids != nullptr);
-  column_ids->set_requires_grad(false);
+  if (conf.has_input("column_ids", 0)) {
+    user_op::InputArgModifier* column_ids = GetInputArgModifierFn("column_ids", 0);
+    CHECK_OR_RETURN(column_ids != nullptr);
+    column_ids->set_requires_grad(false);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -97,15 +105,6 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
               .Attr<std::string>("embedding_options", op.attr<std::string>("embedding_options"))
               .Build();
       AddOp(grad_op);
-      if (op.NeedGenGradTensor4OpInput("shadow", 0)) {
-        user_op::UserOpConfWrapperBuilder var_grad_builder(op.op_name() + "_var");
-        user_op::UserOpConfWrapper var_grad_op = var_grad_builder.Op("zero_like")
-                                                     .Input("like", op.input("shadow", 0))
-                                                     .Output("out")
-                                                     .Build();
-        AddOp(var_grad_op);
-        op.BindGradTensorWithOpInput(var_grad_op.output("out", 0), "shadow", 0);
-      }
       return Maybe<void>::Ok();
     });
 

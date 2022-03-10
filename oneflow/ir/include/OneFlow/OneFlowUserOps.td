@@ -9078,7 +9078,7 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
   let input = (ins
     OneFlow_Tensor:$shadow,
     OneFlow_Tensor:$ids,
-    OneFlow_Tensor:$column_ids
+    Optional<OneFlow_Tensor>:$column_ids
   );
   let output = (outs
     OneFlow_Tensor:$embeddings
@@ -9098,8 +9098,7 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
 def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_placeholder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$ids,
-    OneFlow_Tensor:$embedding_grad,
-    Optional<OneFlow_Tensor>:$learning_rate
+    OneFlow_Tensor:$embedding_grad
   );
   let attrs = (ins
     StrAttr:$embedding_options

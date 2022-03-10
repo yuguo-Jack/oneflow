@@ -407,7 +407,6 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t line_size = unique_values->shape().At(1);
     int64_t embedding_size;
-
     bool has_copy_nd = false;
     bool has_cast = false;
     int64_t tmp_buf_counts = 0;
