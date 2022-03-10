@@ -158,7 +158,7 @@ std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
 
 void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
                           const int64_t line_size, const std::string& embedding_name,
-                          const ParallelConf& parallel_conf,
+                          bool has_embedding_prefetch, const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
                           const std::string& unique_columns_lbn, std::string* embedding_lbn,
@@ -166,24 +166,28 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
   auto AddIdentityOp = [&](const std::string& in_lbn) -> std::string {
     return BuildIdentityOp(job_builder, in_lbn, parallel_conf, embedding_op);
   };
-  // embedding prefetch op
-  user_op::UserOpConfWrapperBuilder embedding_prefetch_op_builder(embedding_op.op_name()
-                                                                  + "_embedding_prefetch");
-  user_op::UserOpConfWrapper embedding_prefetch_op =
-      embedding_prefetch_op_builder.OpTypeName("embedding_prefetch")
-          .Input("num_unique_ids", AddIdentityOp(num_unique_ids_lbn))
-          .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
-          .Input("column_ids", AddIdentityOp(unique_columns_lbn))
-          .Output("context")
-          .Attr<int64_t>("embedding_size", embedding_size)
-          .Attr<int64_t>("line_size", line_size)
-          .Attr<std::string>("embedding_options",
-                             embedding_op.attr<std::string>("embedding_options"))
-          .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
-          .Build();
-  OperatorConf embedding_prefetch_new_op_conf = embedding_prefetch_op.op_conf();
-  embedding_prefetch_new_op_conf.set_stream_name_hint("EMBEDDING");
-  job_builder->AddOps(parallel_conf, {embedding_prefetch_new_op_conf});
+  std::string context_lbn;
+  if (has_embedding_prefetch) {
+    // embedding prefetch op
+    user_op::UserOpConfWrapperBuilder embedding_prefetch_op_builder(embedding_op.op_name()
+                                                                    + "_embedding_prefetch");
+    user_op::UserOpConfWrapper embedding_prefetch_op =
+        embedding_prefetch_op_builder.OpTypeName("embedding_prefetch")
+            .Input("num_unique_ids", AddIdentityOp(num_unique_ids_lbn))
+            .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
+            .Input("column_ids", AddIdentityOp(unique_columns_lbn))
+            .Output("context")
+            .Attr<int64_t>("embedding_size", embedding_size)
+            .Attr<int64_t>("line_size", line_size)
+            .Attr<std::string>("embedding_options",
+                               embedding_op.attr<std::string>("embedding_options"))
+            .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
+            .Build();
+    OperatorConf embedding_prefetch_new_op_conf = embedding_prefetch_op.op_conf();
+    embedding_prefetch_new_op_conf.set_stream_name_hint("EMBEDDING");
+    job_builder->AddOps(parallel_conf, {embedding_prefetch_new_op_conf});
+    context_lbn = AddIdentityOp(embedding_prefetch_op.output("context", 0));
+  }
 
   // embedding lookup op
   user_op::UserOpConfWrapperBuilder embedding_lookup_op_builder(embedding_op.op_name()
@@ -191,13 +195,15 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
   embedding_lookup_op_builder.OpTypeName("embedding_lookup")
       .Input("num_unique_ids", AddIdentityOp(num_unique_ids_lbn))
       .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
-      .Input("context", AddIdentityOp(embedding_prefetch_op.output("context", 0)))
+      .Input("column_ids", AddIdentityOp(unique_columns_lbn))
       .Output("unique_values")
       .Attr<DataType>("dtype", embedding_op.attr<DataType>("dtype"))
       .Attr<int64_t>("embedding_size", embedding_size)
       .Attr<int64_t>("line_size", line_size)
+      .Attr<std::string>("embedding_options", embedding_op.attr<std::string>("embedding_options"))
       .Attr<std::string>("embedding_name", embedding_name)
       .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
+  if (has_embedding_prefetch) { embedding_lookup_op_builder.Input("context", context_lbn); }
   bool has_embeddings_output =
       (line_size != embedding_size) || ctx->job_desc().enable_auto_mixed_precision();
   if (has_embeddings_output) {
@@ -580,12 +586,13 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                    &unique_ids_lbn, &unique_columns_lbn, &reverse_index_lbn,
                    &num_unique_matrix_lbn);
 
+    bool has_embedding_prefetch = (options.L1CachePolicy() != "full") ? true : false;
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
     BuildEmbeddingLookup(ctx, job_builder, options.EmbeddingSize(), options.LineSize(),
-                         options.Name(), op_node->parallel_desc().parallel_conf(), embedding_op,
-                         num_unique_ids_lbn, unique_ids_lbn, unique_columns_lbn, &embedding_lbn,
-                         &unique_values_lbn);
+                         options.Name(), has_embedding_prefetch,
+                         op_node->parallel_desc().parallel_conf(), embedding_op, num_unique_ids_lbn,
+                         unique_ids_lbn, unique_columns_lbn, &embedding_lbn, &unique_values_lbn);
 
     if (false && parallel_num == 1) {
       user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name() + "_gather");

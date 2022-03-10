@@ -214,7 +214,6 @@ namespace oneflow {
   const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
-  CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   if (ctx->has_output("embeddings", 0)) {
     DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
     embeddings_dim_vec.push_back(embedding_size);
@@ -233,12 +232,15 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupOp::GetSbp(user_op::SbpContext* ctx) {
   // ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(),
   // 0).Broadcast(user_op::OpArg("num_unique_ids", 0)).Build();
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(ctx->outputs(), 0)
-      .Broadcast(user_op::OpArg("context", 0))
-      .Build();
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(user_op::OpArg("num_unique_ids", 0))
+                     .Split(user_op::OpArg("unique_ids", 0), 0)
+                     .Split(user_op::OpArg("column_ids", 0), 0)
+                     .Split(ctx->outputs(), 0);
+  if (ctx->user_op_conf().has_input("context", 0)) {
+    builder.Broadcast(user_op::OpArg("context", 0));
+  }
+  builder.Build();
   return Maybe<void>::Ok();
 }
 

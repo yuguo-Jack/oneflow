@@ -2532,8 +2532,8 @@ def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [NoSideEffect, DeclareOp
 def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let same_output_regst_num = 1;
   let has_nd_sbp_infer_fn = 1;
-  let input = (ins AnyType:$like);
-  let output = (outs AnyType:$out);
+  let input = (ins OneFlow_Tensor:$like);
+  let output = (outs OneFlow_Tensor:$out);
 }
 
 def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
@@ -9076,12 +9076,12 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 
 def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_placeholder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$shadow,
-    AnyType:$ids,
-    AnyType:$column_ids
+    OneFlow_Tensor:$shadow,
+    OneFlow_Tensor:$ids,
+    OneFlow_Tensor:$column_ids
   );
   let output = (outs
-    AnyType:$embeddings
+    OneFlow_Tensor:$embeddings
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
@@ -9096,9 +9096,9 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
 
 def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_placeholder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$ids,
-    AnyType:$embedding_grad,
-    Optional<AnyType>:$learning_rate
+    OneFlow_Tensor:$ids,
+    OneFlow_Tensor:$embedding_grad,
+    Optional<OneFlow_Tensor>:$learning_rate
   );
   let attrs = (ins
     StrAttr:$embedding_options
@@ -9186,12 +9186,12 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
 
 def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$num_unique_ids,
-    AnyType:$unique_ids,
-    AnyType:$column_ids
+    OneFlow_Tensor:$num_unique_ids,
+    OneFlow_Tensor:$unique_ids,
+    OneFlow_Tensor:$column_ids
   );
   let output = (outs
-    AnyType:$context //no practical sense, control lookup run after prefetch.
+    OneFlow_Tensor:$context //no practical sense, control lookup run after prefetch.
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
@@ -9207,20 +9207,22 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
 
 def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$num_unique_ids,
-    AnyType:$unique_ids,
-    AnyType:$context
+    OneFlow_Tensor:$num_unique_ids,
+    OneFlow_Tensor:$unique_ids,
+    OneFlow_Tensor:$column_ids,
+     Optional<OneFlow_Tensor>:$context
   );
   let output = (outs
-    AnyType:$unique_values,
-    Optional<AnyType>:$embeddings
+    OneFlow_Tensor:$unique_values,
+    Optional<OneFlow_Tensor>:$embeddings
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
     OneFlow_DataType:$embeddings_dtype,
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
-    StrAttr:$embedding_name
+    StrAttr:$embedding_name,
+    StrAttr:$embedding_options
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9231,15 +9233,15 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
 
 def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$num_unique_ids,
-    AnyType:$unique_embeddings,
-    AnyType:$embedding_grad,
-    Optional<AnyType>:$learning_rate,
+    OneFlow_Tensor:$num_unique_ids,
+    OneFlow_Tensor:$unique_embeddings,
+    OneFlow_Tensor:$embedding_grad,
+    Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let output = (outs
-    AnyType:$updated_unique_embeddings
+    OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$scale,
@@ -9254,15 +9256,15 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
 
 def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$num_unique_ids,
-    AnyType:$unique_embeddings,
-    AnyType:$embedding_grad,
-    Optional<AnyType>:$learning_rate,
+    OneFlow_Tensor:$num_unique_ids,
+    OneFlow_Tensor:$unique_embeddings,
+    OneFlow_Tensor:$embedding_grad,
+    Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let output = (outs
-    AnyType:$updated_unique_embeddings
+    OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$scale,
@@ -9278,17 +9280,17 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
 
 def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$num_unique_ids,
-    AnyType:$unique_embeddings,
-    AnyType:$embedding_grad,
-    Optional<AnyType>:$learning_rate,
+    OneFlow_Tensor:$num_unique_ids,
+    OneFlow_Tensor:$unique_embeddings,
+    OneFlow_Tensor:$embedding_grad,
+    Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if,
+    Optional<OneFlow_Tensor>:$skip_if,
     Optional<OneFlow_Tensor>:$bias_correction1,
     Optional<OneFlow_Tensor>:$bias_correction2
   );
   let output = (outs
-    AnyType:$updated_unique_embeddings
+    OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
@@ -9307,9 +9309,9 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Dec
 
 def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$num_unique_ids,
-    AnyType:$unique_ids,
-    AnyType:$unique_embeddings
+    OneFlow_Tensor:$num_unique_ids,
+    OneFlow_Tensor:$unique_ids,
+    OneFlow_Tensor:$unique_embeddings
   );
   let attrs = (ins
     StrAttr:$embedding_name

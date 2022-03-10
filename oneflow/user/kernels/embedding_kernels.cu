@@ -383,29 +383,42 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EmbeddingKernelState>(ctx);
+    return std::make_shared<EmbeddingPrefetchKernelState>(ctx);
   }
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EmbeddingPrefetchKernelState*>(state);
     CHECK(kernel_state != nullptr);
+    const auto& generator = kernel_state->generator();
+    CHECK_NOTNULL(generator);
+    std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
+        CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+    uint64_t seed = cuda_generator->current_seed();
+    one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
     embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+    InitParam* init_param = kernel_state->InitParams();
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
+    const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const int64_t line_size = unique_values->shape().At(1);
+    int64_t embedding_size;
 
     bool has_copy_nd = false;
     bool has_cast = false;
     int64_t tmp_buf_counts = 0;
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
+      embedding_size = embeddings->shape().At(1);
       has_copy_nd = (embeddings->shape().elem_cnt() != unique_values->shape().elem_cnt());
       has_cast = (embeddings->data_type() != unique_values->data_type());
       if (has_copy_nd && has_cast) { tmp_buf_counts = embeddings->shape().elem_cnt(); }
+    } else {
+      embedding_size = line_size;
     }
 
     LookupTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
@@ -424,8 +437,18 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                                   sizeof(uint32_t), cudaMemcpyDefault,
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
-    CHECK_EQ(*host_num_keys, 0);  // we think keys must be in cache or kv_store.
-
+    const uint32_t num_store_missing_keys = *host_num_keys;
+    // CHECK_EQ(num_store_missing_keys, 0);  // we think keys must be in cache or kv_store.
+    if (num_store_missing_keys > 0) {
+      // init values
+      const int64_t grid_size = BlocksNum4ThreadsNum(num_store_missing_keys);
+      uint64_t inc_offset = num_store_missing_keys / grid_size + 1;
+      InitValueKernel<T, K, IDX>
+          <<<grid_size, line_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              seed, cuda_gen_state, inc_offset, line_size, embedding_size, *init_param,
+              column_ids->dptr<IDX>(), buffer_manager.NumStoreMissingPtr(),
+              buffer_manager.StoreMissingIndicesPtr(), unique_values->mut_dptr<T>());
+    }
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       CHECK(has_copy_nd || has_cast);
