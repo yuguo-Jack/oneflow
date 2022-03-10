@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_H_
 #define ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_H_
 
-#include "oneflow/core/embedding/key_value_store.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 

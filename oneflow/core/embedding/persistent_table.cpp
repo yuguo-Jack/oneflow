@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/embedding/posix_file.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/profiler/profiler.h"
 #include <robin_hood.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -161,9 +160,8 @@ class ChunkIteratorImpl : public PersistentTable::Iterator {
         n_(n),
         chunk_keys_(chunk_keys),
         chunk_indices_(chunk_indices),
-        chunk_values_(chunk_values) {
-    chunk_index_offset_ = chunk_id * num_values_per_chunk_;
-  }
+        chunk_values_(chunk_values),
+        chunk_index_offset_(chunk_id * num_values_per_chunk_) {}
   ~ChunkIteratorImpl() override = default;
 
   void Next(uint32_t num_keys, uint32_t* return_keys, void* keys, void* values) override {
@@ -414,13 +412,13 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
     : root_dir_(options.path),
       key_size_(options.key_size),
       value_size_(options.value_size),
+      logical_block_size_(GetLogicalBlockSize(options.physical_block_size, value_size_)),
       blocks_buffer_(options.physical_block_size),
       writable_key_file_chunk_id_(-1) {
   PosixFile::RecursiveCreateDirectory(options.path, 0755);
   const std::string lock_filename = PosixFile::JoinPath(options.path, kLockFileName);
   const bool init = !PosixFile::FileExists(lock_filename);
   lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
-  logical_block_size_ = GetLogicalBlockSize(options.physical_block_size, value_size_);
   const uint64_t target_chunk_size = options.target_chunk_size_mb * 1024 * 1024;
   CHECK_GE(target_chunk_size, logical_block_size_);
   num_logical_blocks_per_chunk_ = target_chunk_size / logical_block_size_,
@@ -500,7 +498,6 @@ void PersistentTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void* values,
                                            uint32_t* n_missing, uint32_t* missing_indices) {
-  OF_PROFILER_RANGE_PUSH("PersistentTable::Get");
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   offsets_buffer_.resize(num_keys);
   void* blocks_ptr = nullptr;
@@ -524,7 +521,6 @@ void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, 
     }
   }
   *n_missing = missing_count;
-  OF_PROFILER_RANGE_POP();
 }
 
 template<typename Key, typename Engine>
@@ -581,7 +577,6 @@ void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
                                            const void* values) {
-  OF_PROFILER_RANGE_PUSH("PersistentTable::Put");
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const void* blocks_ptr = nullptr;
   if (value_size_ == logical_block_size_) {
@@ -600,7 +595,6 @@ void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
     blocks_ptr = blocks_buffer_.ptr();
   }
   PutBlocks(num_keys, keys, blocks_ptr);
-  OF_PROFILER_RANGE_POP();
 }
 
 template<typename Key, typename Engine>
