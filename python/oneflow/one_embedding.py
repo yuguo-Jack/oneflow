@@ -52,9 +52,19 @@ def _check_cache(cache):
 
 
 class Embedding(Module):
-    def __init__(self, name, embedding_dim, dtype, key_type, intializer, store_options):
+    def __init__(
+        self,
+        name,
+        embedding_dim,
+        dtype,
+        key_type,
+        columns,
+        store_options,
+        default_initializer={"type": "normal", "mean": 0, "std": 0.05},
+    ):
         super().__init__()
         embedding_options = {}
+        embedding_columns = {}
         embedding_options["name"] = name
         assert embedding_dim > 0
         embedding_options["embedding_dim"] = embedding_dim
@@ -98,19 +108,20 @@ class Embedding(Module):
         embedding_options["kv_store"] = kv_store
 
         # initializer
-        assert intializer.__contains__("default_initializer")
-        _check_initializer(intializer["default_initializer"])
-        if intializer.__contains__("columns"):
-            columns = intializer["columns"]
+        if columns is not None:
             assert isinstance(columns, (list, tuple))
             for column in columns:
                 assert isinstance(column, dict)
                 assert column.__contains__("initializer")
                 _check_initializer(column["initializer"])
-        embedding_options["default_initializer"] = intializer["default_initializer"]
-        embedding_options["columns"] = intializer["columns"]
+            embedding_columns["columns"] = columns
+        else:
+            assert default_initializer is not None
+            _check_initializer(default_initializer)
+            embedding_columns["columns"] = [{"initializer": default_initializer}]
 
         self.embedding_options = json.dumps(embedding_options)
+        self.embedding_columns = json.dumps(embedding_columns)
         # TODO(zzk): Support placement configuration. Currently OneEmbedding is placed in all gpu.
         self.parallel_id = flow.env.get_rank()
         self.parallel_num = flow.env.get_world_size()
@@ -166,13 +177,20 @@ class Embedding(Module):
     def forward(self, ids, column_ids):
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
         return flow._C.embedding_lookup_placeholder(
-            self.shadow, ids, column_ids, self.dtype, self.embedding_options,
+            self.shadow,
+            ids,
+            column_ids,
+            self.dtype,
+            self.embedding_columns,
+            self.embedding_options,
         )
 
 
 def make_device_mem_store_option(
     device_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
+    assert device_memory_mb > 0
+    assert isinstance(persistent_path, (str, list, tuple))
     option = {
         "kv_store": {
             "caches": [
@@ -195,6 +213,8 @@ def make_device_mem_store_option(
 def make_host_mem_store_option(
     host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
+    assert host_memory_mb > 0
+    assert isinstance(persistent_path, (str, list, tuple))
     option = {
         "kv_store": {
             "caches": [
@@ -217,6 +237,8 @@ def make_host_mem_store_option(
 def make_device_mem_cached_ssd_store_option(
     device_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
+    assert device_memory_mb > 0
+    assert isinstance(persistent_path, (str, list, tuple))
     option = {
         "kv_store": {
             "caches": [
@@ -239,6 +261,8 @@ def make_device_mem_cached_ssd_store_option(
 def make_host_mem_cached_ssd_store_option(
     host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
+    assert host_memory_mb > 0
+    assert isinstance(persistent_path, (str, list, tuple))
     option = {
         "kv_store": {
             "caches": [
@@ -265,6 +289,9 @@ def make_device_mem_cached_host_store_option(
     size_factor=1,
     physical_block_size=512,
 ):
+    assert device_memory_mb > 0
+    assert host_memory_mb > 0
+    assert isinstance(persistent_path, (str, list, tuple))
     option = {
         "kv_store": {
             "caches": [

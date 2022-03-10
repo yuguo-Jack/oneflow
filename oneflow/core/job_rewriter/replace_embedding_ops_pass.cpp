@@ -179,8 +179,9 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
             .Output("context")
             .Attr<int64_t>("embedding_size", embedding_size)
             .Attr<int64_t>("line_size", line_size)
-            .Attr<std::string>("embedding_options",
-                               embedding_op.attr<std::string>("embedding_options"))
+            .Attr<std::string>("embedding_columns",
+                               embedding_op.attr<std::string>("embedding_columns"))
+            .Attr<std::string>("embedding_name", embedding_name)
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
     OperatorConf embedding_prefetch_new_op_conf = embedding_prefetch_op.op_conf();
@@ -200,7 +201,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
       .Attr<DataType>("dtype", embedding_op.attr<DataType>("dtype"))
       .Attr<int64_t>("embedding_size", embedding_size)
       .Attr<int64_t>("line_size", line_size)
-      .Attr<std::string>("embedding_options", embedding_op.attr<std::string>("embedding_options"))
+      .Attr<std::string>("embedding_columns", embedding_op.attr<std::string>("embedding_columns"))
       .Attr<std::string>("embedding_name", embedding_name)
       .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
   if (has_embedding_prefetch) { embedding_lookup_op_builder.Input("context", context_lbn); }

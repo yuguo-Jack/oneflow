@@ -9085,6 +9085,7 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
+    StrAttr:$embedding_columns,
     StrAttr:$embedding_options
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9196,7 +9197,8 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
-    StrAttr:$embedding_options
+    StrAttr:$embedding_name,
+    StrAttr:$embedding_columns
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9222,7 +9224,7 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     StrAttr:$embedding_name,
-    StrAttr:$embedding_options
+    StrAttr:$embedding_columns
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;

@@ -83,43 +83,6 @@ class EmbeddingOptions final {
     } else {
       UNIMPLEMENTED();
     }
-    auto columns = json_object["columns"];
-    if (columns != nlohmann::detail::value_t::null) {
-      for (int32_t i = 0; i < columns.size(); ++i) {
-        EmbeddingColumn embedding_column;
-        auto column = columns.at(i);
-        auto initializer = GetValue(column, "initializer");
-        std::string type = GetValue(initializer, "type");
-        if (type == "uniform") {
-          embedding_column.initializer.type = InitializerType::kUniform;
-          embedding_column.initializer.uniform_param.low = GetValue(initializer, "low");
-          embedding_column.initializer.uniform_param.high = GetValue(initializer, "high");
-        } else if (type == "normal") {
-          embedding_column.initializer.type = InitializerType::kNormal;
-          embedding_column.initializer.normal_param.mean = GetValue(initializer, "mean");
-          embedding_column.initializer.normal_param.std = GetValue(initializer, "std");
-        } else {
-          UNIMPLEMENTED();
-        }
-        columns_.push_back(embedding_column);
-      }
-    } else {
-      EmbeddingColumn embedding_column;
-      auto initializer = GetValue(json_object, "default_initializer");
-      std::string type = GetValue(initializer, "type");
-      if (type == "uniform") {
-        embedding_column.initializer.type = InitializerType::kUniform;
-        embedding_column.initializer.uniform_param.low = GetValue(initializer, "low");
-        embedding_column.initializer.uniform_param.high = GetValue(initializer, "high");
-      } else if (type == "normal") {
-        embedding_column.initializer.type = InitializerType::kNormal;
-        embedding_column.initializer.normal_param.mean = GetValue(initializer, "mean");
-        embedding_column.initializer.normal_param.std = GetValue(initializer, "std");
-      } else {
-        UNIMPLEMENTED();
-      }
-      columns_.push_back(embedding_column);
-    }
   }
   ~EmbeddingOptions() = default;
 
@@ -134,7 +97,6 @@ class EmbeddingOptions final {
   std::string L2CacheValueMemoryKind() const { return l2_cache_value_memory_kind_; }
   std::string PersistentTablePath() const { return persistent_table_path_; }
   int64_t PersistentTablePhysicalBlockSize() const { return persistent_table_phisical_block_size_; }
-  std::vector<EmbeddingColumn> Columns() const { return columns_; }
 
  private:
   std::string name_;
@@ -148,6 +110,56 @@ class EmbeddingOptions final {
   std::string l2_cache_value_memory_kind_;
   std::string persistent_table_path_;
   int64_t persistent_table_phisical_block_size_;
+};
+
+namespace {
+
+void ParseColumnFromJson(const nlohmann::json& initializer, EmbeddingColumn* embedding_column) {
+  CHECK(initializer.contains("type"));
+  CHECK(initializer["type"].is_string());
+  std::string type = initializer["type"].get<std::string>();
+  if (type == "uniform") {
+    embedding_column->initializer.type = InitializerType::kUniform;
+    CHECK(initializer.contains("low"));
+    CHECK(initializer.contains("high"));
+    CHECK(initializer["low"].is_number());
+    CHECK(initializer["high"].is_number());
+    embedding_column->initializer.uniform_param.low = initializer["low"];
+    embedding_column->initializer.uniform_param.high = initializer["high"];
+  } else if (type == "normal") {
+    CHECK(initializer.contains("mean"));
+    CHECK(initializer.contains("std"));
+    CHECK(initializer["mean"].is_number());
+    CHECK(initializer["std"].is_number());
+    embedding_column->initializer.type = InitializerType::kNormal;
+    embedding_column->initializer.normal_param.mean = initializer["mean"];
+    embedding_column->initializer.normal_param.std = initializer["std"];
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
+class EmbeddingColumns {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EmbeddingColumns);
+  EmbeddingColumns(std::string json_serialized) {
+    auto json_object = nlohmann::json::parse(json_serialized);
+    CHECK(json_object.contains("columns"));
+    auto columns = json_object["columns"];
+    CHECK(columns.is_array());
+    for (int32_t i = 0; i < columns.size(); ++i) {
+      auto column = columns.at(i);
+      CHECK(column.contains("initializer"));
+      EmbeddingColumn embedding_column;
+      ParseColumnFromJson(column["initializer"], &embedding_column);
+      columns_.push_back(embedding_column);
+    }
+  }
+  std::vector<EmbeddingColumn> Columns() const { return columns_; }
+
+ private:
   std::vector<EmbeddingColumn> columns_;
 };
 

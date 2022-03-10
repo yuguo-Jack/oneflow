@@ -2263,9 +2263,11 @@ class EmbeddingLookupFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
                            const std::shared_ptr<one::Tensor>& ids,
                            const std::shared_ptr<one::Tensor>& column_ids,
-                           const Symbol<DType>& dtype, const std::string& embedding_options) const {
+                           const Symbol<DType>& dtype, const std::string& embedding_columns,
+                           const std::string& embedding_options) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<std::string>("embedding_columns", embedding_columns));
     JUST(attrs.SetAttr<std::string>("embedding_options", embedding_options));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {shadow, ids, column_ids}, attrs);
   }
