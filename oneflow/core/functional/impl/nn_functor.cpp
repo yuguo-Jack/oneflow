@@ -263,9 +263,9 @@ class BatchMatMulFunctor {
   std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
-class CublasFusedMLPFunctor {
+class FusedMLPFunctor {
  public:
-  CublasFusedMLPFunctor() {
+  FusedMLPFunctor() {
 #if CUDA_VERSION >= 11040
     fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
@@ -312,15 +312,16 @@ class CublasFusedMLPFunctor {
       k = n;
     }
 
-    DeviceType device_type;
+#if CUDA_VERSION >= 11050
+    DeviceType device_type{};
     if (x->is_consistent()) {
       device_type = JUST(x->parallel_desc())->device_type();
     } else {
       device_type = JUST(x->device())->enum_type();
     }
 
-#if CUDA_VERSION >= 11040
-    if (device_type == DeviceType::kCUDA) {
+    if ((device_type == DeviceType::kCUDA) && (weight_size <= kMaxInputCount)
+        && (!ParseBooleanFromEnv("ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP", false))) {
       TensorTuple input(2 * weight_size + 1);
       input[0] = x;
       std::copy(weights.begin(), weights.end(), input.begin() + 1);
@@ -328,20 +329,21 @@ class CublasFusedMLPFunctor {
 
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
-
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
     }
-#endif
+#endif  // CUDA_VERSION >= 11050
 
-    // Fall back to matmul + bias_add + relu
+    // Fall back to Naive matmul + bias_add + relu
     std::shared_ptr<one::Tensor> out = x;
     for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
       out = JUST(
           functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
                               biases[layer_idx], 1));
-      if (layer_idx == weight_size - 1) {
-        if (!skip_final_activation) { out = JUST(functional::Relu(out, false)); }
-      } else {
+      if ((layer_idx != weight_size - 1) || (!skip_final_activation)) {
+        /*
+        When it is not finaly dense layer, or it is final dense layer and skip_final_activate=False,
+        we add relu Layer.
+        */
         out = JUST(functional::Relu(out, false));
       }
     }
@@ -2428,7 +2430,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
-  m.add_functor<impl::CublasFusedMLPFunctor>("CublasFusedMLP");
+  m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");

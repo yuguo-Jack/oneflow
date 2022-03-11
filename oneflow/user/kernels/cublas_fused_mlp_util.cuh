@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#if defined(__CUDACC__)
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
 #include "oneflow/core/common/optional.h"
@@ -25,6 +26,18 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+
+constexpr int32_t kAuxReluLdAlignRequirement = 128;
+
+long AlignReluAuxLd(long aux_ld) {
+  /*
+  ReLu bit-mask matrix leading dimension in elements.
+  Must be divisible by 128 and be no less than the number of rows in the output matrix.
+  */
+  long old_aux_ld = aux_ld;
+  return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
+         * kAuxReluLdAlignRequirement;
+}
 
 class CublasFusedMLPKernelCache final : public user_op::OpKernelCache {
  public:
@@ -178,15 +191,6 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
   }
 }
 
-void AlignReluAuxLd(long* aux_ld) {
-  /*
-  ReLu bit-mask matrix leading dimension in elements.
-  Must be divisible by 128 and be no less than the number of rows in the output matrix.
-  */
-  long old_aux_ld = *aux_ld;
-  *aux_ld = ((old_aux_ld + 128 - 1) / 128) * 128;
-}
-
 void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
                    const cublasComputeType_t cublas_compute_dtype,
                    const cudaDataType_t cuda_data_type, bool need_aux,
@@ -228,11 +232,10 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
   `CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
   */
   if (need_aux) {
-    long aux_ld = cublas_ldc;
-    AlignReluAuxLd(&aux_ld);
+    long aligned_aux_ld = AlignReluAuxLd(cublas_ldc);
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
-                                                   CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, &aux_ld,
-                                                   sizeof(aux_ld)));
+                                                   CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
+                                                   &aligned_aux_ld, sizeof(aligned_aux_ld)));
   }
   // Set matrix layout
   SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
@@ -247,4 +250,6 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
 
 }  // namespace oneflow
 
-#endif
+#endif  // CUDA_VERSION >= 11040
+
+#endif  // defined(__CUDACC__)

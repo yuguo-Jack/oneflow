@@ -38,7 +38,6 @@ long AlignReluAuxLd(long aux_ld) {
 
 Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
   int32_t weight_size = ctx->input_size("weights");
   int32_t bias_size = ctx->input_size("biases");
   CHECK_EQ_OR_RETURN(weight_size, bias_size);
@@ -170,14 +169,12 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                     .Build();
       AddOp(bias_grad_op);
       if (op.NeedGenGradTensor4OpInput("biases", weight_num - 1)) {
-        printf("final bias requires grad \n");
         op.BindGradTensorWithOpInput(bias_grad_op.output("output_tensor", 0), "biases",
                                      weight_num - 1);
       }
-      std::string cublas_dy;
+      std::string cublas_dy = last_bias_grad;
+      ;
       for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
-        if (hidden_layer_idx == weight_num - 1) { cublas_dy = last_bias_grad; }
-
         user_op::UserOpConfWrapperBuilder cublas_bias_add_relu_matmul_grad_builder(
             op.op_name() + "_cublas_bias_add_relu_matmul_grad_" + std::to_string(hidden_layer_idx));
         user_op::UserOpConfWrapper cublas_bias_add_relu_matmul_grad_op =
@@ -190,7 +187,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Build();
         AddOp(cublas_bias_add_relu_matmul_grad_op);
         if (op.NeedGenGradTensor4OpInput("biases", hidden_layer_idx - 1)) {
-          printf("Bias %d requires grad \n", hidden_layer_idx - 1);
           op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_bias", 0),
                                        "biases",
                                        hidden_layer_idx - 1);  // previous layers bias grad
@@ -198,7 +194,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
         user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
             op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
-        printf("Here hidden index is: %d \n", hidden_layer_idx - 1);
         user_op::UserOpConfWrapper matmul_weight_grad_op =
             matmul_weight_grad_builder.Op("matmul")
                 .Input("a", cublas_dy)
@@ -210,7 +205,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Build();
         AddOp(matmul_weight_grad_op);
         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
-          printf("weights %d requires grad \n", hidden_layer_idx);
           op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights",
                                        hidden_layer_idx);
         }
@@ -220,11 +214,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
       // For the first layer, we need to use 2 matmul to get grads.
       std::string last_dy;
-      if (weight_num != 1) {
-        last_dy = cublas_dy;
-      } else {
-        last_dy = last_bias_grad;
-      }
+      if (weight_num != 1) { last_dy = cublas_dy; }
       // dx:
       user_op::UserOpConfWrapperBuilder matmul_input_grad_builder(op.op_name()
                                                                   + "_matmul_input_grad");
@@ -238,7 +228,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                             .Build();
       AddOp(matmul_input_grad_op);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        printf("X requires grad \n");
         op.BindGradTensorWithOpInput(matmul_input_grad_op.output("out", 0), "x", 0);
       }
       // dw:
@@ -254,7 +243,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                              .Build();
       AddOp(matmul_weight_grad_op);
       if (op.NeedGenGradTensor4OpInput("weights", 0)) {
-        printf("weight0 requires grad \n");
         op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights", 0);
       }
 

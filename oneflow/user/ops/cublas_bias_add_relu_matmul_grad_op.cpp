@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// #if CUDA_VERSION >= 11040
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
@@ -61,11 +60,11 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> CublasBiasAddReluMatmulGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
-      .Split(user_op::OpArg("weight", 0), 0)
-      .Broadcast(user_op::OpArg("dy", 0))
+      .Broadcast(user_op::OpArg("weight", 0))
+      .Split(user_op::OpArg("dy", 0), 0)
       .Split(user_op::OpArg("aux", 0), 0)
       .Split(user_op::OpArg("d_grad", 0), 0)
-      .Split(user_op::OpArg("d_bias", 0), 0)
+      .PartialSum(user_op::OpArg("d_bias", 0))
       .Build();
   return Maybe<void>::Ok();
 }
@@ -75,4 +74,3 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
 }
 
 }  // namespace oneflow
-// #endif // CUDA_VERSION >= 11040
