@@ -131,13 +131,12 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     int row = i / line_size;
     int col = i - row * line_size;
     const uint32_t index = missing_indices[row];
+    const int64_t offset = index * line_size + col;
     const int32_t slot_idx = column_ids[index];
     assert(slot_idx < param.num_columns);
-    if(slot_idx>=26) {
-      printf("error error\n");
-    }
+    if (slot_idx >= 26) { printf("error error\n"); }
     embedding::EmbeddingInitializer initializer = param.columns[slot_idx].initializer;
-    T value;
+    T value = 0;
     if (col < embedding_size) {
       if (initializer.type == embedding::InitializerType::kUniform) {
         const float low = initializer.uniform_param.low;
@@ -150,10 +149,8 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
       } else {
         __trap();
       }
-    } else {
-      value = 0;
     }
-    values[i] = value;
+    values[offset] = value;
   }
   __syncthreads();
   if (threadIdx.x == 0) {
