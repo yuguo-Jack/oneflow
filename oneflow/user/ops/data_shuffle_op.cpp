@@ -186,70 +186,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmbeddingPrefetchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("context", 0) = ctx->InputShape("num_unique_ids", 0);
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingPrefetchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> EmbeddingPrefetchOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("column_ids", 0), 0)
-      .Broadcast(user_op::OpArg("context", 0))
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> EmbeddingPrefetchOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("context", 0) = ctx->InputDType("num_unique_ids", 0);
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> EmbeddingLookupOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);
-  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
-  const int64_t line_size = ctx->Attr<int64_t>("line_size");
-  if (ctx->has_output("embeddings", 0)) {
-    DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
-    embeddings_dim_vec.push_back(embedding_size);
-    *ctx->OutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
-  }
-  DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
-  unique_values_dim_vec.push_back(line_size);
-  *ctx->OutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingLookupOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> EmbeddingLookupOp::GetSbp(user_op::SbpContext* ctx) {
-  auto builder = ctx->NewBuilder()
-                     .Broadcast(user_op::OpArg("num_unique_ids", 0))
-                     .Split(user_op::OpArg("unique_ids", 0), 0)
-                     .Split(user_op::OpArg("column_ids", 0), 0)
-                     .Split(ctx->outputs(), 0);
-  if (ctx->user_op_conf().has_input("context", 0)) {
-    builder.Broadcast(user_op::OpArg("context", 0));
-  }
-  builder.Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> EmbeddingLookupOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("unique_values", 0) = ctx->Attr<DataType>("dtype");
-  if (ctx->has_output("embeddings", 0)) {
-    *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("embeddings_dtype");
-  }
-  return Maybe<void>::Ok();
-}
-
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("updated_unique_embeddings", 0) = ctx->InputShape("unique_embeddings", 0);
   return Maybe<void>::Ok();
@@ -324,27 +260,6 @@ namespace oneflow {
 
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> EmbeddingPutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingPutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> EmbeddingPutOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> EmbeddingPutOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 

@@ -44,6 +44,13 @@ struct EmbeddingColumn {
   EmbeddingInitializer initializer;
 };
 
+constexpr size_t kMaxColumns = 128;
+
+struct ColumnsParam {
+  int32_t num_columns = 0;
+  EmbeddingColumn columns[kMaxColumns];
+};
+
 class EmbeddingOptions final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EmbeddingOptions);
@@ -149,18 +156,18 @@ class EmbeddingColumns {
     CHECK(json_object.contains("columns"));
     auto columns = json_object["columns"];
     CHECK(columns.is_array());
+    CHECK_LE(columns.size(), kMaxColumns);
     for (int32_t i = 0; i < columns.size(); ++i) {
       auto column = columns.at(i);
       CHECK(column.contains("initializer"));
-      EmbeddingColumn embedding_column;
-      ParseColumnFromJson(column["initializer"], &embedding_column);
-      columns_.push_back(embedding_column);
+      ParseColumnFromJson(column["initializer"], &(param_.columns[i]));
     }
+    param_.num_columns = columns.size();
   }
-  std::vector<EmbeddingColumn> Columns() const { return columns_; }
+  ColumnsParam Columns() const { return param_; }
 
  private:
-  std::vector<EmbeddingColumn> columns_;
+  ColumnsParam param_;
 };
 
 }  // namespace embedding
