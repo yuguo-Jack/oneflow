@@ -134,7 +134,6 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     const int64_t offset = index * line_size + col;
     const int32_t slot_idx = column_ids[index];
     assert(slot_idx < param.num_columns);
-    if (slot_idx >= 26) { printf("error error\n"); }
     embedding::EmbeddingInitializer initializer = param.columns[slot_idx].initializer;
     T value = 0;
     if (col < embedding_size) {
