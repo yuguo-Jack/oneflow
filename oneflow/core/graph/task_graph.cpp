@@ -87,7 +87,7 @@ bool IsTickOpConf(const OperatorConf& conf) {
 
 bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   const OperatorConf& op_conf = op->op_conf();
-  if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
+  if (op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
       || op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf()
       || op_conf.has_source_tick_conf() || op_conf.has_sink_tick_conf()
       || op_conf.has_acc_tick_conf()) {
@@ -95,10 +95,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   }
   if (op_conf.has_user_conf()) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
-    if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
-        || user_type_name == "unpack" || user_type_name == "identity_buffer") {
-      return true;
-    }
+    if (user_type_name == "identity_buffer") { return true; }
   }
   return false;
 }
@@ -145,8 +142,8 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
 
     cur_node->ForEachNodeOnInOutDataEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
-          && this_node->thrd_id() == next_node->thrd_id()
-          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
+          && this_node->thrd_id() == next_node->thrd_id()) {
+        //  && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);
