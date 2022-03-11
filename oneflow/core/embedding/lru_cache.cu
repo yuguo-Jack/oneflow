@@ -13,12 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Inspired by https://github.com/NVIDIA-Merlin/HugeCTR/blob/master/gpu_cache/src/nv_gpu_cache.cu
+
 #include "oneflow/core/embedding/lru_cache.h"
 #include "oneflow/core/device/cuda_util.h"
-#include <cub/cub.cuh>
 #include "oneflow/core/embedding/hash_functions.cuh"
-#include <cuda/std/semaphore>
 #include <new>
+#include <cuda.h>
+
+#if CUDA_VERSION >= 11000
+#include <cuda/std/semaphore>
+#endif
 
 namespace oneflow {
 
@@ -36,20 +42,85 @@ ep::CudaLaunchConfig GetLaunchConfig(uint32_t n_keys) {
                               kWarpSize * kNumWarpPerBlock, 0);
 }
 
+struct ThreadContext {
+  __device__ ThreadContext() {
+    const uint32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+    global_warp_id = global_thread_id / kWarpSize;
+    warp_id_in_block = global_warp_id % kNumWarpPerBlock;  // NOLINT
+    num_warps = gridDim.x * kNumWarpPerBlock;              // NOLINT
+    lane_id = global_thread_id % kWarpSize;
+  }
+
+  uint32_t global_warp_id;
+  uint32_t warp_id_in_block;
+  uint32_t num_warps;
+  uint32_t lane_id;
+};
+
+#if CUDA_VERSION >= 11000
+
+class WarpMutex {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(WarpMutex);
+  __device__ WarpMutex() : semaphore_(1) {}
+  __device__ ~WarpMutex() = default;
+
+  __device__ void Lock(const ThreadContext& thread_ctx) {
+    if (thread_ctx.lane_id == 0) { semaphore_.acquire(); }
+    __syncwarp();
+  }
+
+  __device__ void Unlock(const ThreadContext& thread_ctx) {
+    __syncwarp();
+    if (thread_ctx.lane_id == 0) { semaphore_.release(); }
+  }
+
+ private:
+  cuda::binary_semaphore<cuda::thread_scope_device> semaphore_;
+};
+
+#else
+
+class WarpMutex {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(WarpMutex);
+  __device__ WarpMutex() = default;
+  __device__ ~WarpMutex() = default;
+
+  __device__ void Lock(const ThreadContext& thread_ctx) {
+    if (thread_ctx.lane_id == 0) {
+      while (atomicCAS(&flag_, 0, 1) != 0)
+        ;
+    }
+    __threadfence();
+    __syncwarp();
+  }
+
+  __device__ void Unlock(const ThreadContext& thread_ctx) {
+    __syncwarp();
+    __threadfence();
+    if (thread_ctx.lane_id == 0) { atomicExch(&flag_, 0); }
+  }
+
+ private:
+  int32_t flag_;
+};
+
+#endif
+
 template<typename Key, typename Elem>
 struct LruCacheContext {
   Key* keys;
   Elem* lines;
   uint8_t* ages;
-  cuda::binary_semaphore<cuda::thread_scope_device>* mutex;
+  WarpMutex* mutex;
   uint64_t n_set;
   uint32_t line_size;
 };
 
-__global__ void InitCacheSetMutex(uint32_t n_set,
-                                  cuda::binary_semaphore<cuda::thread_scope_device>* mutex) {
+__global__ void InitCacheSetMutex(uint32_t n_set, WarpMutex* mutex) {
   const uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < n_set) { new (mutex + idx) cuda::binary_semaphore<cuda::thread_scope_device>(1); }
+  if (idx < n_set) { new (mutex + idx) WarpMutex; }
 }
 
 template<typename Key, typename Elem>
@@ -61,22 +132,20 @@ void ClearLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
 
 template<typename Key, typename Elem>
 void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>* ctx) {
-  const size_t key_size_per_set = kWarpSize * sizeof(Key);
+  const size_t keys_size_per_set = kWarpSize * sizeof(Key);
   const uint32_t line_size = options.value_size / sizeof(Elem);
   const size_t lines_size_per_set = kWarpSize * line_size * sizeof(Elem);
-  const size_t lru_size_per_set = kWarpSize * sizeof(uint8_t);
-  const size_t mutex_size_per_set = sizeof(cuda::binary_semaphore<cuda::thread_scope_device>);
-  const size_t size_per_set =
-      key_size_per_set + lines_size_per_set + lru_size_per_set + mutex_size_per_set;
+  const size_t ages_size_per_set = kWarpSize * sizeof(uint8_t);
+  const size_t mutex_size_per_set = sizeof(WarpMutex);
   const size_t n_set = (options.capacity - 1 + kWarpSize) / kWarpSize;
   CHECK_GT(n_set, 0);
   ctx->n_set = n_set;
   ctx->line_size = line_size;
-  const size_t keys_size = n_set * key_size_per_set;
+  const size_t keys_size = n_set * keys_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->keys), keys_size));
   const size_t lines_size = n_set * lines_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
-  const size_t ages_size = n_set * lru_size_per_set;
+  const size_t ages_size = n_set * ages_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->ages), ages_size));
   const size_t mutex_size = n_set * mutex_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->mutex), mutex_size));
@@ -92,29 +161,13 @@ void DestroyLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
   OF_CUDA_CHECK(cudaFree(ctx->mutex));
 }
 
-struct ThreadContext {
-  __device__ ThreadContext() {
-    const uint32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-    global_warp_id = global_thread_id / kWarpSize;
-    warp_id_in_block = global_warp_id % kNumWarpPerBlock;
-    num_warps = gridDim.x * kNumWarpPerBlock;
-    lane_id = global_thread_id % kWarpSize;
-  }
-
-  uint32_t global_warp_id;
-  uint32_t warp_id_in_block;
-  uint32_t num_warps;
-  uint32_t lane_id;
-};
-
 template<typename Key, typename Elem>
 struct SetContext {
-  __device__ SetContext(const LruCacheContext<Key, Elem>& ctx, uint32_t set_id) {
-    keys = ctx.keys + set_id * kWarpSize;
-    lines = ctx.lines + set_id * kWarpSize * ctx.line_size;
-    ages = ctx.ages + set_id * kWarpSize;
-    mutex = ctx.mutex + set_id;
-  }
+  __device__ SetContext(const LruCacheContext<Key, Elem>& ctx, uint32_t set_id)
+      : keys(ctx.keys + set_id * kWarpSize),
+        mutex(ctx.mutex + set_id),
+        ages(ctx.ages + set_id * kWarpSize),
+        lines(ctx.lines + set_id * kWarpSize * ctx.line_size) {}
 
   __device__ int Lookup(const ThreadContext& thread_ctx, Key key) {
     const Key lane_key = keys[thread_ctx.lane_id];
@@ -194,20 +247,14 @@ struct SetContext {
     }
   }
 
-  __device__ void Lock(const ThreadContext& thread_ctx) {
-    if (thread_ctx.lane_id == 0) { mutex->acquire(); }
-    __syncwarp();
-  }
+  __device__ void Lock(const ThreadContext& thread_ctx) { mutex->Lock(thread_ctx); }
 
-  __device__ void Unlock(const ThreadContext& thread_ctx) {
-    if (thread_ctx.lane_id == 0) { mutex->release(); }
-    __syncwarp();
-  }
+  __device__ void Unlock(const ThreadContext& thread_ctx) { mutex->Unlock(thread_ctx); }
 
   Key* keys;
   Elem* lines;
   uint8_t* ages;
-  cuda::binary_semaphore<cuda::thread_scope_device>* mutex;
+  WarpMutex* mutex;
 };
 
 template<typename Key, typename Elem, bool test_only>
@@ -401,7 +448,11 @@ template<typename Key, typename Elem>
 class LruCache : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LruCache);
-  explicit LruCache(const CacheOptions& options) : device_index_{}, max_query_length_(0) {
+  explicit LruCache(const CacheOptions& options)
+      : device_index_{},
+        max_query_length_(0),
+        query_indices_buffer_(nullptr),
+        query_keys_buffer_(nullptr) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     InitLruCacheContext(options, &ctx_);
   }
@@ -522,9 +573,7 @@ std::unique_ptr<Cache> DispatchKeyType(const CacheOptions& options) {
 
 }  // namespace
 
-std::unique_ptr<Cache> NewLruCache(const CacheOptions& options) {
-  return std::unique_ptr<Cache>(new LruCache<int64_t, float>(options));
-}
+std::unique_ptr<Cache> NewLruCache(const CacheOptions& options) { return DispatchKeyType(options); }
 
 }  // namespace embedding
 
