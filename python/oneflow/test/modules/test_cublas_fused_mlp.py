@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 
@@ -110,7 +110,7 @@ def _test_fused_matmul_bias_add_relu(
         flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True)
     )
 
-    fused_out = flow._C.cublas_fused_mlp(
+    fused_out = flow._C.fused_mlp(
         fused_x,
         fused_weight_list,
         fused_bias_list,
