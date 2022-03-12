@@ -113,6 +113,7 @@ void InitMemoryChains(Plan* plan,
         CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
         mem_chain->total_mem_reused_size += RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
 
+        /*
         // for time shape in mem chain
         Shape regst_time_shape =
             Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape());
@@ -121,6 +122,7 @@ void InitMemoryChains(Plan* plan,
         } else {
           CHECK(mem_chain->time_shape == regst_time_shape);
         }
+        */
       }
     }
   }
@@ -152,17 +154,17 @@ bool TryMergeMemChain2MergedChains(
     return lhs->total_mem_reused_size > rhs->total_mem_reused_size;
   });
   for (MemoryChain* merged_chain : *merged_chains) {
-    if (merged_chain->time_shape == meta_shape && mem_chain->time_shape == meta_shape) {
-      if (IsStrictOrderL2R(merged_chain, mem_chain)) {
-        merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
-                                          mem_chain->sorted_tasks.begin(),
-                                          mem_chain->sorted_tasks.end());
-        merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
-                                               mem_chain->mem_reused_regsts.end());
-        merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
-        return true;
-      }
+    // if (merged_chain->time_shape == meta_shape && mem_chain->time_shape == meta_shape) {
+    if (IsStrictOrderL2R(merged_chain, mem_chain)) {
+      merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
+                                        mem_chain->sorted_tasks.begin(),
+                                        mem_chain->sorted_tasks.end());
+      merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
+                                             mem_chain->mem_reused_regsts.end());
+      merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
+      return true;
     }
+    // }
   }
   return false;
 }
