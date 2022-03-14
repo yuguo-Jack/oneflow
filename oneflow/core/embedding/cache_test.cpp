@@ -40,7 +40,7 @@ void TestCache(Cache* cache, uint32_t line_size) {
   ep::Stream* stream = device->CreateStream();
 
   std::unordered_set<int64_t> in_cache;
-  const size_t n_iter = 128;
+  const size_t n_iter = 32;
   const uint32_t n_keys = 1024;
   int64_t* d_keys;
   int64_t* keys;
@@ -203,22 +203,6 @@ void TestCache(Cache* cache, uint32_t line_size) {
   OF_CUDA_CHECK(cudaFree(d_evicted_keys));
   OF_CUDA_CHECK(cudaFreeHost(evicted_keys));
   device->DestroyStream(stream);
-}
-
-TEST(Cache, LruCache) {
-  if (!HasCudaDevice()) { return; }
-
-  CacheOptions options{};
-  options.policy = CacheOptions::Policy::kLRU;
-  const uint32_t line_size = 128;
-  options.value_size = 512;
-  options.capacity = 65536;
-  options.key_size = 8;
-  options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
-
-  std::unique_ptr<Cache> cache(NewCache(options));
-  cache->ReserveQueryLength(65536);
-  TestCache(cache.get(), line_size);
 }
 
 TEST(Cache, FullCache) {

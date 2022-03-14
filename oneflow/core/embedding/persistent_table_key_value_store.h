@@ -23,12 +23,16 @@ namespace oneflow {
 
 namespace embedding {
 
+#ifdef WITH_CUDA
+
 struct PersistentTableKeyValueStoreOptions {
   PersistentTableOptions table_options{};
 };
 
 std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(
     const PersistentTableKeyValueStoreOptions& options);
+
+#endif  // WITH_CUDA
 
 }  // namespace embedding
 

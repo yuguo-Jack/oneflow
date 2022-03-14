@@ -16,13 +16,13 @@ limitations under the License.
 #include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/embedding/full_cache.h"
 #include "oneflow/core/embedding/lru_cache.h"
-#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
 namespace embedding {
 
 std::unique_ptr<Cache> NewCache(const CacheOptions& options) {
+#ifdef WITH_CUDA
   CHECK_GT(options.key_size, 0);
   CHECK_GT(options.value_size, 0);
   CHECK_GT(options.capacity, 0);
@@ -34,6 +34,10 @@ std::unique_ptr<Cache> NewCache(const CacheOptions& options) {
     UNIMPLEMENTED();
     return nullptr;
   }
+#else
+  UNIMPLEMENTED();
+  return nullptr;
+#endif  // WITH_CUDA
 }
 
 }  // namespace embedding

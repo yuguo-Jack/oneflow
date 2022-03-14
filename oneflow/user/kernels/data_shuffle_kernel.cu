@@ -405,9 +405,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)   \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-#define IDX_DATA_TYPE_SEQ                           \
-  OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+#define IDX_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32)
 
 #define REGISTER_CUDA_ID_SHUFFLE_KERNEL(k_dtype_pair, column_dtype_pair, idx_dtype_pair)          \
   REGISTER_USER_KERNEL("id_shuffle")                                                              \
