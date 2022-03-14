@@ -153,7 +153,7 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
   }
-  ~EmbeddingPutKernelState() override {
+  ~EmbeddingPutKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
     OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
   }
