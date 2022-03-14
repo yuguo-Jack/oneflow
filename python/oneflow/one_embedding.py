@@ -67,7 +67,7 @@ class Embedding(Module):
         embedding_columns = {}
         embedding_options["name"] = name
         assert embedding_dim > 0
-        embedding_options["embedding_dim"] = embedding_dim
+        self.embedding_dim = embedding_dim
         self.dtype = dtype
         self.key_type = key_type
 
@@ -181,6 +181,7 @@ class Embedding(Module):
             ids,
             column_ids,
             self.dtype,
+            self.embedding_dim,
             self.embedding_columns,
             self.embedding_options,
         )

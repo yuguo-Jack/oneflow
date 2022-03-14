@@ -58,7 +58,6 @@ struct ColumnsParam {
   EmbeddingColumn columns[kMaxColumns];
 };
 
-
 void ParseColumnFromJson(const nlohmann::json& initializer, EmbeddingColumn* embedding_column) {
   CHECK(initializer.contains("type"));
   CHECK(initializer["type"].is_string());

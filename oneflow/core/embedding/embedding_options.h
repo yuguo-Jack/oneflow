@@ -32,7 +32,6 @@ class EmbeddingOptions final {
       return val;
     };
     name_ = GetValue(json_object, "name");
-    embedding_dim_ = GetValue(json_object, "embedding_dim");
     const int64_t storage_dim = GetValue(json_object, "storage_dim");
     line_size_ = storage_dim;
     auto kv_store = GetValue(json_object, "kv_store");
@@ -64,7 +63,6 @@ class EmbeddingOptions final {
   ~EmbeddingOptions() = default;
 
   std::string Name() const { return name_; }
-  int64_t EmbeddingSize() const { return embedding_dim_; }
   int64_t LineSize() const { return line_size_; }
   std::string L1CachePolicy() const { return l1_cache_policy_; }
   int64_t L1CacheMemoryBudgetMb() const { return l1_cache_memory_budget_mb_; }
@@ -77,7 +75,6 @@ class EmbeddingOptions final {
 
  private:
   std::string name_;
-  int64_t embedding_dim_;
   int64_t line_size_;
   std::string l1_cache_policy_;
   int64_t l1_cache_memory_budget_mb_;

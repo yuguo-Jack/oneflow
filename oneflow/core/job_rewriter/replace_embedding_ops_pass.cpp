@@ -570,6 +570,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     const LogicalBlobId& lbi = GenLogicalBlobId(embedding_op.input("shadow", 0));
     const std::string& shadow_op_name = lbi.op_name();
     embedding::EmbeddingOptions options(embedding_op.attr<std::string>("embedding_options"));
+    const int64_t embedding_size = embedding_op.attr<int64_t>("embedding_size");
     const int64_t parallel_num = op_node->parallel_desc().parallel_num();
     std::vector<OperatorConf> add_ops;
     std::vector<std::string> delete_op_names;
@@ -590,10 +591,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     bool has_embedding_prefetch = (options.L1CachePolicy() != "full") ? true : false;
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
-    BuildEmbeddingLookup(ctx, job_builder, options.EmbeddingSize(), options.LineSize(),
-                         options.Name(), has_embedding_prefetch,
-                         op_node->parallel_desc().parallel_conf(), embedding_op, num_unique_ids_lbn,
-                         unique_ids_lbn, unique_columns_lbn, &embedding_lbn, &unique_values_lbn);
+    BuildEmbeddingLookup(ctx, job_builder, embedding_size, options.LineSize(), options.Name(),
+                         has_embedding_prefetch, op_node->parallel_desc().parallel_conf(),
+                         embedding_op, num_unique_ids_lbn, unique_ids_lbn, unique_columns_lbn,
+                         &embedding_lbn, &unique_values_lbn);
 
     if (false && parallel_num == 1) {
       user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name() + "_gather");
@@ -660,8 +661,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                           "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
         BuildEmbeddingUpdate(ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(),
-                             options.EmbeddingSize(), options.Name(), embedding_optimizer_conf,
-                             embedding_op, num_unique_ids_lbn, unique_ids_lbn, unique_values_lbn,
+                             embedding_size, options.Name(), embedding_optimizer_conf, embedding_op,
+                             num_unique_ids_lbn, unique_ids_lbn, unique_values_lbn,
                              embedding_grad_lbn, learning_rate_lbn);
       }
     }

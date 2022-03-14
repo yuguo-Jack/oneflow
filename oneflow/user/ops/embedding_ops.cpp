@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
-#include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {
 
@@ -27,8 +26,7 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(ids_shape, column_ids_shape);
   }
   DimVector out_dim_vec = ids_shape.dim_vec();
-  embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
-  const int64_t embedding_size = options.EmbeddingSize();
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
