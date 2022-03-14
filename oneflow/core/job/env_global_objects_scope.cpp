@@ -253,7 +253,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
-  Global<embedding::EmbeddingManager>::Delete();
   Global<ThreadPool>::Delete();
   Global<ep::DeviceManagerRegistry>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
@@ -264,6 +263,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();
+  Global<embedding::EmbeddingManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
   ClearAllSymbolAndIdCache();

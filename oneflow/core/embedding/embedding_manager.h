@@ -28,22 +28,20 @@ namespace embedding {
 class EmbeddingManager final {
  public:
   EmbeddingManager() = default;
-  ~EmbeddingManager();
+  ~EmbeddingManager() = default;
 
   void SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
                     const std::string& snapshot_name);
   void LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
                     const std::string& snapshot_name);
 
-  embedding::KeyValueStore* GetKeyValueStore(const std::string& embedding_name,
-                                             int64_t parallel_id);
+  KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t parallel_id);
 
-  void CreateKeyValueStore(const embedding::KeyValueStoreOptions& options, int64_t parallel_id,
+  void CreateKeyValueStore(const KeyValueStoreOptions& options, int64_t parallel_id,
                            int64_t parallel_num);
 
  private:
-  HashMap<std::pair<std::string, int64_t>, std::unique_ptr<embedding::KeyValueStore>>
-      key_value_store_map_;
+  HashMap<std::pair<std::string, int64_t>, std::unique_ptr<KeyValueStore>> key_value_store_map_;
   std::mutex mutex_;
 };
 

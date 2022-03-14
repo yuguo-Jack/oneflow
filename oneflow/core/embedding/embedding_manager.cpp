@@ -22,10 +22,6 @@ namespace oneflow {
 
 namespace embedding {
 
-EmbeddingManager::~EmbeddingManager() {
-  for (auto& pair : key_value_store_map_) { pair.second->SaveSnapshot("index"); }
-}
-
 KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
                                                   int64_t parallel_id) {
   OF_CUDA_CHECK(cudaSetDevice(parallel_id));
@@ -70,11 +66,9 @@ void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t p
   std::unique_lock<std::mutex> lock(mutex_);
 
   auto it = key_value_store_map_.find(map_key);
-  if (it != key_value_store_map_.end()) {
-    it->second->SaveSnapshot(snapshot_name);
-  } else {
-    LOG(ERROR) << "Can not find embedding: " << embedding_name << "-" << parallel_id;
-  }
+  CHECK(it != key_value_store_map_.end())
+      << "Can not find embedding: " << embedding_name << "-" << parallel_id;
+  it->second->SaveSnapshot(snapshot_name);
 }
 
 void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
@@ -82,15 +76,13 @@ void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t p
   OF_CUDA_CHECK(cudaSetDevice(parallel_id));
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
   auto it = key_value_store_map_.find(map_key);
-  if (it != key_value_store_map_.end()) {
-    if (it->second->SnapshotExists(snapshot_name)) {
-      it->second->LoadSnapshot(snapshot_name);
-    } else {
-      LOG(ERROR) << "Here Exists Embedding name is: " << embedding_name << "-" << parallel_id
-                 << " but no corresponding snapshot. ";
-    }
+  CHECK(it != key_value_store_map_.end())
+      << "Can not find embedding: " << embedding_name << "-" << parallel_id;
+  if (it->second->SnapshotExists(snapshot_name)) {
+    it->second->LoadSnapshot(snapshot_name);
   } else {
-    LOG(ERROR) << "Can not find the embedding: " << embedding_name << "-" << parallel_id;
+    LOG(ERROR) << "Here Exists Embedding name is: " << embedding_name << "-" << parallel_id
+               << " but no corresponding snapshot. ";
   }
 }
 
