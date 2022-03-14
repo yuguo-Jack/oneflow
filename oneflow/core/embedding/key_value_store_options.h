@@ -24,16 +24,16 @@ namespace embedding {
 
 namespace {
 
-void ParseCacheOptions(const nlohmann::json& cache_obj, embedding::CacheOptions* cache_options) {
+void ParseCacheOptions(const nlohmann::json& cache_obj, CacheOptions* cache_options) {
   CHECK_GT(cache_options->key_size, 0);
   CHECK_GT(cache_options->value_size, 0);
   CHECK(cache_obj.contains("policy"));
   CHECK(cache_obj["policy"].is_string());
   std::string policy = cache_obj["policy"].get<std::string>();
   if (policy == "lru") {
-    cache_options->policy = embedding::CacheOptions::Policy::kLRU;
+    cache_options->policy = CacheOptions::Policy::kLRU;
   } else if (policy == "full") {
-    cache_options->policy = embedding::CacheOptions::Policy::kFull;
+    cache_options->policy = CacheOptions::Policy::kFull;
   } else {
     UNIMPLEMENTED();
   }
@@ -45,9 +45,9 @@ void ParseCacheOptions(const nlohmann::json& cache_obj, embedding::CacheOptions*
   CHECK(cache_obj["value_memory_kind"].is_string());
   std::string value_memory_kind = cache_obj["value_memory_kind"].get<std::string>();
   if (value_memory_kind == "device") {
-    cache_options->value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
+    cache_options->value_memory_kind = CacheOptions::MemoryKind::kDevice;
   } else if (value_memory_kind == "host") {
-    cache_options->value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
+    cache_options->value_memory_kind = CacheOptions::MemoryKind::kHost;
   } else {
     UNIMPLEMENTED();
   }
