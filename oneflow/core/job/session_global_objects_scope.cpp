@@ -136,7 +136,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<RuntimeJobDescs>::New();
     Global<summary::EventsWriter>::New();
     Global<boxing::collective::Scheduler>::New();
-    Global<EmbeddingManager>::New();
+    Global<embedding::EmbeddingManager>::New();
   }
 
   return Maybe<void>::Ok();
@@ -154,7 +154,7 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
-    Global<EmbeddingManager>::Delete();
+    Global<embedding::EmbeddingManager>::Delete();
     Global<boxing::collective::Scheduler>::Delete();
     Global<summary::EventsWriter>::Delete();
     Global<RuntimeJobDescs>::Delete();

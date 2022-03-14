@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace embedding {}  // namespace embedding
+namespace embedding {
 
 class EmbeddingManager final {
  public:
@@ -47,6 +47,7 @@ class EmbeddingManager final {
   std::mutex mutex_;
 };
 
+}  // namespace embedding
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EMBEDDING_EMBEDDING_MANAGER_H_

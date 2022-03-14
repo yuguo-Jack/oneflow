@@ -113,7 +113,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     EmbeddingColumns embedding_columns(ctx->Attr<std::string>("embedding_columns"));
-    key_value_store_ = Global<EmbeddingManager>::Get()->GetKeyValueStore(
+    key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
@@ -147,13 +147,13 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
   explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) : device_index_(-1) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    key_value_store_ = Global<EmbeddingManager>::Get()->GetKeyValueStore(
+    key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
   }
-  ~EmbeddingPutKernelState() {
+  ~EmbeddingPutKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
     OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
   }

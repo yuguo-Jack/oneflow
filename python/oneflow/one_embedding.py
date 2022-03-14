@@ -71,6 +71,17 @@ class Embedding(Module):
         self.dtype = dtype
         self.key_type = key_type
 
+        key_type_size = np.dtype(
+            flow.convert_oneflow_dtype_to_numpy_dtype(key_type)
+        ).itemsize
+        assert key_type_size > 0
+        key_value_store_options["key_type_size"] = key_type_size
+        value_type_size = np.dtype(
+            flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+        ).itemsize
+        assert value_type_size > 0
+        key_value_store_options["value_type_size"] = value_type_size
+
         scale_factor = store_options["size_factor"]
         key_value_store_options["storage_dim"] = scale_factor * embedding_dim
 
@@ -95,12 +106,8 @@ class Embedding(Module):
         assert persistent_table.__contains__("path")
         persistent_table_path = persistent_table["path"]
         assert isinstance(persistent_table_path, (str, list, tuple))
-        if isinstance(persistent_table_path, str):
-            assert os.path.exists(persistent_table_path)
-        else:
+        if isinstance(persistent_table_path, (list, tuple)):
             assert len(persistent_table_path) == flow.env.get_world_size()
-            for i in range(len(persistent_table_path)):
-                assert os.path.exists(persistent_table_path[i])
         if persistent_table.__contains__("physical_block_size"):
             assert persistent_table["physical_block_size"] in [512, 4096]
         else:
@@ -119,7 +126,7 @@ class Embedding(Module):
             assert default_initializer is not None
             _check_initializer(default_initializer)
             embedding_columns["columns"] = [{"initializer": default_initializer}]
-
+        key_value_store_options["parallel_num"] = flow.env.get_world_size()
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_columns = json.dumps(embedding_columns)
         # TODO(zzk): Support placement configuration. Currently OneEmbedding is placed in all gpu.

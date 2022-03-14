@@ -60,39 +60,75 @@ class KeyValueStoreOptions final {
   OF_DISALLOW_COPY_AND_MOVE(KeyValueStoreOptions);
   KeyValueStoreOptions(std::string json_serialized) {
     auto json_object = nlohmann::json::parse(json_serialized);
-    auto GetValue = [](const nlohmann::json& obj, const std::string& attr) -> nlohmann::json {
-      nlohmann::json val = obj[attr];
-      if (val == nlohmann::detail::value_t::null) { UNIMPLEMENTED(); }
-      return val;
-    };
-    name_ = GetValue(json_object, "name");
-    const int64_t storage_dim = GetValue(json_object, "storage_dim");
-    line_size_ = storage_dim;
-    auto kv_store = GetValue(json_object, "kv_store");
+
+    CHECK(json_object.contains("key_type_size"));
+    CHECK(json_object["key_type_size"].is_number());
+    key_type_size_ = json_object["key_type_size"].get<int64_t>();
+
+    CHECK(json_object.contains("value_type_size"));
+    CHECK(json_object["value_type_size"].is_number());
+    value_type_size_ = json_object["value_type_size"].get<int64_t>();
+
+    CHECK(json_object.contains("parallel_num"));
+    CHECK(json_object["parallel_num"].is_number());
+    const int64_t parallel_num = json_object["parallel_num"].get<int64_t>();
+
+    CHECK(json_object.contains("name"));
+    CHECK(json_object["name"].is_string());
+    name_ = json_object["name"].get<std::string>();
+
+    CHECK(json_object.contains("storage_dim"));
+    CHECK(json_object["storage_dim"].is_number());
+    line_size_ = json_object["storage_dim"].get<int64_t>();
+
+    CHECK(json_object.contains("kv_store"));
+    auto kv_store = json_object["kv_store"];
+
     auto caches = kv_store["caches"];
     if (caches != nlohmann::detail::value_t::null && caches.size() > 0) {
       CHECK(caches.is_array());
       cache_options_.resize(caches.size());
       for (int i = 0; i < caches.size(); ++i) {
-        cache_options_.at(i).key_size = GetSizeOfDataType(DataType::kInt64);
-        cache_options_.at(i).value_size = GetSizeOfDataType(DataType::kFloat) * line_size_;
+        cache_options_.at(i).key_size = key_type_size_;
+        cache_options_.at(i).value_size = value_type_size_ * line_size_;
         ParseCacheOptions(caches.at(i), &cache_options_.at(i));
       }
     }
-    if (kv_store["persistent_table"] != nlohmann::detail::value_t::null) {
-      auto persistent_table = kv_store["persistent_table"];
-      persistent_table_path_ = GetValue(persistent_table, "path");
-      persistent_table_phisical_block_size_ = GetValue(persistent_table, "physical_block_size");
+
+    CHECK(kv_store.contains("persistent_table"));
+    auto persistent_table = kv_store["persistent_table"];
+    CHECK(persistent_table.contains("path"));
+    auto path = persistent_table["path"];
+    CHECK(path.is_array() || path.is_string());
+    if (path.is_array()) {
+      CHECK_EQ(path.size(), parallel_num);
+      for (int i = 0; i < path.size(); ++i) {
+        CHECK(path.at(i).is_string());
+        persistent_table_paths_.push_back(path.at(i).get<std::string>());
+      }
     } else {
-      UNIMPLEMENTED();
+      std::string root_path = path.get<std::string>();
+      const std::string& num_rank = std::to_string(parallel_num);
+      const int64_t rank_id_suffix_length = num_rank.size();
+      for (int i = 0; i < parallel_num; ++i) {
+        const std::string& rank_id = std::to_string(i);
+        const std::string rank_i_path = root_path + "/"
+                                        + std::string(rank_id_suffix_length - rank_id.size(), '0')
+                                        + rank_id + "-" + num_rank;
+        persistent_table_paths_.push_back(rank_i_path);
+      }
     }
+    CHECK(persistent_table.contains("physical_block_size"));
+    CHECK(persistent_table["physical_block_size"].is_number());
+    persistent_table_phisical_block_size_ = persistent_table["physical_block_size"].get<int64_t>();
   }
   ~KeyValueStoreOptions() = default;
-
+  int64_t KeyTypeSize() const { return key_type_size_; }
+  int64_t ValueTypeSize() const { return value_type_size_; }
   std::string Name() const { return name_; }
   int64_t LineSize() const { return line_size_; }
   std::vector<CacheOptions> GetCachesOptions() const { return cache_options_; }
-  std::string PersistentTablePath() const { return persistent_table_path_; }
+  std::vector<std::string> PersistentTablePaths() const { return persistent_table_paths_; }
   int64_t PersistentTablePhysicalBlockSize() const { return persistent_table_phisical_block_size_; }
   bool IsFullCache() const {
     if (cache_options_.size() > 0 && cache_options_.at(0).policy == CacheOptions::Policy::kFull) {
@@ -102,15 +138,11 @@ class KeyValueStoreOptions final {
   }
 
  private:
+  int64_t key_type_size_;
+  int64_t value_type_size_;
   std::string name_;
   int64_t line_size_;
-  std::string l1_cache_policy_;
-  int64_t l1_cache_memory_budget_mb_;
-  std::string l1_cache_value_memory_kind_;
-  std::string l2_cache_policy_;
-  int64_t l2_cache_memory_budget_mb_;
-  std::string l2_cache_value_memory_kind_;
-  std::string persistent_table_path_;
+  std::vector<std::string> persistent_table_paths_;
   int64_t persistent_table_phisical_block_size_;
   std::vector<CacheOptions> cache_options_;
 };
