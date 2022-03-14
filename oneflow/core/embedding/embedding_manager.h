@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 
 #include "oneflow/core/embedding/key_value_store.h"
-#include "oneflow/core/embedding/embedding_options.h"
+#include "oneflow/core/embedding/key_value_store_options.h"
 
 namespace oneflow {
 
@@ -38,7 +38,7 @@ class EmbeddingManager final {
   embedding::KeyValueStore* GetKeyValueStore(const std::string& embedding_name,
                                              int64_t parallel_id);
 
-  void CreateKeyValueStore(const embedding::EmbeddingOptions& options, int64_t parallel_id,
+  void CreateKeyValueStore(const embedding::KeyValueStoreOptions& options, int64_t parallel_id,
                            int64_t parallel_num);
 
  private:

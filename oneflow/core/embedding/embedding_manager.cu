@@ -35,16 +35,17 @@ embedding::KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& 
   return it->second.get();
 }
 
-void EmbeddingManager::CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_options,
-                                           int64_t parallel_id, int64_t parallel_num) {
+void EmbeddingManager::CreateKeyValueStore(
+    const embedding::KeyValueStoreOptions& key_value_store_options, int64_t parallel_id,
+    int64_t parallel_num) {
   OF_CUDA_CHECK(cudaSetDevice(parallel_id));
-  const std::string& name = embedding_options.Name();
-  const uint32_t line_size = embedding_options.LineSize();
+  const std::string& name = key_value_store_options.Name();
+  const uint32_t line_size = key_value_store_options.LineSize();
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
   std::unique_lock<std::mutex> lock(mutex_);
 
   std::unique_ptr<embedding::KeyValueStore> store;
-  const std::string& path = embedding_options.PersistentTablePath();
+  const std::string& path = key_value_store_options.PersistentTablePath();
   const std::string& num_rank = std::to_string(parallel_num);
   const int32_t rank_id_suffix_length = num_rank.size();
   const std::string& rank_id = std::to_string(parallel_id);
@@ -53,57 +54,16 @@ void EmbeddingManager::CreateKeyValueStore(const embedding::EmbeddingOptions& em
                                + rank_id + "-" + num_rank;
   options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
   options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
-  options.table_options.physical_block_size = embedding_options.PersistentTablePhysicalBlockSize();
+  options.table_options.physical_block_size =
+      key_value_store_options.PersistentTablePhysicalBlockSize();
   options.table_options.target_chunk_size_mb = 4 * 1024;
   store = NewPersistentTableKeyValueStore(options);
-  if (embedding_options.L2CachePolicy() != "none") {
-    embedding::CacheOptions cache_options{};
-    if (embedding_options.L2CacheValueMemoryKind() == "device") {
-      cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
-    } else if (embedding_options.L2CacheValueMemoryKind() == "host") {
-      cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
-    } else {
-      UNIMPLEMENTED();
-    }
-    if (embedding_options.L2CachePolicy() == "lru") {
-      cache_options.policy = embedding::CacheOptions::Policy::kLRU;
-    } else if (embedding_options.L2CachePolicy() == "full") {
-      cache_options.policy = embedding::CacheOptions::Policy::kFull;
-    } else {
-      UNIMPLEMENTED();
-    }
-    cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
-    cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
-    cache_options.capacity =
-        embedding_options.L2CacheMemoryBudgetMb() * 1024 * 1024 / cache_options.value_size;
-    std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options);
-    LOG(ERROR) << "add L2 cache: " << embedding_options.L2CachePolicy() << " "
-               << embedding_options.L2CacheMemoryBudgetMb();
-    store = NewCachedKeyValueStore(std::move(store), std::move(cache));
-  }
-  if (embedding_options.L1CachePolicy() != "none") {
-    embedding::CacheOptions cache_options{};
-    if (embedding_options.L1CacheValueMemoryKind() == "device") {
-      cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
-    } else if (embedding_options.L1CacheValueMemoryKind() == "host") {
-      cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
-    } else {
-      UNIMPLEMENTED();
-    }
-    if (embedding_options.L1CachePolicy() == "lru") {
-      cache_options.policy = embedding::CacheOptions::Policy::kLRU;
-    } else if (embedding_options.L1CachePolicy() == "full") {
-      cache_options.policy = embedding::CacheOptions::Policy::kFull;
-    } else {
-      UNIMPLEMENTED();
-    }
-    cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
-    cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
-    cache_options.capacity =
-        embedding_options.L1CacheMemoryBudgetMb() * 1024 * 1024 / cache_options.value_size;
-    std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options);
-    LOG(ERROR) << "add L1 cache: " << embedding_options.L1CachePolicy() << " "
-               << embedding_options.L1CacheMemoryBudgetMb();
+  const std::vector<embedding::CacheOptions> cache_options =
+      key_value_store_options.GetCachesOptions();
+  for (int i = 0; i < cache_options.size(); ++i) {
+    std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options.at(i));
+    LOG(ERROR) << "add cache: " << cache_options.at(i).policy << " "
+               << cache_options.at(i).capacity;
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
   key_value_store_map_.emplace(map_key, std::move(store));

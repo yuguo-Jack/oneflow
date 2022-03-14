@@ -28,7 +28,7 @@ namespace oneflow {
   *ctx->OutputShape("num_unique", 0) = Shape({1});
   *ctx->OutputShape("unique_keys", 0) = Shape({keys_shape.elem_cnt()});
   *ctx->OutputShape("unique_values", 0) = Shape({values_shape.elem_cnt()});
-  *ctx->OutputShape("reverse_index", 0) = keys_shape;
+  *ctx->OutputShape("inverse_indices", 0) = keys_shape;
   return Maybe<void>::Ok();
 }
 
@@ -44,12 +44,10 @@ namespace oneflow {
 /* static */ Maybe<void> UniqueKeyValuePairOp::InferDataType(user_op::InferContext* ctx) {
   const DataType key_dtype = ctx->InputDType("keys", 0);
   const DataType values_dtype = ctx->InputDType("values", 0);
-  CHECK_EQ_OR_RETURN(values_dtype, DataType::kInt32);
-  CHECK_OR_RETURN((key_dtype == DataType::kInt64) || (key_dtype == DataType::kInt32));
   *ctx->OutputDType("num_unique", 0) = DataType::kInt32;
   *ctx->OutputDType("unique_keys", 0) = key_dtype;
   *ctx->OutputDType("unique_values", 0) = values_dtype;
-  *ctx->OutputDType("reverse_index", 0) = DataType::kInt32;
+  *ctx->OutputDType("inverse_indices", 0) = DataType::kInt32;
   return Maybe<void>::Ok();
 }
 

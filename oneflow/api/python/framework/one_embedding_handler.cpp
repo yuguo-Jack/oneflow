@@ -23,12 +23,13 @@ namespace oneflow {
 
 class OneEmbeddingHandler final {
  public:
-  OneEmbeddingHandler(const std::string& embedding_option_string, int64_t rank_id,
+  OneEmbeddingHandler(const std::string& key_value_store_option_string, int64_t rank_id,
                       int64_t world_size)
       : rank_id_(rank_id), world_size_(world_size) {
-    embedding_option_.reset(new embedding::EmbeddingOptions(embedding_option_string));
-    embedding_name_ = embedding_option_->Name();
-    CreateKeyValueStore(*embedding_option_, rank_id_, world_size_);
+    key_value_store_option_.reset(
+        new embedding::KeyValueStoreOptions(key_value_store_option_string));
+    embedding_name_ = key_value_store_option_->Name();
+    CreateKeyValueStore(*key_value_store_option_, rank_id_, world_size_);
   }
 
   void LoadSnapshot(const std::string& snapshot_name) {
@@ -39,23 +40,25 @@ class OneEmbeddingHandler final {
     Global<EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, rank_id_, snapshot_name);
   }
 
-  void CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_option, int64_t num_rank,
-                           int64_t world_size) {
-    Global<EmbeddingManager>::Get()->CreateKeyValueStore(embedding_option, rank_id_, world_size_);
+  void CreateKeyValueStore(const embedding::KeyValueStoreOptions& key_value_store_options,
+                           int64_t num_rank, int64_t world_size) {
+    Global<EmbeddingManager>::Get()->CreateKeyValueStore(key_value_store_options, rank_id_,
+                                                         world_size_);
   }
 
  private:
   std::string embedding_name_;
-  std::unique_ptr<embedding::EmbeddingOptions> embedding_option_;
+  std::unique_ptr<embedding::KeyValueStoreOptions> key_value_store_option_;
   int64_t rank_id_;
   int64_t world_size_;
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OneEmbeddingHandler, std::shared_ptr<OneEmbeddingHandler>>(m, "OneEmbeddingHandler")
-      .def(py::init([](const std::string& embedding_option_str, const int64_t rank_id,
+      .def(py::init([](const std::string& key_value_store_option_str, const int64_t rank_id,
                        const int64_t world_size) {
-        return std::make_shared<OneEmbeddingHandler>(embedding_option_str, rank_id, world_size);
+        return std::make_shared<OneEmbeddingHandler>(key_value_store_option_str, rank_id,
+                                                     world_size);
       }))
       .def("SaveSnapshot", &OneEmbeddingHandler::SaveSnapshot)
       .def("LoadSnapshot", &OneEmbeddingHandler::LoadSnapshot)

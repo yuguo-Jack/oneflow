@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/cuda/atomic.cuh"
-#include "oneflow/core/embedding/embedding_options.h"
+#include "oneflow/core/embedding/key_value_store_options.h"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
 

@@ -63,16 +63,16 @@ class Embedding(Module):
         default_initializer={"type": "normal", "mean": 0, "std": 0.05},
     ):
         super().__init__()
-        embedding_options = {}
+        key_value_store_options = {}
         embedding_columns = {}
-        embedding_options["name"] = name
+        key_value_store_options["name"] = name
         assert embedding_dim > 0
         self.embedding_dim = embedding_dim
         self.dtype = dtype
         self.key_type = key_type
 
         scale_factor = store_options["size_factor"]
-        embedding_options["storage_dim"] = scale_factor * embedding_dim
+        key_value_store_options["storage_dim"] = scale_factor * embedding_dim
 
         # kv store
         assert store_options.__contains__("kv_store")
@@ -105,7 +105,7 @@ class Embedding(Module):
             assert persistent_table["physical_block_size"] in [512, 4096]
         else:
             persistent_table["physical_block_size"] = 4096
-        embedding_options["kv_store"] = kv_store
+        key_value_store_options["kv_store"] = kv_store
 
         # initializer
         if columns is not None:
@@ -120,13 +120,13 @@ class Embedding(Module):
             _check_initializer(default_initializer)
             embedding_columns["columns"] = [{"initializer": default_initializer}]
 
-        self.embedding_options = json.dumps(embedding_options)
+        self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_columns = json.dumps(embedding_columns)
         # TODO(zzk): Support placement configuration. Currently OneEmbedding is placed in all gpu.
         self.parallel_id = flow.env.get_rank()
         self.parallel_num = flow.env.get_world_size()
         self.handler = OneEmbeddingHandler(
-            self.embedding_options, self.parallel_id, self.parallel_num
+            self.key_value_store_options, self.parallel_id, self.parallel_num
         )
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
 
@@ -183,16 +183,16 @@ class Embedding(Module):
             self.dtype,
             self.embedding_dim,
             self.embedding_columns,
-            self.embedding_options,
+            self.key_value_store_options,
         )
 
 
-def make_device_mem_store_option(
+def make_device_mem_store_options(
     device_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
     assert device_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
-    option = {
+    options = {
         "kv_store": {
             "caches": [
                 {
@@ -208,15 +208,15 @@ def make_device_mem_store_option(
         },
         "size_factor": size_factor,
     }
-    return option
+    return options
 
 
-def make_host_mem_store_option(
+def make_host_mem_store_options(
     host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
     assert host_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
-    option = {
+    options = {
         "kv_store": {
             "caches": [
                 {
@@ -232,15 +232,15 @@ def make_host_mem_store_option(
         },
         "size_factor": size_factor,
     }
-    return option
+    return options
 
 
-def make_device_mem_cached_ssd_store_option(
+def make_device_mem_cached_ssd_store_options(
     device_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
     assert device_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
-    option = {
+    options = {
         "kv_store": {
             "caches": [
                 {
@@ -256,10 +256,10 @@ def make_device_mem_cached_ssd_store_option(
         },
         "size_factor": size_factor,
     }
-    return option
+    return options
 
 
-def make_host_mem_cached_ssd_store_option(
+def make_host_mem_cached_ssd_store_options(
     host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
     assert host_memory_mb > 0
@@ -280,10 +280,10 @@ def make_host_mem_cached_ssd_store_option(
         },
         "size_factor": size_factor,
     }
-    return option
+    return options
 
 
-def make_device_mem_cached_host_store_option(
+def make_device_mem_cached_host_store_options(
     device_memory_mb,
     host_memory_mb,
     persistent_path,

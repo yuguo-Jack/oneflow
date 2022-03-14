@@ -13,18 +13,52 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_EMBEDDING_OPTIONS_H_
-#define ONEFLOW_EMBEDDING_EMBEDDING_OPTIONS_H_
+#ifndef ONEFLOW_EMBEDDING_KEY_VALUE_STORE_OPTIONS_H_
+#define ONEFLOW_EMBEDDING_KEY_VALUE_STORE_OPTIONS_H_
 #include "nlohmann/json.hpp"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/embedding/cache.h"
 
 namespace oneflow {
 namespace embedding {
 
-class EmbeddingOptions final {
+namespace {
+
+void ParseCacheOptions(const nlohmann::json& cache_obj, embedding::CacheOptions* cache_options) {
+  CHECK_GT(cache_options->key_size, 0);
+  CHECK_GT(cache_options->value_size, 0);
+  CHECK(cache_obj.contains("policy"));
+  CHECK(cache_obj["policy"].is_string());
+  std::string policy = cache_obj["policy"].get<std::string>();
+  if (policy == "lru") {
+    cache_options->policy = embedding::CacheOptions::Policy::kLRU;
+  } else if (policy == "full") {
+    cache_options->policy = embedding::CacheOptions::Policy::kFull;
+  } else {
+    UNIMPLEMENTED();
+  }
+  CHECK(cache_obj.contains("cache_memory_budget_mb"));
+  CHECK(cache_obj["cache_memory_budget_mb"].is_number());
+  cache_options->capacity =
+      cache_obj["cache_memory_budget_mb"].get<int64_t>() * 1024 * 1024 / cache_options->value_size;
+  CHECK(cache_obj.contains("value_memory_kind"));
+  CHECK(cache_obj["value_memory_kind"].is_string());
+  std::string value_memory_kind = cache_obj["value_memory_kind"].get<std::string>();
+  if (value_memory_kind == "device") {
+    cache_options->value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
+  } else if (value_memory_kind == "host") {
+    cache_options->value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
+class KeyValueStoreOptions final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EmbeddingOptions);
-  EmbeddingOptions(std::string json_serialized) {
+  OF_DISALLOW_COPY_AND_MOVE(KeyValueStoreOptions);
+  KeyValueStoreOptions(std::string json_serialized) {
     auto json_object = nlohmann::json::parse(json_serialized);
     auto GetValue = [](const nlohmann::json& obj, const std::string& attr) -> nlohmann::json {
       nlohmann::json val = obj[attr];
@@ -38,19 +72,12 @@ class EmbeddingOptions final {
     auto caches = kv_store["caches"];
     if (caches != nlohmann::detail::value_t::null && caches.size() > 0) {
       CHECK(caches.is_array());
-      l1_cache_policy_ = GetValue(caches.at(0), "policy");
-      l1_cache_memory_budget_mb_ = GetValue(caches.at(0), "cache_memory_budget_mb");
-      l1_cache_value_memory_kind_ = GetValue(caches.at(0), "value_memory_kind");
-      if (caches.size() > 1) {
-        l2_cache_policy_ = GetValue(caches.at(1), "policy");
-        l2_cache_memory_budget_mb_ = GetValue(caches.at(1), "cache_memory_budget_mb");
-        l2_cache_value_memory_kind_ = GetValue(caches.at(1), "value_memory_kind");
-      } else {
-        l2_cache_policy_ = "none";
+      cache_options_.resize(caches.size());
+      for (int i = 0; i < caches.size(); ++i) {
+        cache_options_.at(i).key_size = GetSizeOfDataType(DataType::kInt64);
+        cache_options_.at(i).value_size = GetSizeOfDataType(DataType::kFloat) * line_size_;
+        ParseCacheOptions(caches.at(i), &cache_options_.at(i));
       }
-    } else {
-      l1_cache_policy_ = "none";
-      l2_cache_policy_ = "none";
     }
     if (kv_store["persistent_table"] != nlohmann::detail::value_t::null) {
       auto persistent_table = kv_store["persistent_table"];
@@ -60,18 +87,19 @@ class EmbeddingOptions final {
       UNIMPLEMENTED();
     }
   }
-  ~EmbeddingOptions() = default;
+  ~KeyValueStoreOptions() = default;
 
   std::string Name() const { return name_; }
   int64_t LineSize() const { return line_size_; }
-  std::string L1CachePolicy() const { return l1_cache_policy_; }
-  int64_t L1CacheMemoryBudgetMb() const { return l1_cache_memory_budget_mb_; }
-  std::string L1CacheValueMemoryKind() const { return l1_cache_value_memory_kind_; }
-  std::string L2CachePolicy() const { return l2_cache_policy_; }
-  int64_t L2CacheMemoryBudgetMb() const { return l2_cache_memory_budget_mb_; }
-  std::string L2CacheValueMemoryKind() const { return l2_cache_value_memory_kind_; }
+  std::vector<CacheOptions> GetCachesOptions() const { return cache_options_; }
   std::string PersistentTablePath() const { return persistent_table_path_; }
   int64_t PersistentTablePhysicalBlockSize() const { return persistent_table_phisical_block_size_; }
+  bool IsFullCache() const {
+    if (cache_options_.size() > 0 && cache_options_.at(0).policy == CacheOptions::Policy::kFull) {
+      return true;
+    }
+    return false;
+  }
 
  private:
   std::string name_;
@@ -84,8 +112,9 @@ class EmbeddingOptions final {
   std::string l2_cache_value_memory_kind_;
   std::string persistent_table_path_;
   int64_t persistent_table_phisical_block_size_;
+  std::vector<CacheOptions> cache_options_;
 };
 
 }  // namespace embedding
 }  // namespace oneflow
-#endif  // ONEFLOW_EMBEDDING_EMBEDDING_OPTIONS_H_
+#endif  // ONEFLOW_EMBEDDING_KEY_VALUE_STORE_OPTIONS_H_
