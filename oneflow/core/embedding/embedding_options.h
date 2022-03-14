@@ -21,36 +21,6 @@ limitations under the License.
 namespace oneflow {
 namespace embedding {
 
-enum class InitializerType {
-  kUniform,
-  kNormal,
-};
-
-struct EmbeddingInitializer {
-  InitializerType type;
-  union {
-    struct {
-      float low;
-      float high;
-    } uniform_param;
-    struct {
-      float mean;
-      float std;
-    } normal_param;
-  };
-};
-
-struct EmbeddingColumn {
-  EmbeddingInitializer initializer;
-};
-
-constexpr size_t kMaxColumns = 128;
-
-struct ColumnsParam {
-  int32_t num_columns = 0;
-  EmbeddingColumn columns[kMaxColumns];
-};
-
 class EmbeddingOptions final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EmbeddingOptions);
@@ -117,57 +87,6 @@ class EmbeddingOptions final {
   std::string l2_cache_value_memory_kind_;
   std::string persistent_table_path_;
   int64_t persistent_table_phisical_block_size_;
-};
-
-namespace {
-
-void ParseColumnFromJson(const nlohmann::json& initializer, EmbeddingColumn* embedding_column) {
-  CHECK(initializer.contains("type"));
-  CHECK(initializer["type"].is_string());
-  std::string type = initializer["type"].get<std::string>();
-  if (type == "uniform") {
-    embedding_column->initializer.type = InitializerType::kUniform;
-    CHECK(initializer.contains("low"));
-    CHECK(initializer.contains("high"));
-    CHECK(initializer["low"].is_number());
-    CHECK(initializer["high"].is_number());
-    embedding_column->initializer.uniform_param.low = initializer["low"];
-    embedding_column->initializer.uniform_param.high = initializer["high"];
-  } else if (type == "normal") {
-    CHECK(initializer.contains("mean"));
-    CHECK(initializer.contains("std"));
-    CHECK(initializer["mean"].is_number());
-    CHECK(initializer["std"].is_number());
-    embedding_column->initializer.type = InitializerType::kNormal;
-    embedding_column->initializer.normal_param.mean = initializer["mean"];
-    embedding_column->initializer.normal_param.std = initializer["std"];
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-}  // namespace
-
-class EmbeddingColumns {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EmbeddingColumns);
-  EmbeddingColumns(std::string json_serialized) {
-    auto json_object = nlohmann::json::parse(json_serialized);
-    CHECK(json_object.contains("columns"));
-    auto columns = json_object["columns"];
-    CHECK(columns.is_array());
-    CHECK_LE(columns.size(), kMaxColumns);
-    for (int32_t i = 0; i < columns.size(); ++i) {
-      auto column = columns.at(i);
-      CHECK(column.contains("initializer"));
-      ParseColumnFromJson(column["initializer"], &(param_.columns[i]));
-    }
-    param_.num_columns = columns.size();
-  }
-  ColumnsParam Columns() const { return param_; }
-
- private:
-  ColumnsParam param_;
 };
 
 }  // namespace embedding

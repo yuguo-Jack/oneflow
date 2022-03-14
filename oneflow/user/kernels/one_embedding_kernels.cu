@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/cuda/atomic.cuh"
-#include "oneflow/core/embedding/embedding_options.h"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
 
@@ -29,13 +28,91 @@ namespace oneflow {
 
 namespace {
 
+enum class InitializerType {
+  kUniform,
+  kNormal,
+};
+
+struct EmbeddingInitializer {
+  InitializerType type;
+  union {
+    struct {
+      float low;
+      float high;
+    } uniform_param;
+    struct {
+      float mean;
+      float std;
+    } normal_param;
+  };
+};
+
+struct EmbeddingColumn {
+  EmbeddingInitializer initializer;
+};
+
+constexpr size_t kMaxColumns = 128;
+
+struct ColumnsParam {
+  int32_t num_columns = 0;
+  EmbeddingColumn columns[kMaxColumns];
+};
+
+
+void ParseColumnFromJson(const nlohmann::json& initializer, EmbeddingColumn* embedding_column) {
+  CHECK(initializer.contains("type"));
+  CHECK(initializer["type"].is_string());
+  std::string type = initializer["type"].get<std::string>();
+  if (type == "uniform") {
+    embedding_column->initializer.type = InitializerType::kUniform;
+    CHECK(initializer.contains("low"));
+    CHECK(initializer.contains("high"));
+    CHECK(initializer["low"].is_number());
+    CHECK(initializer["high"].is_number());
+    embedding_column->initializer.uniform_param.low = initializer["low"];
+    embedding_column->initializer.uniform_param.high = initializer["high"];
+  } else if (type == "normal") {
+    CHECK(initializer.contains("mean"));
+    CHECK(initializer.contains("std"));
+    CHECK(initializer["mean"].is_number());
+    CHECK(initializer["std"].is_number());
+    embedding_column->initializer.type = InitializerType::kNormal;
+    embedding_column->initializer.normal_param.mean = initializer["mean"];
+    embedding_column->initializer.normal_param.std = initializer["std"];
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+class EmbeddingColumns {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EmbeddingColumns);
+  EmbeddingColumns(std::string json_serialized) {
+    auto json_object = nlohmann::json::parse(json_serialized);
+    CHECK(json_object.contains("columns"));
+    auto columns = json_object["columns"];
+    CHECK(columns.is_array());
+    CHECK_LE(columns.size(), kMaxColumns);
+    for (int32_t i = 0; i < columns.size(); ++i) {
+      auto column = columns.at(i);
+      CHECK(column.contains("initializer"));
+      ParseColumnFromJson(column["initializer"], &(param_.columns[i]));
+    }
+    param_.num_columns = columns.size();
+  }
+  ColumnsParam Columns() const { return param_; }
+
+ private:
+  ColumnsParam param_;
+};
+
 template<typename IDX>
 class EmbeddingKernelState final : public user_op::OpKernelState {
  public:
   explicit EmbeddingKernelState(user_op::KernelInitContext* ctx)
       : generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    embedding::EmbeddingColumns embedding_columns(ctx->Attr<std::string>("embedding_columns"));
+    EmbeddingColumns embedding_columns(ctx->Attr<std::string>("embedding_columns"));
     key_value_store_ = Global<EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
@@ -51,13 +128,13 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 
   one::Generator* generator() { return generator_.get(); }
 
-  embedding::ColumnsParam Columns() { return columns_param_; }
+  ColumnsParam Columns() { return columns_param_; }
 
  private:
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
   embedding::KeyValueStore* key_value_store_;
-  embedding::ColumnsParam columns_param_;
+  ColumnsParam columns_param_;
 };
 
 template<typename IDX>
@@ -120,7 +197,7 @@ class EmbeddingTmpBufferManager final {
 template<typename T, typename U>
 __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                 uint64_t inc_offset, const int32_t line_size,
-                                const int32_t embedding_size, embedding::ColumnsParam param,
+                                const int32_t embedding_size, ColumnsParam param,
                                 const U* column_ids, const uint32_t* num_missing_keys,
                                 const uint32_t* missing_indices, T* values) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -134,14 +211,14 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     const int64_t offset = index * line_size + col;
     const int32_t slot_idx = column_ids[index];
     assert(slot_idx < param.num_columns);
-    embedding::EmbeddingInitializer initializer = param.columns[slot_idx].initializer;
+    EmbeddingInitializer initializer = param.columns[slot_idx].initializer;
     T value = 0;
     if (col < embedding_size) {
-      if (initializer.type == embedding::InitializerType::kUniform) {
+      if (initializer.type == InitializerType::kUniform) {
         const float low = initializer.uniform_param.low;
         const float high = initializer.uniform_param.high;
         value = curand_uniform(&state) * (high - low) + low;
-      } else if (initializer.type == embedding::InitializerType::kNormal) {
+      } else if (initializer.type == InitializerType::kNormal) {
         const float mean = initializer.normal_param.mean;
         const float std = initializer.normal_param.std;
         value = (curand_normal(&state) + mean) / std;
@@ -175,7 +252,7 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
   uint64_t seed = cuda_generator->current_seed();
   one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
   embedding::KeyValueStore* store = kernel_state->KeyValueStore();
-  embedding::ColumnsParam param = kernel_state->Columns();
+  ColumnsParam param = kernel_state->Columns();
   bool need_value_buffer;
   if (values_ptr != nullptr) {
     need_value_buffer = false;
