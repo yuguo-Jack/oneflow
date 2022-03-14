@@ -143,7 +143,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
-  Global<EmbeddingMgr>::New();
+  Global<EmbeddingManager>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -253,7 +253,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
-  Global<EmbeddingMgr>::Delete();
+  Global<EmbeddingManager>::Delete();
   Global<ThreadPool>::Delete();
   Global<ep::DeviceManagerRegistry>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {

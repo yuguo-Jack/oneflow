@@ -36,7 +36,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
       : generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     embedding::EmbeddingColumns embedding_columns(ctx->Attr<std::string>("embedding_columns"));
-    key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
+    key_value_store_ = Global<EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
@@ -65,7 +65,7 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
  public:
   explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
+    key_value_store_ = Global<EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();

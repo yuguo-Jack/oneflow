@@ -22,12 +22,12 @@ namespace oneflow {
 
 namespace embedding {}  // namespace embedding
 
-EmbeddingMgr::~EmbeddingMgr() {
+EmbeddingManager::~EmbeddingManager() {
   for (auto& pair : key_value_store_map_) { pair.second->SaveSnapshot("index"); }
 }
 
-embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& embedding_name,
-                                                         int64_t parallel_id) {
+embedding::KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
+                                                             int64_t parallel_id) {
   OF_CUDA_CHECK(cudaSetDevice(parallel_id));
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
   std::unique_lock<std::mutex> lock(mutex_);
@@ -35,8 +35,8 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& embe
   return it->second.get();
 }
 
-void EmbeddingMgr::CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_options,
-                                       int64_t parallel_id, int64_t parallel_num) {
+void EmbeddingManager::CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_options,
+                                           int64_t parallel_id, int64_t parallel_num) {
   OF_CUDA_CHECK(cudaSetDevice(parallel_id));
   const std::string& name = embedding_options.Name();
   const uint32_t line_size = embedding_options.LineSize();
@@ -109,8 +109,8 @@ void EmbeddingMgr::CreateKeyValueStore(const embedding::EmbeddingOptions& embedd
   key_value_store_map_.emplace(map_key, std::move(store));
 }
 
-void EmbeddingMgr::SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
-                                const std::string& snapshot_name) {
+void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
+                                    const std::string& snapshot_name) {
   OF_CUDA_CHECK(cudaSetDevice(parallel_id));
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
   std::unique_lock<std::mutex> lock(mutex_);
@@ -123,8 +123,8 @@ void EmbeddingMgr::SaveSnapshot(const std::string& embedding_name, int64_t paral
   }
 }
 
-void EmbeddingMgr::LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
-                                const std::string& snapshot_name) {
+void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
+                                    const std::string& snapshot_name) {
   OF_CUDA_CHECK(cudaSetDevice(parallel_id));
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
   auto it = key_value_store_map_.find(map_key);

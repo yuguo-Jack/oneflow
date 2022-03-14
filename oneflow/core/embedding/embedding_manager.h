@@ -25,10 +25,10 @@ namespace oneflow {
 
 namespace embedding {}  // namespace embedding
 
-class EmbeddingMgr final {
+class EmbeddingManager final {
  public:
-  EmbeddingMgr() = default;
-  ~EmbeddingMgr();
+  EmbeddingManager() = default;
+  ~EmbeddingManager();
 
   void SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
                     const std::string& snapshot_name);

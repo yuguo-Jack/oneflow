@@ -32,16 +32,16 @@ class OneEmbeddingHandler final {
   }
 
   void LoadSnapshot(const std::string& snapshot_name) {
-    Global<EmbeddingMgr>::Get()->LoadSnapshot(embedding_name_, rank_id_, snapshot_name);
+    Global<EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, rank_id_, snapshot_name);
   }
 
   void SaveSnapshot(const std::string& snapshot_name) {
-    Global<EmbeddingMgr>::Get()->SaveSnapshot(embedding_name_, rank_id_, snapshot_name);
+    Global<EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, rank_id_, snapshot_name);
   }
 
   void CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_option, int64_t num_rank,
                            int64_t world_size) {
-    Global<EmbeddingMgr>::Get()->CreateKeyValueStore(embedding_option, rank_id_, world_size_);
+    Global<EmbeddingManager>::Get()->CreateKeyValueStore(embedding_option, rank_id_, world_size_);
   }
 
  private:
