@@ -347,19 +347,22 @@ void BuildIdShuffle(int64_t parallel_num, const user_op::UserOpConfWrapper& embe
                     std::string* num_unique_ids_lbn, std::string* unique_ids_lbn,
                     std::string* unique_columns_lbn, std::string* inverse_indices_lbn,
                     std::string* num_unique_matrix_lbn) {
+  const int32_t num_columns = embedding_op.attr<int32_t>("num_columns");
   if (parallel_num == 1) {
     user_op::UserOpConfWrapperBuilder unique_op_builder(embedding_op.op_name()
                                                         + "_unique_ids_and_columns");
-    user_op::UserOpConfWrapper unique_op =
-        unique_op_builder.OpTypeName("unique_key_value_pair")
-            .Input("keys", embedding_op.input("ids", 0))
-            .Input("values", embedding_op.input("column_ids", 0))
-            .Output("num_unique")
-            .Output("unique_keys")
-            .Output("unique_values")
-            .Output("inverse_indices")
-            .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
-            .Build();
+    unique_op_builder.OpTypeName("unique_key_value_pair")
+        .Input("keys", embedding_op.input("ids", 0))
+        .Output("num_unique")
+        .Output("unique_keys")
+        .Output("unique_values")
+        .Output("inverse_indices")
+        .Attr<int32_t>("num_columns", num_columns)
+        .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
+    if (embedding_op.has_input("column_ids", 0)) {
+      unique_op_builder.Input("values", embedding_op.input("column_ids", 0));
+    }
+    user_op::UserOpConfWrapper unique_op = unique_op_builder.Build();
     OperatorConf unique_new_op_conf = unique_op.op_conf();
     unique_new_op_conf.set_stream_name_hint("ID_SHUFFLE");
     add_ops->push_back(unique_new_op_conf);
@@ -369,18 +372,20 @@ void BuildIdShuffle(int64_t parallel_num, const user_op::UserOpConfWrapper& embe
     *inverse_indices_lbn = unique_op.output("inverse_indices", 0);
   } else {
     user_op::UserOpConfWrapperBuilder id_shuffle_op_builder(embedding_op.op_name() + "_id_shuffle");
-    user_op::UserOpConfWrapper id_shuffle_op =
-        id_shuffle_op_builder.OpTypeName("id_shuffle")
-            .Input("ids", embedding_op.input("ids", 0))
-            .Input("column_ids", embedding_op.input("column_ids", 0))
-            .Output("inverse_unique_partition_indices")
-            .Output("cur_rank_num_unique")
-            .Output("cur_rank_unique_ids")
-            .Output("cur_rank_unique_column_ids")
-            .Output("cur_rank_inverse_indices")
-            .Output("num_unique_matrix")
-            .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
-            .Build();
+    id_shuffle_op_builder.OpTypeName("id_shuffle")
+        .Input("ids", embedding_op.input("ids", 0))
+        .Output("inverse_unique_partition_indices")
+        .Output("cur_rank_num_unique")
+        .Output("cur_rank_unique_ids")
+        .Output("cur_rank_unique_column_ids")
+        .Output("cur_rank_inverse_indices")
+        .Output("num_unique_matrix")
+        .Attr<int32_t>("num_columns", num_columns)
+        .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
+    if (embedding_op.has_input("column_ids", 0)) {
+      id_shuffle_op_builder.Input("column_ids", embedding_op.input("column_ids", 0));
+    }
+    user_op::UserOpConfWrapper id_shuffle_op = id_shuffle_op_builder.Build();
     OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
     id_shuffle_new_op_conf.set_stream_name_hint("ID_SHUFFLE");
     add_ops->push_back(id_shuffle_new_op_conf);
