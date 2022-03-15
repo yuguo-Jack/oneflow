@@ -9313,7 +9313,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [AttrS
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F64Attr, "1.">:$scale
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
