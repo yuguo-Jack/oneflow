@@ -22,6 +22,8 @@ namespace oneflow {
 
 namespace embedding {
 
+#ifdef WITH_CUDA
+
 KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
                                                   int64_t parallel_id) {
   OF_CUDA_CHECK(cudaSetDevice(parallel_id));
@@ -51,7 +53,7 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
       key_value_store_options.PersistentTablePhysicalBlockSize();
   options.table_options.target_chunk_size_mb = 4 * 1024;
   store = NewPersistentTableKeyValueStore(options);
-  const std::vector<CacheOptions> cache_options = key_value_store_options.GetCachesOptions();
+  const std::vector<CacheOptions>& cache_options = key_value_store_options.GetCachesOptions();
   for (int i = 0; i < cache_options.size(); ++i) {
     std::unique_ptr<Cache> cache = NewCache(cache_options.at(i));
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
@@ -85,6 +87,8 @@ void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t p
                << " but no corresponding snapshot. ";
   }
 }
+
+#endif  // WITH_CUDA
 
 }  // namespace embedding
 
