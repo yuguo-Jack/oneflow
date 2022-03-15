@@ -516,9 +516,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
   }
   embedding_update_op_builder.Attr<double>("scale", scale);
   user_op::UserOpConfWrapper embedding_update_op =
-      embedding_update_op_builder.Attr<int64_t>("embedding_size", embedding_size)
-          .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
-          .Build();
+      embedding_update_op_builder.ScopeSymbolId(embedding_op.op_conf().scope_symbol_id()).Build();
   OperatorConf embedding_update_new_op_conf = embedding_update_op.op_conf();
   embedding_update_new_op_conf.set_stream_name_hint("EMBEDDING");
   job_builder->AddOps(parallel_conf, {embedding_update_new_op_conf});

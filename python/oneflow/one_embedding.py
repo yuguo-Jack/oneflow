@@ -183,7 +183,7 @@ class Embedding(Module):
 
     def forward(self, ids, column_ids):
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
-        return flow._C.embedding_lookup_placeholder(
+        return flow._C.one_embedding_lookup(
             self.shadow,
             ids,
             column_ids,

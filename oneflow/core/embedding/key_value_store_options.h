@@ -125,10 +125,10 @@ class KeyValueStoreOptions final {
   ~KeyValueStoreOptions() = default;
   int64_t KeyTypeSize() const { return key_type_size_; }
   int64_t ValueTypeSize() const { return value_type_size_; }
-  std::string Name() const { return name_; }
+  const std::string& Name() const { return name_; }
   int64_t LineSize() const { return line_size_; }
-  std::vector<CacheOptions> GetCachesOptions() const { return cache_options_; }
-  std::vector<std::string> PersistentTablePaths() const { return persistent_table_paths_; }
+  const std::vector<CacheOptions>& GetCachesOptions() const { return cache_options_; }
+  const std::vector<std::string>& PersistentTablePaths() const { return persistent_table_paths_; }
   int64_t PersistentTablePhysicalBlockSize() const { return persistent_table_phisical_block_size_; }
   bool IsFullCache() const {
     if (cache_options_.size() > 0 && cache_options_.at(0).policy == CacheOptions::Policy::kFull) {

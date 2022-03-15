@@ -9279,7 +9279,7 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_ids,
     OneFlow_Tensor:$column_ids,
-     Optional<OneFlow_Tensor>:$context
+    Optional<OneFlow_Tensor>:$context
   );
   let output = (outs
     OneFlow_Tensor:$unique_values,
@@ -9300,12 +9300,12 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
-    Optional<OneFlow_Tensor>:$learning_rate,
+    OneFlow_Tensor:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
   );
@@ -9313,8 +9313,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "1.">:$scale,
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+    DefaultValuedAttr<F64Attr, "1.">:$scale
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9323,12 +9322,12 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
-    Optional<OneFlow_Tensor>:$learning_rate,
+    OneFlow_Tensor:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
   );
@@ -9337,7 +9336,6 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$scale,
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<F32Attr, "0.9">:$beta
   );
   let same_output_regst_num = 1;
@@ -9347,12 +9345,12 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
-    Optional<OneFlow_Tensor>:$learning_rate,
+    OneFlow_Tensor:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if,
     Optional<OneFlow_Tensor>:$bias_correction1,
@@ -9362,7 +9360,6 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Dec
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.9">:$beta1,
     DefaultValuedAttr<F32Attr, "0.999">:$beta2,

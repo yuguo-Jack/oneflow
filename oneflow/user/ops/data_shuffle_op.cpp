@@ -44,10 +44,10 @@ namespace oneflow {
 /* static */ Maybe<void> UniqueKeyValuePairOp::InferDataType(user_op::InferContext* ctx) {
   const DataType key_dtype = ctx->InputDType("keys", 0);
   const DataType values_dtype = ctx->InputDType("values", 0);
-  *ctx->OutputDType("num_unique", 0) = DataType::kInt32;
+  *ctx->OutputDType("num_unique", 0) = DataType::kUInt32;
   *ctx->OutputDType("unique_keys", 0) = key_dtype;
   *ctx->OutputDType("unique_values", 0) = values_dtype;
-  *ctx->OutputDType("inverse_indices", 0) = DataType::kInt32;
+  *ctx->OutputDType("inverse_indices", 0) = DataType::kUInt32;
   return Maybe<void>::Ok();
 }
 
@@ -90,15 +90,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IdShuffleOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("num_unique_matrix", 0) = DataType::kInt32;
-  *ctx->OutputDType("inverse_unique_partition_indices", 0) = DataType::kInt32;
-  *ctx->OutputDType("cur_rank_num_unique", 0) = DataType::kInt32;
+  *ctx->OutputDType("num_unique_matrix", 0) = DataType::kUInt32;
+  *ctx->OutputDType("inverse_unique_partition_indices", 0) = DataType::kUInt32;
+  *ctx->OutputDType("cur_rank_num_unique", 0) = DataType::kUInt32;
   *ctx->OutputDType("cur_rank_unique_ids", 0) = ctx->InputDType("ids", 0);
-  *ctx->OutputDType("cur_rank_inverse_indices", 0) = DataType::kInt32;
+  *ctx->OutputDType("cur_rank_inverse_indices", 0) = DataType::kUInt32;
   if (ctx->has_input("column_ids", 0)) {
     *ctx->OutputDType("cur_rank_unique_column_ids", 0) = ctx->InputDType("column_ids", 0);
   } else {
-    *ctx->OutputDType("cur_rank_unique_column_ids", 0) = DataType::kInt32;
+    *ctx->OutputDType("cur_rank_unique_column_ids", 0) = DataType::kUInt32;
   }
   return Maybe<void>::Ok();
 }
@@ -136,9 +136,9 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingShuffleOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kInt32);
-  CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kInt32);
-  CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kInt32);
+  CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kUInt32);
+  CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kUInt32);
+  CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kUInt32);
   *ctx->OutputDType("embeddings", 0) = ctx->InputDType("cur_rank_embeddings", 0);
   return Maybe<void>::Ok();
 }
@@ -177,87 +177,10 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingGradientShuffleOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kInt32);
-  CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kInt32);
-  CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kInt32);
+  CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kUInt32);
+  CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kUInt32);
+  CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kUInt32);
   *ctx->OutputDType("cur_rank_unique_embedding_grad", 0) = ctx->InputDType("embedding_grad", 0);
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> SgdEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("updated_unique_embeddings", 0) = ctx->InputShape("unique_embeddings", 0);
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> SgdEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> SgdEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> SgdEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> MomentumEmbeddingUpdateOp::InferLogicalTensorDesc(
-    user_op::InferContext* ctx) {
-  *ctx->OutputShape("updated_unique_embeddings", 0) = ctx->InputShape("unique_embeddings", 0);
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> MomentumEmbeddingUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> MomentumEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> MomentumEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> AdamEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("updated_unique_embeddings", 0) = ctx->InputShape("unique_embeddings", 0);
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> AdamEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> AdamEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> AdamEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
   return Maybe<void>::Ok();
 }
 
