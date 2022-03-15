@@ -9306,7 +9306,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [AttrS
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
-    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
   );
   let output = (outs
@@ -9328,7 +9328,7 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
-    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
   );
   let output = (outs
@@ -9351,7 +9351,7 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Att
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
-    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if,
     Optional<OneFlow_Tensor>:$bias_correction1,
     Optional<OneFlow_Tensor>:$bias_correction2
