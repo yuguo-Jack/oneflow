@@ -14,17 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/embedding/key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/ep/include/primitive/memcpy.h"
-#include "oneflow/core/embedding/embedding_manager.h"
-#include "oneflow/core/common/str_util.h"
-#include "oneflow/user/kernels/random_mask_generator.h"
-#include "oneflow/core/framework/random_generator_impl.h"
-#include "oneflow/core/cuda/atomic.cuh"
-#include "oneflow/core/embedding/key_value_store_options.h"
-#include "oneflow/core/ep/include/primitive/copy_nd.h"
-#include "oneflow/core/ep/include/primitive/cast.h"
 
 namespace oneflow {
 
@@ -224,8 +214,9 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     MomentumUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            line_size, embedding_size, scale, beta, reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
-            scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
+            line_size, embedding_size, scale, beta,
+            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
+            skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
             updated_unique_embeddings->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -300,9 +291,10 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), beta1, beta2, epsilon,
-            bias_correction1_ptr, bias_correction2_ptr, reinterpret_cast<const IDX*>(num_unique_ids->dptr()),
-            learning_rate_ptr, scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
-            unique_embeddings->dptr<T>(), updated_unique_embeddings->mut_dptr<T>());
+            bias_correction1_ptr, bias_correction2_ptr,
+            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
+            skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
+            updated_unique_embeddings->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
