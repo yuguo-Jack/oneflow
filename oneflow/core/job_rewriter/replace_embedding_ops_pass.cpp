@@ -47,7 +47,7 @@ void DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
         CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     const LogicalBlobId count_not_finite_lbi =
         GenLogicalBlobId(dynamic_loss_scale_state.count_not_finite_lbn());
-    const OpNode* op_node = op_graph.OpNode4OpName(count_not_finite_lbi.op_name());  // identity
+    const OpNode* op_node = op_graph.OpNode4OpName(count_not_finite_lbi.op_name());
     if (op_node->op().op_conf().has_user_conf()
         && op_node->op().op_conf().user_conf().op_type_name() == "identity") {
       const user_op::UserOpConfWrapper identity_op_conf(op_node->op().op_conf());
@@ -103,7 +103,7 @@ std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   const class oneflow::OpNode* op_node =
       op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
-  CHECK_OR_RETURN(op_node != nullptr) << "op node not found in op graph, op name: " << op_name;
+  CHECK(op_node != nullptr) << "op node not found in op graph, op name: " << op_name;
   const ParallelConf& parallel_conf = op_node->parallel_desc().parallel_conf();
   OperatorConf schedule_op_conf{};
   schedule_op_conf.set_name(op_name);
@@ -607,7 +607,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
           }
           if (found_embedding_optimizer == true) { break; }
         }
-        CHECK_EQ(found_embedding_optimizer, true);
+        CHECK_EQ_OR_RETURN(found_embedding_optimizer, true);
         const std::string& learning_rate_lbn =
             AddScheduleOp(op_graph, job_builder, embedding_optimizer_conf,
                           "System-Train-LearningRate-Scheduler_" + NewUniqueId());
