@@ -29,7 +29,7 @@ path1 = tempfile.TemporaryDirectory(dir="./").name
 path2 = tempfile.TemporaryDirectory(dir="./").name
 
 
-def _test_one_embedding(test_case, has_column_id, num_columns):
+def _test_one_embedding(test_case, has_column_id, num_columns, use_fp16):
     placement = flow.placement(type="cuda", ranks=list(range(2)))
     batch_size = 4
     embedding_size = 2
@@ -95,6 +95,15 @@ def _test_one_embedding(test_case, has_column_id, num_columns):
     class TrainGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
+            if use_fp16:
+                self.config.enable_amp(True)
+                grad_scaler = flow.amp.GradScaler(
+                    init_scale=1073741824,
+                    growth_factor=2.0,
+                    backoff_factor=0.5,
+                    growth_interval=2000,
+                )
+                self.set_grad_scaler(grad_scaler)
             self.dense = MatMul(embedding_size * num_columns, 1)
             self.embedding_lookup1 = OneEmbedding("emb1", path1)
             self.embedding_lookup2 = OneEmbedding("emb2", path2)
@@ -129,10 +138,19 @@ def _test_one_embedding(test_case, has_column_id, num_columns):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class OneEmbeddingTestCase(flow.unittest.TestCase):
-    def test_one_embedding(test_case):
+    # def test_one_embedding1(test_case):
+    #    arg_dict = OrderedDict()
+    #    arg_dict["has_column_id"] = [True, False]
+    #    arg_dict["num_columns"] = [1, 2]
+    #    arg_dict["use_fp16"] = [False]
+    #    for kwargs in GenArgDict(arg_dict):
+    #        _test_one_embedding(test_case, **kwargs)
+
+    def test_one_embedding2(test_case):
         arg_dict = OrderedDict()
-        arg_dict["has_column_id"] = [True, False]
-        arg_dict["num_columns"] = [1, 2]
+        arg_dict["has_column_id"] = [True]
+        arg_dict["num_columns"] = [26]
+        arg_dict["use_fp16"] = [True]
         for kwargs in GenArgDict(arg_dict):
             _test_one_embedding(test_case, **kwargs)
 
