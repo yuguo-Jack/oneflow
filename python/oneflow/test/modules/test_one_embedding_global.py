@@ -24,6 +24,12 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+if flow.env.get_rank() == 0:
+    if os.path.exists("./test1"):
+        os.system("rm -rf ./test1")
+    if os.path.exists("./test2"):
+        os.system("rm -rf ./test2")
+
 
 def _test_one_embedding(test_case, has_column_id, num_columns):
     placement = flow.placement(type="cuda", ranks=list(range(2)))
@@ -55,7 +61,7 @@ def _test_one_embedding(test_case, has_column_id, num_columns):
             return out
 
     class OneEmbedding(nn.Module):
-        def __init__(self):
+        def __init__(self, name, path):
             super().__init__()
             column_size_array = [np.random.randint(100, 1000)] * num_columns
             scales = np.sqrt(1 / np.array(column_size_array))
@@ -71,10 +77,10 @@ def _test_one_embedding(test_case, has_column_id, num_columns):
                     }
                 )
             store_options = flow.one_embedding.make_device_mem_cached_ssd_store_options(
-                device_memory_mb=8, persistent_path="test/", size_factor=1,
+                device_memory_mb=16, persistent_path=path, size_factor=1,
             )
             self.embedding = flow.one_embedding.Embedding(
-                "my_embedding",
+                name,
                 embedding_size,
                 flow.float,
                 flow.int64,
@@ -92,16 +98,26 @@ def _test_one_embedding(test_case, has_column_id, num_columns):
         def __init__(self,):
             super().__init__()
             self.dense = MatMul(embedding_size * num_columns, 1)
-            self.embedding_lookup = OneEmbedding()
+            self.embedding_lookup1 = OneEmbedding("emb1", "test1")
+            self.embedding_lookup2 = OneEmbedding("emb2", "test2")
             self.add_optimizer(
                 flow.optim.SGD(self.dense.parameters(), lr=0.1, momentum=0.0)
             )
             self.add_optimizer(
-                flow.optim.SGD(self.embedding_lookup.parameters(), lr=0.1, momentum=0.0)
+                flow.optim.SGD(
+                    self.embedding_lookup1.parameters(), lr=0.1, momentum=0.0
+                )
+            )
+            self.add_optimizer(
+                flow.optim.SGD(
+                    self.embedding_lookup2.parameters(), lr=0.1, momentum=0.0
+                )
             )
 
         def build(self, ids, column_ids):
-            embedding = self.embedding_lookup.forward(ids, column_ids)
+            embedding1 = self.embedding_lookup1.forward(ids, column_ids)
+            embedding2 = self.embedding_lookup2.forward(ids, column_ids)
+            embedding = embedding1 + embedding2
             loss = embedding.reshape(embedding.shape[0], -1)
             loss = self.dense(loss)
             loss = loss.mean()

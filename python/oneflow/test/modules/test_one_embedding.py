@@ -24,9 +24,13 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+if os.path.exists("./test"):
+    os.system("rm -rf ./test")
+
 
 def _test_one_embedding(test_case, has_column_id, num_columns):
-    batch_size = 512
+    batch_size = 4
+    embedding_size = 2
     ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
     if has_column_id:
         column_ids = (
@@ -68,12 +72,12 @@ def _test_one_embedding(test_case, has_column_id, num_columns):
                         }
                     }
                 )
-            store_options = flow.one_embedding.make_device_mem_store_options(
-                device_memory_mb=1024, persistent_path="test/", size_factor=1,
+            store_options = flow.one_embedding.make_device_mem_cached_ssd_store_options(
+                device_memory_mb=16, persistent_path="test/", size_factor=1,
             )
             self.embedding = flow.one_embedding.Embedding(
                 "my_embedding",
-                128,
+                embedding_size,
                 flow.float,
                 flow.int64,
                 columns=initializer_list,
