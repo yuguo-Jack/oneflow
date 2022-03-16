@@ -217,7 +217,7 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const ParallelConf& parallel
 
 void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
                                    JobBuilder* job_builder, const OpNode* op_node,
-                                   const int64_t parallel_num, const ParallelConf& parallel_conf,
+                                   const bool use_system_gather, const ParallelConf& parallel_conf,
                                    const user_op::UserOpConfWrapper& embedding_op,
                                    const std::string& inverse_indices_lbn,
                                    const std::string& inner_inverse_unique_partition_indices_lbn,
@@ -240,7 +240,7 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
       }
     }
   }
-  if (parallel_num == 1) {
+  if (use_system_gather) {
     const int64_t num_segments =
         op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi("ids_0")).shape().elem_cnt();
     user_op::UserOpConfWrapperBuilder unsorted_segment_sum_op_builder(embedding_op.op_name()
@@ -341,14 +341,14 @@ double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_bu
   return scale_factor;
 }
 
-void BuildIdShuffle(int64_t parallel_num, const user_op::UserOpConfWrapper& embedding_op,
+void BuildIdShuffle(bool use_system_gather, const user_op::UserOpConfWrapper& embedding_op,
                     std::vector<OperatorConf>* add_ops,
                     std::string* inner_inverse_unique_partition_indices_lbn,
                     std::string* num_unique_ids_lbn, std::string* unique_ids_lbn,
                     std::string* unique_columns_lbn, std::string* inverse_indices_lbn,
                     std::string* num_unique_matrix_lbn) {
   const int32_t num_columns = embedding_op.attr<int32_t>("num_columns");
-  if (parallel_num == 1) {
+  if (use_system_gather) {
     user_op::UserOpConfWrapperBuilder unique_op_builder(embedding_op.op_name()
                                                         + "_unique_ids_and_columns");
     unique_op_builder.OpTypeName("unique_key_value_pair")
@@ -522,6 +522,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         embedding_op.attr<std::string>("key_value_store_options"));
     const int64_t embedding_size = embedding_op.attr<int64_t>("embedding_size");
     const int64_t parallel_num = op_node->parallel_desc().parallel_num();
+    const bool use_system_gather = (parallel_num == 1);
     std::vector<OperatorConf> add_ops;
     std::vector<std::string> delete_op_names;
     std::string new_embeddings_lbn;
@@ -533,7 +534,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     std::string inverse_indices_lbn;
     std::string num_unique_matrix_lbn;
 
-    BuildIdShuffle(op_node->parallel_desc().parallel_num(), embedding_op, &add_ops,
+    BuildIdShuffle(use_system_gather, embedding_op, &add_ops,
                    &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
                    &unique_ids_lbn, &unique_columns_lbn, &inverse_indices_lbn,
                    &num_unique_matrix_lbn);
@@ -547,7 +548,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                          embedding_op, num_unique_ids_lbn, unique_ids_lbn, unique_columns_lbn,
                          &embedding_lbn, &unique_values_lbn);
 
-    if (parallel_num == 1) {
+    if (use_system_gather) {
       user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name() + "_gather");
       user_op::UserOpConfWrapper gather_op =
           gather_op_builder.OpTypeName("gather")
@@ -582,7 +583,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
 
         std::string embedding_grad_lbn;
         BuildEmbeddingGradientShuffle(
-            ctx, op_graph, job_builder, op_node, parallel_num,
+            ctx, op_graph, job_builder, op_node, use_system_gather,
             op_node->parallel_desc().parallel_conf(), embedding_op, inverse_indices_lbn,
             inner_inverse_unique_partition_indices_lbn, num_unique_matrix_lbn,
             update_op_conf.input("embedding_grad", 0), &embedding_grad_lbn);
