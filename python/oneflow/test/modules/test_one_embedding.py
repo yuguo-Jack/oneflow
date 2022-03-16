@@ -21,11 +21,11 @@ import oneflow as flow
 import numpy as np
 import oneflow.nn as nn
 import oneflow.unittest
+import tempfile
 
 from oneflow.test_utils.automated_test_util import *
 
-if os.path.exists("./test"):
-    os.system("rm -rf ./test")
+path = tempfile.TemporaryDirectory(dir="./").name
 
 
 def _test_one_embedding(test_case, has_column_id, num_columns):
@@ -73,7 +73,7 @@ def _test_one_embedding(test_case, has_column_id, num_columns):
                     }
                 )
             store_options = flow.one_embedding.make_device_mem_cached_ssd_store_options(
-                device_memory_mb=16, persistent_path="test/", size_factor=1,
+                device_memory_mb=16, persistent_path=path, size_factor=1,
             )
             self.embedding = flow.one_embedding.Embedding(
                 "my_embedding",

@@ -21,14 +21,12 @@ import oneflow as flow
 import numpy as np
 import oneflow.nn as nn
 import oneflow.unittest
+import tempfile
 
 from oneflow.test_utils.automated_test_util import *
 
-if flow.env.get_rank() == 0:
-    if os.path.exists("./test1"):
-        os.system("rm -rf ./test1")
-    if os.path.exists("./test2"):
-        os.system("rm -rf ./test2")
+path1 = tempfile.TemporaryDirectory(dir="./").name
+path2 = tempfile.TemporaryDirectory(dir="./").name
 
 
 def _test_one_embedding(test_case, has_column_id, num_columns):
@@ -98,8 +96,8 @@ def _test_one_embedding(test_case, has_column_id, num_columns):
         def __init__(self,):
             super().__init__()
             self.dense = MatMul(embedding_size * num_columns, 1)
-            self.embedding_lookup1 = OneEmbedding("emb1", "test1")
-            self.embedding_lookup2 = OneEmbedding("emb2", "test2")
+            self.embedding_lookup1 = OneEmbedding("emb1", path1)
+            self.embedding_lookup2 = OneEmbedding("emb2", path2)
             self.add_optimizer(
                 flow.optim.SGD(self.dense.parameters(), lr=0.1, momentum=0.0)
             )
