@@ -184,7 +184,7 @@ TEST(PersistentTableKeyValueStore, PersistentTableKeyValueStore) {
 
   std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(options);
   store->ReserveQueryLength(128);
-  TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, value_length);
+  TestKeyValueStore(store.get(), 1024, 1024, value_length);
   store.reset();
   PosixFile::RecursiveDelete(path);
   Global<ep::DeviceManagerRegistry>::Delete();
@@ -205,13 +205,13 @@ TEST(CachedKeyValueStore, LRU) {
   cache_options.policy = CacheOptions::Policy::kLRU;
   cache_options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
   cache_options.value_size = 512;
-  cache_options.capacity = 130172;
+  cache_options.capacity = 512;
   cache_options.key_size = 8;
   std::unique_ptr<Cache> cache = NewCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
   cached_store->ReserveQueryLength(128);
-  TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length);
+  TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
   cached_store.reset();
   PosixFile::RecursiveDelete(path);
   Global<ep::DeviceManagerRegistry>::Delete();
@@ -232,13 +232,13 @@ TEST(CachedKeyValueStore, Full) {
   cache_options.policy = CacheOptions::Policy::kFull;
   cache_options.value_memory_kind = CacheOptions::MemoryKind::kHost;
   cache_options.value_size = 512;
-  cache_options.capacity = 1024 * 1024 * 2;
+  cache_options.capacity = 1024 * 2;
   cache_options.key_size = 8;
   std::unique_ptr<Cache> cache = NewCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
   cached_store->ReserveQueryLength(128);
-  TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length);
+  TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
   cached_store.reset();
   PosixFile::RecursiveDelete(path);
   Global<ep::DeviceManagerRegistry>::Delete();
