@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
+from oneflow.framework.env_util import api_all_device_placement as all_device_placement
 
 
 def get_local_rank():
