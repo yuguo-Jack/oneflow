@@ -34,8 +34,9 @@ class VirtualMachine final {
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
-  static Maybe<std::string> GetHangWarning();
+  static std::function<Maybe<std::string>()> GetHangWarning();
 
+  bool NoMoreInsertedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
   bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
   std::string GetBlockingDebugString();
 

@@ -31,7 +31,7 @@ Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, modifier);
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
-                                  &VirtualMachine::GetHangWarning));
+                                  VirtualMachine::GetHangWarning()));
   return Maybe<void>::Ok();
 }
 

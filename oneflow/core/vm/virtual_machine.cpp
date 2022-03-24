@@ -151,7 +151,7 @@ void VirtualMachine::ControlSync() {
   MakeCtrlSeqInstructions(mut_vm(), &list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
   CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
-                                       &VirtualMachine::GetHangWarning));
+                                       VirtualMachine::GetHangWarning()));
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -163,8 +163,23 @@ VirtualMachine::~VirtualMachine() {
   callback_thread_.join();
 }
 
-Maybe<std::string> VirtualMachine::GetHangWarning() {
-  return JUST(GlobalMaybe<VirtualMachine>())->GetBlockingDebugString();
+std::function<Maybe<std::string>()> VirtualMachine::GetHangWarning() {
+  auto last_total_inserted = std::make_shared<size_t>(0);
+  auto last_total_erased = std::make_shared<size_t>(0);
+  auto* vm = Global<VirtualMachine>::Get();
+  if (vm != nullptr) {
+    *last_total_inserted = vm->vm().total_inserted_lively_instruction_cnt();
+    *last_total_erased = vm->vm().total_erased_lively_instruction_cnt();
+  }
+  return [last_total_inserted, last_total_erased]() -> Maybe<std::string> {
+    auto* vm = Global<VirtualMachine>::Get();
+    CHECK_NOTNULL_OR_RETURN(vm) << "virtual machine not initialized.";
+    if (vm->NoMoreInsertedLivelyInstructions(last_total_inserted.get())
+        && vm->NoMoreErasedLivelyInstructions(last_total_erased.get())) {
+      return vm->GetBlockingDebugString();
+    }
+    return std::string("the vm is running.");
+  };
 }
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
@@ -179,6 +194,14 @@ std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFini
         << vm->GetBlockingDebugString();
     return false;
   };
+}
+
+bool VirtualMachine::NoMoreInsertedLivelyInstructions(
+    size_t* last_total_inserted_lively_instruction_cnt) const {
+  size_t cnt = vm_->total_inserted_lively_instruction_cnt();
+  bool no_more_inserted = (*last_total_inserted_lively_instruction_cnt == cnt);
+  *last_total_inserted_lively_instruction_cnt = cnt;
+  return no_more_inserted;
 }
 
 bool VirtualMachine::NoMoreErasedLivelyInstructions(
@@ -217,7 +240,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
         });
         pending_notifier_.Notify();
         JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
-                                       &VirtualMachine::GetHangWarning));
+                                       VirtualMachine::GetHangWarning()));
         return Maybe<void>::Ok();
       }));
     }

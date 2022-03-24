@@ -45,7 +45,7 @@ Maybe<void> ClusterSync() {
     return Maybe<void>::Ok();
   }));
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
-                                 &VirtualMachine::GetHangWarning));
+                                 VirtualMachine::GetHangWarning()));
   return Maybe<void>::Ok();
 }
 
@@ -56,7 +56,7 @@ Maybe<void> CurrentRankSync() {
     return Maybe<void>::Ok();
   }));
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
-                                 &VirtualMachine::GetHangWarning));
+                                 VirtualMachine::GetHangWarning()));
   return Maybe<void>::Ok();
 }
 
