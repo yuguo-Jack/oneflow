@@ -86,7 +86,7 @@ Maybe<void> BlockingCounter::WaitUntilCntEqualZero(
       if (JUST(StopWaitingAfterTimeout())) { return status; }
       timeout_start = Now();
     } else {
-      LOG(WARNING) << *JUST(GetWarning());
+      LOG(INFO) << *JUST(GetWarning());
     }
   }
   UNIMPLEMENTED_THEN_RETURN();
