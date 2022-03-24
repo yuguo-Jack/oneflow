@@ -150,7 +150,8 @@ void VirtualMachine::ControlSync() {
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(mut_vm(), &list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
-  CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
+                                       &VirtualMachine::GetHangWarning));
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -160,6 +161,10 @@ VirtualMachine::~VirtualMachine() {
   CHECK(!vm_);
   callback_notifier_.Close();
   callback_thread_.join();
+}
+
+Maybe<std::string> VirtualMachine::GetHangWarning() {
+  return JUST(GlobalMaybe<VirtualMachine>())->GetBlockingDebugString();
 }
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
@@ -211,7 +216,8 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
           return true;
         });
         pending_notifier_.Notify();
-        JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+        JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
+                                       &VirtualMachine::GetHangWarning));
         return Maybe<void>::Ok();
       }));
     }

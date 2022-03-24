@@ -138,8 +138,9 @@ void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
 
 std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t debug_cnt) {
   std::stringstream ss;
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_lively_instruction_list()) {
-    if (--debug_cnt <= 0) { break; }
+  bool limited = (debug_cnt == -1);
+  INTRUSIVE_FOR_EACH(instruction, mut_lively_instruction_list()) {
+    if (limited && --debug_cnt <= 0) { break; }
     ss << instruction->instr_msg().DebugName() << "\n";
   }
   return ss.str();

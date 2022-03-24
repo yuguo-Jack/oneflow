@@ -34,6 +34,12 @@ class BlockingCounter final {
   void WaitForeverUntilCntEqualZero();
   Maybe<void> WaitUntilCntEqualZero(size_t timeout_seconds);
   Maybe<void> WaitUntilCntEqualZero(const std::function<Maybe<bool>()>& StopWaitingAfterTimeout);
+  Maybe<void> WaitUntilCntEqualZero(const std::function<Maybe<bool>()>& StopWaitingAfterTimeout,
+                                    const std::function<Maybe<std::string>()>& GetWarning);
+  Maybe<void> WaitUntilCntEqualZero(size_t timeout_seconds,
+                                    const std::function<Maybe<bool>()>& StopWaitingAfterTimeout,
+                                    size_t timeout_warning_interval,
+                                    const std::function<Maybe<std::string>()>& GetWarning);
 
  private:
   std::mutex mtx_;

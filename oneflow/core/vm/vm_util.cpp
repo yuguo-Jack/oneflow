@@ -44,7 +44,8 @@ Maybe<void> ClusterSync() {
     JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));
-  JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
+                                 &VirtualMachine::GetHangWarning));
   return Maybe<void>::Ok();
 }
 
@@ -54,7 +55,8 @@ Maybe<void> CurrentRankSync() {
     JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));
-  JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
+                                 &VirtualMachine::GetHangWarning));
   return Maybe<void>::Ok();
 }
 

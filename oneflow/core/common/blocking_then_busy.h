@@ -38,6 +38,13 @@ class BlockingThenBusy final {
     return Maybe<void>::Ok();
   }
 
+  Maybe<void> WaitUntilCntEqualZero(const std::function<Maybe<bool>()>& StopAfterTimeout,
+                                    const std::function<Maybe<std::string>()>& GetWarning) {
+    JUST(blocking_counter_.WaitUntilCntEqualZero(StopAfterTimeout, GetWarning));
+    JUST(spin_counter_.WaitUntilCntEqualZero());
+    return Maybe<void>::Ok();
+  }
+
  private:
   BlockingCounter blocking_counter_;
   SpinCounter spin_counter_;

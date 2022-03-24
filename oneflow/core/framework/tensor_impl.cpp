@@ -141,7 +141,8 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(this, btb, Callback, "const");
   }));
-  TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
+  TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished(),
+                                 &VirtualMachine::GetHangWarning))
       .GetOrThrow();
   eager_blob_object_->set_is_shape_synced(true);
   return shape_ptr;

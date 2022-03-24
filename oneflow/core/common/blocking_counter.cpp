@@ -60,4 +60,36 @@ Maybe<void> BlockingCounter::WaitUntilCntEqualZero(
   UNIMPLEMENTED_THEN_RETURN();
 }
 
+template<typename T>
+size_t SecondsFrom(const T& start) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()
+                                                               - start)
+      .count();
+}
+
+Maybe<void> BlockingCounter::WaitUntilCntEqualZero(
+    const std::function<Maybe<bool>()>& StopWaitingAfterTimeout,
+    const std::function<Maybe<std::string>()>& GetWarning) {
+  return WaitUntilCntEqualZero(EnvInteger<ONEFLOW_TIMEOUT_SECONDS>(), StopWaitingAfterTimeout,
+                               EnvInteger<ONEFLOW_TIMEOUT_WARNING_SECONDS>(), GetWarning);
+}
+
+Maybe<void> BlockingCounter::WaitUntilCntEqualZero(
+    size_t timeout_seconds, const std::function<Maybe<bool>()>& StopWaitingAfterTimeout,
+    size_t timeout_warning_interval, const std::function<Maybe<std::string>()>& GetWarning) {
+  auto* Now = &std::chrono::steady_clock::now;
+  for (auto timeout_start = Now(), interval_start = Now(); true; interval_start = Now()) {
+    auto status = TRY(WaitUntilCntEqualZero(std::min(timeout_seconds, timeout_warning_interval)));
+    if (status.IsOk()) { return status; }
+    if (!status.error()->has_timeout_error()) { return status; }
+    if (SecondsFrom(timeout_start) > timeout_seconds) {
+      if (JUST(StopWaitingAfterTimeout())) { return status; }
+      timeout_start = Now();
+    } else {
+      LOG(WARNING) << *JUST(GetWarning());
+    }
+  }
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
 }  // namespace oneflow
