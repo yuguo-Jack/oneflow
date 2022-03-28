@@ -2538,27 +2538,21 @@ class OneEmbeddingUniqueKeyValuePairFunctor {
 class NcclSliceBoxingCopyFunctor {
  public:
   NcclSliceBoxingCopyFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("nccl_slice_boxing_copy")
-                         .Input("in")
-                         .Output("out")
-                         .Build());
+    op_ = CHECK_JUST(one::OpBuilder("nccl_slice_boxing_copy").Input("in").Output("out").Build());
   }
 
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& in,
-      const std::vector<std::string>& src_nd_sbp,
-      const std::vector<std::string>& dst_nd_sbp) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::vector<std::string>& src_nd_sbp,
+                           const std::vector<std::string>& dst_nd_sbp) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<std::string>>("src_nd_sbp", src_nd_sbp));
     JUST(attrs.SetAttr<std::vector<std::string>>("dst_nd_sbp", dst_nd_sbp));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {in}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 }  // namespace impl
 

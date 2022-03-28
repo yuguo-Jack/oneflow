@@ -53,22 +53,21 @@ class NcclSliceBoxingKernelState final : public user_op::OpKernelState {
         GetTensorSliceView(*parallel_desc_.hierarchy(), dst_nd_sbp, logical_shape);
     const std::vector<TensorSliceView>& in_slices =
         GetTensorSliceView(*parallel_desc_.hierarchy(), src_nd_sbp, logical_shape);
-    LOG(ERROR)<<"logical_shape "<<logical_shape.DebugStr();
     for (int64_t i = 0; i < parallel_num; ++i) {
       const TensorSliceView& cur_rank_in_slice = in_slices.at(parallel_id_);
       const TensorSliceView& in_intersection = out_slices.at(i).Intersect(cur_rank_in_slice);
-      if(!in_intersection.IsEmpty()) {
-          send_elem_cnts_.push_back(in_intersection.shape().elem_cnt());
-          in_tensor_slice_copier_vec_.emplace_back(
-              new TensorSliceCopier(in_intersection, cur_rank_in_slice, data_type, device_type));
+      if (!in_intersection.IsEmpty()) {
+        send_elem_cnts_.push_back(in_intersection.shape().elem_cnt());
+        in_tensor_slice_copier_vec_.emplace_back(
+            new TensorSliceCopier(in_intersection, cur_rank_in_slice, data_type, device_type));
       } else {
-          send_elem_cnts_.push_back(0);
-          in_tensor_slice_copier_vec_.emplace_back(nullptr);
+        send_elem_cnts_.push_back(0);
+        in_tensor_slice_copier_vec_.emplace_back(nullptr);
       }
 
       const TensorSliceView& cur_rank_out_slice = out_slices.at(parallel_id_);
       const TensorSliceView& out_interaction = cur_rank_out_slice.Intersect(in_slices.at(i));
-      if(!out_interaction.IsEmpty()) {
+      if (!out_interaction.IsEmpty()) {
         recv_elem_cnts_.push_back(out_interaction.shape().elem_cnt());
         out_tensor_slice_copier_vec_.emplace_back(
             new TensorSliceCopier(cur_rank_out_slice, out_interaction, data_type, device_type));
@@ -178,19 +177,20 @@ class NcclSliceBoxingCopyKernel final : public user_op::OpKernel {
     const std::vector<std::shared_ptr<TensorSliceCopier>>& in_tensor_slice_copier_vec =
         kernel_state->in_tensor_slice_copier_vec();
     for (int64_t i = 0; i < parallel_num; ++i) {
-      if(in_tensor_slice_copier_vec.at(i) != nullptr) {
+      if (in_tensor_slice_copier_vec.at(i) != nullptr) {
         in_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), send_in_ptr.at(i), in->dptr());
       }
     }
     OF_NCCL_CHECK(ncclGroupStart());
     for (int64_t i = 0; i < parallel_num; ++i) {
-      if(send_elem_cnts.at(i) != 0) {
-        LOG(ERROR)<<ctx->parallel_ctx().parallel_id()<<" send "<<send_elem_cnts.at(i)<<" to "<<i;
-        OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i), GetNcclDataType(data_type), i,
-                               comm, cuda_stream));
+      if (send_elem_cnts.at(i) != 0) {
+        // LOG(INFO)<<ctx->parallel_ctx().parallel_id()<<" send "<<send_elem_cnts.at(i)<<" to "<<i;
+        OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i), GetNcclDataType(data_type),
+                               i, comm, cuda_stream));
       }
-      if(recv_elem_cnts.at(i) != 0) {
-        LOG(ERROR)<<ctx->parallel_ctx().parallel_id()<<" recv "<<recv_elem_cnts.at(i)<<" from "<<i;
+      if (recv_elem_cnts.at(i) != 0) {
+        // LOG(INFO)<<ctx->parallel_ctx().parallel_id()<<" recv "<<recv_elem_cnts.at(i)<<" from
+        // "<<i;
         OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(i), recv_elem_cnts.at(i), GetNcclDataType(data_type),
                                i, comm, cuda_stream));
       }
@@ -199,8 +199,8 @@ class NcclSliceBoxingCopyKernel final : public user_op::OpKernel {
     const std::vector<std::shared_ptr<TensorSliceCopier>>& out_tensor_slice_copier_vec =
         kernel_state->out_tensor_slice_copier_vec();
     for (int64_t i = 0; i < parallel_num; ++i) {
-      if(out_tensor_slice_copier_vec.at(i) != nullptr) {
-      out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out->mut_dptr(), recv_out_ptr.at(i));
+      if (out_tensor_slice_copier_vec.at(i) != nullptr) {
+        out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out->mut_dptr(), recv_out_ptr.at(i));
       }
     }
   }
