@@ -33,7 +33,6 @@ from oneflow._C import relu
 from oneflow._C import hardtanh
 from oneflow._C import hardsigmoid
 from oneflow._C import hardswish
-from oneflow._C import leaky_relu
 from oneflow._C import elu
 from oneflow._C import celu
 from oneflow._C import selu

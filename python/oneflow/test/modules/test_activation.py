@@ -576,41 +576,6 @@ class TestHardtanhModule(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestLeakyReLUModule(flow.unittest.TestCase):
-    @autotest()
-    def test_leakyrelu_module_with_random_data(test_case):
-        m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor().to(device)
-        y = m(x)
-        return y
-
-    @autotest()
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_leakyrelu_module_with_half_random_data(test_case):
-        m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor().to(device)
-        x = x.to(torch.float16)
-        y = m(x)
-        return y
-
-    @autotest()
-    def test_leakyrelu_module_with_0dim_data(test_case):
-        m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor(ndim=0).to(device)
-        y = m(x)
-        return y
-
-
-@flow.unittest.skip_unless_1n1d()
 class TestMishModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_mish_module_with_random_data(test_case):

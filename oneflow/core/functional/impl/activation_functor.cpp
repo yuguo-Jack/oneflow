@@ -357,37 +357,6 @@ class HardSwishGradFunctor : public BinaryFunctor {
   }
 };
 
-class LeakyReluFunctor {
- public:
-  LeakyReluFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("leaky_relu").Input("x").Output("y").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class LeakyReluGradFunctor {
- public:
-  LeakyReluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("leaky_relu_grad").Input("x").Input("dy").Output("dx").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& dy, const float& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class SiluFunctor : public UnaryFunctor {
  public:
   SiluFunctor() { op_ = CHECK_JUST(one::OpBuilder("silu").Input("in").Output("out").Build()); }
@@ -461,8 +430,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
-  m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
-  m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
   m.add_functor<impl::SiluFunctor>("Silu");
   m.add_functor<impl::SiluGradFunctor>("SiluGrad");
   m.add_functor<impl::MishFunctor>("Mish");

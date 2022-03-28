@@ -354,18 +354,6 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.leaky_relu,
-    """
-    leaky_relu(x: Tensor,  alpha :Float) -> Tensor
-
-    Applies element-wise,
-    :math:`\text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)`
-
-    See :class:`~oneflow.nn.LeakyReLU` for more details.
-
-    """,
-)
-add_docstr(
     oneflow._C.elu,
     """
     elu(x: Tensor, alpha :Float) -> Tensor
