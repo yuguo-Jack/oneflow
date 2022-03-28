@@ -2057,3 +2057,7 @@
 - name: "pixel_shuffle"
   signature: "Tensor (Tensor input, Int64 h_upscale_factor, Int64 w_upscale_factor) => PixelShuffle"
   bind_python: True
+
+- name: "nccl_slice_boxing_copy"
+  signature: "Tensor (Tensor in, StringList src_nd_sbp, StringList dst_nd_sbp) => NcclSliceBoxingCopy"
+  bind_python: True

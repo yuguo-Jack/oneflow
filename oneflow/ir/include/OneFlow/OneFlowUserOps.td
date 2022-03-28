@@ -5134,6 +5134,24 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
   let has_nd_sbp_infer_fn = 1;
 }
 
+def OneFlow_NcclSliceBoxingCopyOp : OneFlow_BaseOp<"nccl_slice_boxing_copy", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$src_nd_sbp,
+    StrArrayAttr:$dst_nd_sbp
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_NCCL_OP_DEFINITIONS
 
 // Group: NORMALIZATION
