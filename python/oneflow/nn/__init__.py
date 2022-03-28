@@ -23,7 +23,6 @@ from oneflow.nn.modules.activation import (
     Hardsigmoid,
     Hardswish,
     Hardtanh,
-    LeakyReLU,
     LogSigmoid,
     LogSoftmax,
     Mish,
@@ -39,6 +38,7 @@ from oneflow.nn.modules.activation import (
     Softsign,
 )
 
+from oneflow.nn.modules.leaky_relu import LeakyReLU
 from oneflow.nn.modules.all_reduce import AllReduce
 from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
 from oneflow.nn.modules.batchnorm_fused import (
