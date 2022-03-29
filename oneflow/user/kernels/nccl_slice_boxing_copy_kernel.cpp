@@ -235,43 +235,21 @@ class NcclSliceBoxingCopyKernel final : public user_op::OpKernel {
         in_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), send_in_ptr.at(i), in->dptr());
       }
     }
-
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    if (ParseBooleanFromEnv("OPTIMIZE_ALL_TO_ALL", false)) {
-      OF_NCCL_CHECK(ncclGroupStart());
-      for (int64_t i = 0; i < parallel_num; ++i) {
-        int send_to = (parallel_id + i) % parallel_num;
-        int recv_from = (parallel_id - i + parallel_num) % parallel_num;
-        if (send_elem_cnts.at(send_to) != 0) {
-          LOG(INFO) << parallel_id << " send " << send_elem_cnts.at(send_to) << " to " << send_to;
-          OF_NCCL_CHECK(ncclSend(send_in_ptr.at(send_to), send_elem_cnts.at(send_to),
-                                 GetNcclDataType(data_type), send_to, comm, cuda_stream));
-        }
-        if (recv_elem_cnts.at(recv_from) != 0) {
-          LOG(INFO) << parallel_id << " recv " << recv_elem_cnts.at(recv_from) << " from "
-                    << recv_from;
-          OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(recv_from), recv_elem_cnts.at(recv_from),
-                                 GetNcclDataType(data_type), recv_from, comm, cuda_stream));
-        }
+    OF_NCCL_CHECK(ncclGroupStart());
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      if (send_elem_cnts.at(i) != 0) {
+        LOG(INFO) << parallel_id << " send " << send_elem_cnts.at(i) << " to " << i;
+        OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i),
+                               GetNcclDataType(data_type), i, comm, cuda_stream));
       }
-      OF_NCCL_CHECK(ncclGroupEnd());
-    } else {
-      OF_NCCL_CHECK(ncclGroupStart());
-      for (int64_t i = 0; i < parallel_num; ++i) {
-        if (send_elem_cnts.at(i) != 0) {
-          LOG(INFO) << parallel_id << " send " << send_elem_cnts.at(i) << " to " << i;
-          OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i),
-                                 GetNcclDataType(data_type), i, comm, cuda_stream));
-        }
-        if (recv_elem_cnts.at(i) != 0) {
-          LOG(INFO) << parallel_id << " recv " << recv_elem_cnts.at(i) << " from " << i;
-          OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(i), recv_elem_cnts.at(i),
-                                 GetNcclDataType(data_type), i, comm, cuda_stream));
-        }
+      if (recv_elem_cnts.at(i) != 0) {
+        LOG(INFO) << parallel_id << " recv " << recv_elem_cnts.at(i) << " from " << i;
+        OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(i), recv_elem_cnts.at(i),
+                               GetNcclDataType(data_type), i, comm, cuda_stream));
       }
-      OF_NCCL_CHECK(ncclGroupEnd());
     }
-
+    OF_NCCL_CHECK(ncclGroupEnd());
     const std::vector<std::shared_ptr<TensorSliceCopier>>& out_tensor_slice_copier_vec =
         kernel_state->out_tensor_slice_copier_vec();
     for (int64_t i = 0; i < parallel_num; ++i) {
