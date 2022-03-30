@@ -89,44 +89,14 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
       /*is_leaf=*/!input->requires_grad());
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
-  std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
 
-  // run tensor view instruction
+  auto view_tensor = std::make_shared<MirroredTensor>(tensor_impl);
 
-  // =============================impl1======================================
-  // // init view blob (with empty data pointer)
-  // const auto& eager_blob_object = JUST(input->eager_blob_object());
-  // const auto& view_eager_blob_object = JUST(output->eager_blob_object());
-  // JUST(view_eager_blob_object->InitBlobWithOffset(JUST(output->storage_offset())));
-  // view_eager_blob_object->set_is_shape_synced(true);
-  // view_eager_blob_object->set_last_used_stream(JUST(eager_blob_object->last_used_stream()));
-  // void* input_ptr = eager_blob_object->mut_blob()->mut_raw_dptr();
-  // view_eager_blob_object->mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
-
-  // =============================impl2======================================
-  // std::unique_ptr<ep::DeviceManagerRegistry> device_manager_registry(
-  //     new ep::DeviceManagerRegistry());
-  // auto stream_device = device_manager_registry->GetDevice(device->enum_type(),
-  // device->device_id()); ep::Stream* stream = stream_device->CreateStream();
-
-  // // init view blob (with empty data pointer)
-  // const auto& eager_blob_object = JUST(input->eager_blob_object());
-  // const auto& view_eager_blob_object = JUST(output->eager_blob_object());
-  // JUST(view_eager_blob_object->InitBlobWithOffset(JUST(output->storage_offset())));
-  // view_eager_blob_object->set_is_shape_synced(true);
-  // view_eager_blob_object->set_last_used_stream(JUST(eager_blob_object->last_used_stream()));
-
-  // OfBlob input_ofblob(stream, eager_blob_object->mut_blob());
-  // OfBlob view_ofblob(stream, view_eager_blob_object->mut_blob());
-
-  // void* input_ptr = input_ofblob.mut_blob()->mut_raw_dptr();
-  // view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
-
-  // ==============================impl3=====================================
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
-  }));
-  return output;
+  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
+      JUST(view_tensor->eager_blob_object());
+  view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
+  view_eager_blob_object->set_is_shape_synced(true);
+  return std::static_pointer_cast<Tensor>(view_tensor);
 }
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
