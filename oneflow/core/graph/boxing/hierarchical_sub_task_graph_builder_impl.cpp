@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
+#include "oneflow/core/graph/nccl_send_recv_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/graph/task_stream_id.h"
@@ -415,11 +416,28 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
       return node;
     };
     if (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy()) {
-      if (NdSbpNoPartialParallel(out_nd_sbp)
-          && (NdSbpNoPartialParallel(in_nd_sbp) || NdsbpAllSplitParallel(out_nd_sbp))) {
+      if (NdSbpNoPartialParallel(out_nd_sbp)) {
+        //&& (NdSbpNoPartialParallel(in_nd_sbp) || NdsbpAllSplitParallel(out_nd_sbp))) {
         // pass
       } else {
         return Error::BoxingNotSupportedError();
+      }
+      if (ParseBooleanFromEnv("USE_NCCL_SEND_RECV", true)) {
+        FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
+          NcclSendRecvBoxingTaskNode* node =
+              ctx->task_graph()->NewNode<NcclSendRecvBoxingTaskNode>();
+          const int64_t machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
+          int64_t device_index = (out_parallel_desc.device_type() == DeviceType::kCPU)
+                                     ? 0
+                                     : CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
+          int64_t thrd_id = EncodeStreamIdToInt64(GenerateComputeTaskStreamId(
+              machine_id, out_parallel_desc.device_type(), device_index));
+          node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_nd_sbp, out_nd_sbp,
+                     in_parallel_desc, out_parallel_desc, out_id);
+          ctx->task_graph()->ConnectWithLbi(sorted_in_tasks.at(out_id), node, lbi);
+          sorted_out_tasks->push_back(node);
+        }
+        return BuildSubTskGphBuilderStatus("NDSliceBoxingAddSubTskGphBuilder", "nccl");
       }
 
       bool producer_has_partial = !NdSbpNoPartialParallel(in_nd_sbp);
@@ -532,6 +550,11 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
                                       const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->NumAxes() == 2
         && (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy())) {
+      if (ParseBooleanFromEnv("USE_NCCL_SEND_RECV", true)) {
+        return nd_slice_boxing_sub_tsk_gph_builder_->Build(
+            ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
+            out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
+      }
       if (in_nd_sbp.sbp_parallel(0) == out_nd_sbp.sbp_parallel(0)) {
         return intra_group_sub_tsk_gph_builder_->Build(
             ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,

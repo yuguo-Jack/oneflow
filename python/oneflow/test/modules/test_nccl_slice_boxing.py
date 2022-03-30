@@ -23,23 +23,25 @@ import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
+import time
 
 
 def _test_nccl_slice_boxing_copy(test_case, shape):
-    src_nd_sbp_str = ["S(0)", "S(1)"]
-    src_nd_sbp = [flow.sbp.split(0), flow.sbp.split(1)]
-    dst_nd_sbp = [flow.sbp.split(2), flow.sbp.split(0)]
-    dst_nd_sbp_str = ["S(2)", "S(0)"]
+    src_nd_sbp_str = ["P", "S(1)"]
+    src_nd_sbp = [flow.sbp.partial_sum(), flow.sbp.split(1)]
+    dst_nd_sbp = [flow.sbp.broadcast(), flow.sbp.split(2)]
+    dst_nd_sbp_str = ["B", "S(2)"]
     placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
+            flow.boxing.nccl.enable_all_to_all(True)
             super().__init__()
 
         def build(self, x):
             y = x
             y = y.to_global(sbp=dst_nd_sbp, placement=placement)
-            y = y.to_global(sbp=src_nd_sbp, placement=placement)
+            # y = y.to_global(sbp=src_nd_sbp, placement=placement)
             return y
 
     class TestGraph2(flow.nn.Graph):
@@ -60,9 +62,9 @@ def _test_nccl_slice_boxing_copy(test_case, shape):
     # y = flow._C.nccl_slice_boxing_copy(x, src_nd_sbp, dst_nd_sbp)
     # graph = TestGraph2()
     graph = TestGraph()
-    for i in range(100):
+    start_time = time.time()
+    for i in range(1):
         y = graph(x)
-    print(y.numpy())
     test_case.assertTrue(np.array_equal(y.numpy(), x.numpy()))
 
 
