@@ -136,6 +136,7 @@ class CommRank final {
   }
 
   int32_t device_id() const { return device_id_; }
+  int32_t local_rank() const { return local_rank_; }
 
   ncclComm_t nccl_comm() const { return nccl_comm_; }
 
@@ -164,20 +165,32 @@ class CommGroup final {
   void InitGroup(const DeviceSet& device_set, const std::string& unique_name) {
     CudaCurrentDeviceGuard guard;
     const int64_t this_machine_id = GlobalProcessCtx::Rank();
+ //   std::cout<<"this_machine_id:"<<this_machine_id<<std::endl;
     global_rank_count_ = device_set.device_size();
     std::vector<int32_t> local_ranks;
     for (int32_t i = 0; i < global_rank_count_; ++i) {
+  //    std::cout<<"device set machine id"<<device_set.device(i).machine_id()<<std::endl;
       if (device_set.device(i).machine_id() == this_machine_id) { local_ranks.push_back(i); }
+    
     }
+    // std::cout<<"local ranks size()"<<local_ranks.size()<<std::endl;
+    // for(int32_t i=0;i<local_ranks.size();i++)
+    // {
+    //   std::cout<<"local rank:"<<local_ranks[i]<<std::endl;
+    // }
+
+
     const int32_t local_rank_count = local_ranks.size();
     CHECK_GT(local_rank_count, 0);
     ncclUniqueId nccl_unique_id{};
     if (local_ranks.front() == 0) {
+  //    std::cout<<"zero zero zero"<<std::endl;
       OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
       if (local_rank_count != global_rank_count_) {
         Global<CtrlClient>::Get()->PushKV(unique_name, NcclUniqueIdToString(nccl_unique_id));
       }
     } else {
+  //    std::cout<<"other other other"<<std::endl;
       Global<CtrlClient>::Get()->PullKV(unique_name, [&nccl_unique_id](const std::string& val) {
         NcclUniqueIdFromString(val, &nccl_unique_id);
       });
@@ -185,13 +198,16 @@ class CommGroup final {
     rank_vec_.reserve(local_rank_count);
     OF_NCCL_CHECK(ncclGroupStart());
     for (int32_t local_rank = 0; local_rank < local_ranks.size(); ++local_rank) {
+      std::cout<<"ncclGroupStart-------"<<std::endl;
       const int32_t global_rank = local_ranks.at(local_rank);
+  //    std::cout<<"global rank:"<<global_rank<<std::endl;
       const int32_t device_id = device_set.device(global_rank).device_id();
       OF_CUDA_CHECK(cudaSetDevice(device_id));
       rank_vec_.emplace_back(device_id, global_rank, global_rank_count_, local_rank,
                              local_rank_count);
       rank_vec_.at(local_rank).InitRank(nccl_unique_id, global_rank_count_);
     }
+ //   std::cout<<"rank_vec_ size:"<<rank_vec_.size()<<std::endl;
     OF_NCCL_CHECK(ncclGroupEnd());
   }
 
@@ -331,7 +347,8 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
                          const std::vector<std::unique_ptr<StreamCtx>>& device_id2stream_ctx,
                          const std::shared_ptr<RequestStore>& request_store,
                          const std::vector<RequestId>& request_ids) {
-  
+
+  // std::cout<<"comm_group.local_rank_count():"<<comm_group.local_rank_count()<<std::endl;
   cudaEvent_t start_event[comm_group.local_rank_count()];
   cudaEvent_t end_event[comm_group.local_rank_count()];
   std::string global_op_name;
@@ -339,11 +356,11 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
   float time[comm_group.local_rank_count()];
   for(int32_t local_rank=0; local_rank < comm_group.local_rank_count(); ++local_rank){
     const CommRank& comm_rank = comm_group.GetCommRank(local_rank);
+   // std::cout<<"comm_rank.device_id():"<<comm_rank.device_id()<<std::endl;
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
     OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
     OF_CUDA_CHECK(cudaEventCreate(&start_event[comm_rank.device_id()]));
     OF_CUDA_CHECK(cudaEventCreate(&end_event[comm_rank.device_id()]));
-    cudaEventSynchronize(end_event[comm_rank.device_id()]);
     OF_CUDA_CHECK(cudaEventRecord(start_event[comm_rank.device_id()], stream_ctx->stream()));
   }
   OF_NCCL_CHECK(ncclGroupStart());
@@ -352,8 +369,11 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
     const auto comm = comm_rank.nccl_comm();
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
     OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
+ //   std::cout<<"request_ids size() "<<request_ids.size()<<std::endl;
     request_store->ForEachMutRequestEntryForIdsInJob(
         request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
+//          std::cout<<"job_id:"<<request_ids.front().job_id<<std::endl;
+//          std::cout<<"---------------------"<<std::endl<<std::endl;
           const auto& op_desc = request_entry->desc().op_desc();
           const std::shared_ptr<const RuntimeRequestInfo>& runtime_request_info =
               request_entry->GetRuntimeRequest(local_rank);
@@ -365,7 +385,7 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
           const int32_t num_ranks = comm_group.global_rank_count();
           const std::string op_name = op_desc.name();
           global_op_name= op_name;
-          global_elem_cnt = elem_cnt;
+          //global_elem_cnt = elem_cnt;
 
           std::cout<<"---------------------------------------------------------------------"<<std::endl;
           switch(op_type){
@@ -377,7 +397,7 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
             case 5: std::cout<<"op_type:"<<"kOpTypeBroadcast"<<std::endl;break;
             case 6: std::cout<<"op_type:"<<"kOpTypeAll2All"<<std::endl;break;
         }
- //         std::cout<<"op_name:"<<op_name<<std::endl;
+          std::cout<<"op_name:"<<op_name<<std::endl;
  //         std::cout<<"nccl_data_type"<< nccl_data_type <<std::endl;
  //         std::cout<<"elem_cnt:"<<elem_cnt<<std::endl;
           std::cout<<"tensor shape():"<<op_desc.shape()<<std::endl;          
@@ -386,15 +406,19 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
             OF_NCCL_CHECK(ncclAllReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                         GetNcclReduceOp(op_desc.reduce_method()), comm,
                                         stream_ctx->stream()));
+            global_elem_cnt = elem_cnt;
+          
           } else if (op_type == OpType::kOpTypeAllGather) {
             CHECK_EQ(elem_cnt % num_ranks, 0);
             OF_NCCL_CHECK(ncclAllGather(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type,
                                         comm, stream_ctx->stream()));
+            global_elem_cnt = elem_cnt / num_ranks;
           } else if (op_type == OpType::kOpTypeReduceScatter) {
             CHECK_EQ(elem_cnt % num_ranks, 0);
             OF_NCCL_CHECK(ncclReduceScatter(
                 send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type,
                 GetNcclReduceOp(op_desc.reduce_method()), comm, stream_ctx->stream()));
+            global_elem_cnt = elem_cnt / num_ranks;
           } else if (op_type == OpType::kOpTypeReduce) {
             OF_NCCL_CHECK(ncclReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                      GetNcclReduceOp(op_desc.reduce_method()), op_desc.root(), comm,
@@ -404,6 +428,7 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
                                         op_desc.root(), comm, stream_ctx->stream()));
           } else if (op_type == OpType::kOpTypeAll2All) {
 #if NCCL_VERSION_CODE > 2700
+            global_elem_cnt = elem_cnt / num_ranks /num_ranks;
             const int64_t elem_per_rank = elem_cnt / num_ranks;
             const int64_t elem_per_chunk = elem_per_rank / num_ranks;
             const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
@@ -432,9 +457,9 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
     OF_CUDA_CHECK(cudaEventRecord(end_event[comm_rank.device_id()], stream_ctx->stream()));
     cudaEventSynchronize(end_event[comm_rank.device_id()]);
     OF_CUDA_CHECK(cudaEventElapsedTime(&time[comm_rank.device_id()], start_event[comm_rank.device_id()], end_event[comm_rank.device_id()]));
+    //std::cout<<" elapsed(ms) "<< time<< std::endl;
     std::cout<< global_op_name <<" communicate "<< global_elem_cnt << " at rank "<< comm_rank.device_id() <<" elapsed(ms) "<< time[comm_rank.device_id()] << std::endl;
   }
-
 
 }
 
@@ -656,8 +681,10 @@ struct NcclExecutorBackend::Impl {
     if (request_store->MutRequestEntry(request_ids.front())->desc().op_desc().op_type()
             == OpType::kOpTypeAllReduce
         && conf.nccl_fusion_all_reduce_use_buffer() && request_ids.size() > 1) {
+//          std::cout<<"LaunchFusedAllReduce:)"<<std::endl;
       LaunchFusedAllReduce(comm_group, device_id2stream_ctx, request_store, request_ids);
     } else {
+//      std::cout<<"LaunchAggregatedOps:)"<<std::endl;
       LaunchAggregatedOps(comm_group, device_id2stream_ctx, request_store, request_ids);
     }
     AddCallbackAndResetRuntimeRequest(comm_group, device_id2stream_ctx, request_store, request_ids);

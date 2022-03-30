@@ -104,6 +104,9 @@ class RequestStore {
       const std::function<void(RequestEntry*, int32_t i, const RequestId& request_id)>& Handler) {
     if (request_ids.size() == 0) { return; }
     int64_t job_id = request_ids.front().job_id;
+    // for(auto iter=job_id2request_entry_vec_.begin();iter!=job_id2request_entry_vec_.end();iter++){
+    //   std::cout<<"hash map first :"<< iter->first<< std::endl;
+    // } 
     auto it = job_id2request_entry_vec_.find(job_id);
     CHECK(it != job_id2request_entry_vec_.end());
     for (int32_t i = 0; i < request_ids.size(); ++i) {
