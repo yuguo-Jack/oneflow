@@ -16,8 +16,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/add.h"
