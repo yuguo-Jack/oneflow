@@ -25,25 +25,32 @@ from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 import time
 import os
-os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"]="1"
+
+os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
+
 
 def _test_nccl_send_recv_boxing(test_case, src_nd_sbp, dst_nd_sbp):
-    #can not process p in dst
+    # can not process p in dst
     if flow.sbp.partial_sum() in dst_nd_sbp:
         return
-    #skip src == dst
+    # skip src == dst
     if src_nd_sbp == dst_nd_sbp:
         return
-    #in this case, use intra group boxing
+    # in this case, use intra group boxing
     if src_nd_sbp[0] == dst_nd_sbp[0]:
         return
-    #in this case, use inter group boxing
-    if src_nd_sbp[1] == dst_nd_sbp[1] and src_nd_sbp[0] != src_nd_sbp[1] and src_nd_sbp[0] != src_nd_sbp[1]:
-        return 
-    #in this case, use 1d boxing
+    # in this case, use inter group boxing
+    if (
+        src_nd_sbp[1] == dst_nd_sbp[1]
+        and src_nd_sbp[0] != src_nd_sbp[1]
+        and src_nd_sbp[0] != src_nd_sbp[1]
+    ):
+        return
+    # in this case, use 1d boxing
     if src_nd_sbp[0] == src_nd_sbp[1] and dst_nd_sbp[0] == dst_nd_sbp[1]:
         return
-
+    print("src_nd_sbp", src_nd_sbp)
+    print("dst_nd_sbp", dst_nd_sbp)
     placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
 
     class TestGraph(flow.nn.Graph):
@@ -63,13 +70,21 @@ def _test_nccl_send_recv_boxing(test_case, src_nd_sbp, dst_nd_sbp):
     y = graph(x)
     test_case.assertTrue(np.array_equal(y.numpy(), x.numpy()))
 
+
 def gen_nd_sbp():
-    sbp_list = [flow.sbp.partial_sum(), flow.sbp.broadcast(), flow.sbp.split(0), flow.sbp.split(1), flow.sbp.split(2)]
+    sbp_list = [
+        flow.sbp.partial_sum(),
+        flow.sbp.broadcast(),
+        flow.sbp.split(0),
+        flow.sbp.split(1),
+        flow.sbp.split(2),
+    ]
     nd_sbp_list = []
     for sbp0 in sbp_list:
         for sbp1 in sbp_list:
             nd_sbp_list.append([sbp0, sbp1])
     return nd_sbp_list
+
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -79,8 +94,6 @@ class TestNcclSendRecvBoxing(flow.unittest.TestCase):
         arg_dict["src_nd_sbp"] = gen_nd_sbp()
         arg_dict["dst_nd_sbp"] = gen_nd_sbp()
         for arg in GenArgList(arg_dict):
-            command =r"head -n2 log/oneflow-24/boxing/log/0.csv"
-            os.system(command)
             _test_nccl_send_recv_boxing(test_case, *arg)
 
 

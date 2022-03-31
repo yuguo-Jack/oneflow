@@ -24,6 +24,4 @@ void GetSendRecvIntersection(int64_t parallel_id, const std::shared_ptr<Shape> p
                              std::vector<TensorSliceView>* src_send_intersections,
                              std::vector<TensorSliceView>* dst_recv_intersections);
 
-bool NdSbpHasPartialParallel(const NdSbp& nd_sbp);
-
 }  // namespace oneflow

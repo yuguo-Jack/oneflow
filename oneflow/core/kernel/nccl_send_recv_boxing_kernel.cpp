@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
 
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+
 namespace oneflow {
 
 class NcclSendRecvBoxingKernel final : public Kernel {
@@ -232,3 +234,5 @@ void NcclSendRecvBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
 REGISTER_KERNEL(OperatorConf::kNcclSendRecvBoxingConf, NcclSendRecvBoxingKernel);
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
