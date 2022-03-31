@@ -15,28 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
 
 namespace oneflow {
-
-namespace {
-
-bool NdSbpHasPartialParallel(const NdSbp& nd_sbp) {
-  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
-  FOR_RANGE(int64_t, i, 0, nd_sbp.sbp_parallel_size()) {
-    if (nd_sbp.sbp_parallel(i).has_partial_sum_parallel()) { return true; }
-  }
-  return false;
-}
-
-bool NdSbpHasBroadcastParallel(const NdSbp& nd_sbp) {
-  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
-  FOR_RANGE(int64_t, i, 0, nd_sbp.sbp_parallel_size()) {
-    if (nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { return true; }
-  }
-  return false;
-}
-
-}  // namespace
 
 class NcclSendRecvBoxingOp : public Operator {
  public:
@@ -79,13 +60,29 @@ Maybe<void> NcclSendRecvBoxingOp::InferInternalBlobDescs(
   const NcclSendRecvBoxingOpConf& conf = this->op_conf().nccl_send_recv_boxing_conf();
   const NdSbp& src_nd_sbp = conf.src_nd_sbp();
   const NdSbp& dst_nd_sbp = conf.dst_nd_sbp();
-  int64_t in_buffer_cnt = in->shape().elem_cnt();
-  int64_t out_buffer_cnt = out->shape().elem_cnt();
-  const int64_t parallel_num = parallel_ctx->parallel_num();
-  // TODO: exactly calculate buf size , now is the max value
-  if (NdSbpHasPartialParallel(src_nd_sbp)) { out_buffer_cnt *= (parallel_num + 1); }
-  if (NdSbpHasBroadcastParallel(dst_nd_sbp)) { in_buffer_cnt *= parallel_num; }
-  buf->mut_shape() = Shape({in_buffer_cnt + out_buffer_cnt});
+  ParallelDesc parallel_desc(conf.parallel_conf());
+  const int64_t parallel_num = parallel_desc.parallel_num();
+  const int64_t parallel_id = parallel_ctx->parallel_id();
+  const Shape& logical_shape = Shape(conf.logical_shape());
+  std::vector<TensorSliceView> src_send_intersections;
+  std::vector<TensorSliceView> dst_recv_intersections;
+  GetSendRecvIntersection(parallel_id, parallel_desc.hierarchy(), src_nd_sbp, dst_nd_sbp,
+                          logical_shape, &src_send_intersections, &dst_recv_intersections);
+  int64_t buf_count = 0;
+  CHECK_EQ(src_send_intersections.size(), parallel_num);
+  for (int64_t i = 0; i < parallel_num; ++i) {
+    const TensorSliceView& intersection = src_send_intersections.at(i);
+    if (!intersection.IsEmpty()) { buf_count += intersection.shape().elem_cnt(); }
+  }
+  for (int64_t i = 0; i < parallel_num; ++i) {
+    const TensorSliceView& intersection = dst_recv_intersections.at(i);
+    if (!intersection.IsEmpty()) { buf_count += intersection.shape().elem_cnt(); }
+  }
+  if (NdSbpHasPartialParallel(src_nd_sbp)) {
+    // Note: when src_nd_sbp has partial_sum, need a out_size buffer to copy and add to out.
+    buf_count += out->shape().elem_cnt();
+  }
+  buf->mut_shape() = Shape({buf_count});
   return Maybe<void>::Ok();
 }
 

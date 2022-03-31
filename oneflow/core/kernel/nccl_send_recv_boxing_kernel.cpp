@@ -19,66 +19,11 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
-#include "oneflow/user/ops/nccl_logical_util.h"
-#include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/add.h"
+#include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
+
 namespace oneflow {
-
-namespace {
-
-bool NdSbpNoPartialParallel(const NdSbp& nd_sbp) {
-  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
-  FOR_RANGE(int64_t, i, 0, nd_sbp.sbp_parallel_size()) {
-    if (nd_sbp.sbp_parallel(i).has_partial_sum_parallel()) { return false; }
-  }
-  return true;
-}
-
-// Go through all the ranks while transfer between two nd sbps with no PartialSum under the same
-// placement.
-// NOTE: We need to make sure no partial sums in the sbps of the producer and consumer.
-void DfsTraverseRanks4NdSbp(
-    int32_t depth, std::vector<int64_t>& in_parallel_ids,
-    const std::vector<int64_t>& out_parallel_ids, const Shape& parallel_hierarchy,
-    const NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>& hierarchy_index_helper,
-    const NdSbp& in_nd_sbp, const std::function<void(int32_t, int32_t)>& visit) {
-  if (depth >= parallel_hierarchy.NumAxes()) {
-    visit(hierarchy_index_helper.NdIndexToOffset(out_parallel_ids.data(),
-                                                 parallel_hierarchy.NumAxes()),
-          hierarchy_index_helper.NdIndexToOffset(in_parallel_ids.data(),
-                                                 parallel_hierarchy.NumAxes()));
-    return;
-  }
-  if (in_nd_sbp.sbp_parallel(depth).has_broadcast_parallel()) {
-    // If Broadcast in the sbp of the producer, only visit those ranks with the same id as the
-    // current rank along the depth-dimension.
-    in_parallel_ids[depth] = out_parallel_ids[depth];
-    DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
-                           hierarchy_index_helper, in_nd_sbp, visit);
-  } else {
-    // If Split or PartialSum, go through all the ranks along the depth-dimension.
-    for (int64_t i = 0; i < parallel_hierarchy.dim_vec().at(depth); i++) {
-      in_parallel_ids[depth] = i;
-      DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
-                             hierarchy_index_helper, in_nd_sbp, visit);
-    }
-  }
-}
-
-void DfsTraverse4NdSbp(int64_t out_id, const std::shared_ptr<Shape> parallel_hierarchy,
-                       const NdSbp& in_nd_sbp, const std::function<void(int32_t, int32_t)>& visit) {
-  int32_t hierarchy_dimension = parallel_hierarchy->NumAxes();
-  const NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
-      parallel_hierarchy->dim_vec().data(), hierarchy_dimension);
-  std::vector<int64_t> in_parallel_ids(hierarchy_dimension);
-  std::vector<int64_t> out_parallel_ids(hierarchy_dimension);
-  hierarchy_index_helper.OffsetToNdIndex(out_id, out_parallel_ids.data(), hierarchy_dimension);
-  DfsTraverseRanks4NdSbp(0, in_parallel_ids, out_parallel_ids, *parallel_hierarchy,
-                         hierarchy_index_helper, in_nd_sbp, visit);
-}
-}  // namespace
 
 class NcclSendRecvBoxingKernel final : public Kernel {
  public:
@@ -244,48 +189,45 @@ void NcclSendRecvBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
   const NdSbp& src_nd_sbp = conf.src_nd_sbp();
   const NdSbp& dst_nd_sbp = conf.dst_nd_sbp();
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
-  src_nd_sbp_no_partial_parallel_ = NdSbpNoPartialParallel(src_nd_sbp);
+  src_nd_sbp_no_partial_parallel_ = !NdSbpHasPartialParallel(src_nd_sbp);
   CHECK_EQ(src_nd_sbp.sbp_parallel_size(), parallel_hierarchy->NumAxes());
   CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), parallel_hierarchy->NumAxes());
   const DataType data_type = this->kernel_conf().data_type();
   const DeviceType device_type = parallel_desc.device_type();
   const Shape& logical_shape = Shape(conf.logical_shape());
   const int64_t parallel_num = parallel_desc.parallel_num();
-  const std::vector<TensorSliceView>& out_slices =
-      GetTensorSliceView(*parallel_desc.hierarchy(), dst_nd_sbp, logical_shape);
-  const std::vector<TensorSliceView>& in_slices =
-      GetTensorSliceView(*parallel_desc.hierarchy(), src_nd_sbp, logical_shape);
 
-  // add to cur_out_slice
-  recv_elem_cnts_.resize(parallel_num);
-  out_tensor_slice_copier_vec_.resize(parallel_num);
-  const TensorSliceView& cur_rank_out_slice = out_slices.at(parallel_id);
-  const auto& add_to_out_slice_vec = [&](int32_t out_id, int32_t in_id) {
-    CHECK_EQ(out_id, parallel_id);
-    const TensorSliceView& in_slice = in_slices.at(in_id);
-    const TensorSliceView& intersection = cur_rank_out_slice.Intersect(in_slice);
-    if (intersection.IsEmpty()) { return; }
-    recv_elem_cnts_.at(in_id) = intersection.shape().elem_cnt();
-    out_tensor_slice_copier_vec_.at(in_id).reset(
-        new TensorSliceCopier(cur_rank_out_slice, intersection, data_type, device_type));
-  };
-  DfsTraverse4NdSbp(parallel_id, parallel_hierarchy, src_nd_sbp, add_to_out_slice_vec);
+  std::vector<TensorSliceView> src_send_intersections;
+  std::vector<TensorSliceView> dst_recv_intersections;
+  GetSendRecvIntersection(parallel_id, parallel_desc.hierarchy(), src_nd_sbp, dst_nd_sbp,
+                          logical_shape, &src_send_intersections, &dst_recv_intersections);
 
-  // add to cur_in_slice
+  CHECK_EQ(src_send_intersections.size(), parallel_num);
   send_elem_cnts_.resize(parallel_num);
   in_tensor_slice_copier_vec_.resize(parallel_num);
-  const TensorSliceView& cur_rank_in_slice = in_slices.at(parallel_id);
-  const auto& add_to_in_slice_vec = [&](int32_t out_id, int32_t in_id) {
-    if (in_id != parallel_id) { return; }
-    const TensorSliceView& out_slice = out_slices.at(out_id);
-    const TensorSliceView& intersection = out_slice.Intersect(cur_rank_in_slice);
-    if (intersection.IsEmpty()) { return; }
-    send_elem_cnts_.at(out_id) = intersection.shape().elem_cnt();
-    in_tensor_slice_copier_vec_.at(out_id).reset(
-        new TensorSliceCopier(intersection, cur_rank_in_slice, data_type, device_type));
-  };
+  const TensorSliceView& cur_rank_in_slice =
+      GetTensorSliceView4ParallelId(*parallel_hierarchy, src_nd_sbp, logical_shape, parallel_id);
   for (int64_t i = 0; i < parallel_num; ++i) {
-    DfsTraverse4NdSbp(i, parallel_hierarchy, src_nd_sbp, add_to_in_slice_vec);
+    const TensorSliceView& intersection = src_send_intersections.at(i);
+    if (!intersection.IsEmpty()) {
+      send_elem_cnts_.at(i) = intersection.shape().elem_cnt();
+      in_tensor_slice_copier_vec_.at(i).reset(
+          new TensorSliceCopier(intersection, cur_rank_in_slice, data_type, device_type));
+    }
+  }
+
+  CHECK_EQ(dst_recv_intersections.size(), parallel_num);
+  recv_elem_cnts_.resize(parallel_num);
+  out_tensor_slice_copier_vec_.resize(parallel_num);
+  const TensorSliceView& cur_rank_out_slice =
+      GetTensorSliceView4ParallelId(*parallel_hierarchy, dst_nd_sbp, logical_shape, parallel_id);
+  for (int64_t i = 0; i < parallel_num; ++i) {
+    const TensorSliceView& intersection = dst_recv_intersections.at(i);
+    if (!intersection.IsEmpty()) {
+      recv_elem_cnts_.at(i) = intersection.shape().elem_cnt();
+      out_tensor_slice_copier_vec_.at(i).reset(
+          new TensorSliceCopier(cur_rank_out_slice, intersection, data_type, device_type));
+    }
   }
 }
 
