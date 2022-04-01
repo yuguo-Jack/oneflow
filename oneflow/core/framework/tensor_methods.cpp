@@ -107,13 +107,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                       const Stride& target_stride) {
-  // TODO:(zhaoluyang) check input tensor is contiguous
-  CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError()
-      << "view::Reshape(): input should be eager local tensor with element count >=1 , but got "
-      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
-      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
-
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
       JUST(BasicView(input, target_shape, target_stride, storage_offset));
@@ -141,10 +134,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
   // OF_PROFILER_RANGE_PUSH("ViewSlice");
-  CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
-      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
-      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = starts.size();
@@ -199,11 +188,6 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 }
 
 Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
-  CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError() << "view::Unsqueeze(): input should be eager local tensor, but got "
-      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
-      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
-
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const auto& ndim = shape->NumAxes();
@@ -248,11 +232,6 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
 
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims) {
-  CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError() << "view::Squeeze(): input should be eager local tensor, but got "
-      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
-      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
-
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
@@ -297,11 +276,6 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
 
 Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
                      const std::vector<int32_t>& expand_shape) {
-  if (!(input->is_eager() && input->is_local())) {
-    return Error::RuntimeError() << "view::Expand(): input should be eager local tensor, but got "
-                                 << (input->is_lazy() ? "lazy" : "consistent");
-  }
-
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = in_shape.size();
