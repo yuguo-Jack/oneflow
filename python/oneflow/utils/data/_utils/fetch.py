@@ -63,12 +63,12 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             oneflow._oneflow_internal.profiler.RangePush('4096slice')
-            # data = [self.dataset[idx] for idx in possibly_batched_index]
-            data = []
-            for idx in possibly_batched_index:
-                oneflow._oneflow_internal.profiler.RangePush("slice")
-                data.append(self.dataset[idx])
-                oneflow._oneflow_internal.profiler.RangePop()
+            data = [self.dataset[idx] for idx in possibly_batched_index]
+            # data = []
+            # for idx in possibly_batched_index:
+            #     oneflow._oneflow_internal.profiler.RangePush("slice")
+            #     data.append(self.dataset[idx])
+            #     oneflow._oneflow_internal.profiler.RangePop()
             oneflow._oneflow_internal.profiler.RangePop()
         else:
             oneflow._oneflow_internal.profiler.RangePush('fetch-dataset')

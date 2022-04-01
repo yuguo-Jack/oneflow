@@ -1869,10 +1869,11 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    //  OF_PROFILER_RANGE_PUSH("TensorGetItemFunctor");
+    OF_PROFILER_RANGE_PUSH("TensorGetItemFunctor");
     if(index.size()==1){
       auto index_item = index.at(0);
       if(index_item.IsInteger()){
+
         const int64_t index = index_item.integer();
         int32_t ndim = x->ndim();
         CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
@@ -1891,7 +1892,10 @@ class TensorGetItemFunctor {
 
         sizes.erase(sizes.begin() + pos_dim);
         strides.erase(strides.begin() + pos_dim);
-        return JUST(view::AsStrided(x, sizes, strides, storage_offset));
+        auto ret = JUST(view::AsStrided(x, sizes, strides, storage_offset));
+        OF_PROFILER_RANGE_POP();
+        return ret;
+
       }
     }
 

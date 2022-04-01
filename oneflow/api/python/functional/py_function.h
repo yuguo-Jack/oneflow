@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
 
@@ -128,7 +129,10 @@ inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
     DispatchFrame::Guard f_guard(cur_f_str);
     return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
   } else {
-    return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
+    OF_PROFILER_RANGE_PUSH("dispatcher.call");
+    auto ret = dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
+    OF_PROFILER_RANGE_POP();
+    return ret;
   }
 }
 
