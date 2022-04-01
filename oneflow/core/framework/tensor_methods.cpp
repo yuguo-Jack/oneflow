@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/xrt/utility/env.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -139,6 +140,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
 
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
+  // OF_PROFILER_RANGE_PUSH("ViewSlice");
   CHECK_OR_RETURN(IsViewApplicable(input))
       << Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
       << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
@@ -172,8 +174,9 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
     target_strides[i] = step * strides->At(i);
     storage_offset += start * strides->At(i);
   }
-
+  OF_PROFILER_RANGE_PUSH("BasicView");
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
+  OF_PROFILER_RANGE_POP();
   if (input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
@@ -191,6 +194,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::slice_backward", backward_fn,
                                                             {input}, &outputs));
   }
+  // OF_PROFILER_RANGE_POP();
   return output;
 }
 

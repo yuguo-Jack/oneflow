@@ -17,7 +17,7 @@ limitations under the License.
 data from an iterable-style or map-style dataset. This logic is shared in both
 single- and multi-processing data loading.
 """
-
+import oneflow
 
 class _BaseDatasetFetcher(object):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
@@ -62,7 +62,19 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
-            data = [self.dataset[idx] for idx in possibly_batched_index]
+            oneflow._oneflow_internal.profiler.RangePush('4096slice')
+            # data = [self.dataset[idx] for idx in possibly_batched_index]
+            data = []
+            for idx in possibly_batched_index:
+                oneflow._oneflow_internal.profiler.RangePush("slice")
+                data.append(self.dataset[idx])
+                oneflow._oneflow_internal.profiler.RangePop()
+            oneflow._oneflow_internal.profiler.RangePop()
         else:
+            oneflow._oneflow_internal.profiler.RangePush('fetch-dataset')
             data = self.dataset[possibly_batched_index]
-        return self.collate_fn(data)
+            oneflow._oneflow_internal.profiler.RangePop
+        oneflow._oneflow_internal.profiler.RangePush('collate_fn')
+        ret = self.collate_fn(data)
+        oneflow._oneflow_internal.profiler.RangePop()
+        return ret

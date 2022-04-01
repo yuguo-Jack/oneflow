@@ -42,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -1084,7 +1085,10 @@ class ReshapeFunctor {
       Optional<Stride> infered_stride =
           ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
       if (infered_stride.has_value()) {
-        return view::Reshape(x, infered_shape, *JUST(infered_stride));
+        OF_PROFILER_RANGE_PUSH("view::Reshape");
+        auto ret = view::Reshape(x, infered_shape, *JUST(infered_stride));
+        OF_PROFILER_RANGE_POP();
+        return ret;
       }
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
@@ -1143,13 +1147,20 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    if (view::IsViewApplicable(x)) { return view::Slice(x, start, stop, step); }
+    OF_PROFILER_RANGE_PUSH("SliceBaseFunctor");
+    if (view::IsViewApplicable(x)) { 
+      auto ret = view::Slice(x, start, stop, step); 
+      OF_PROFILER_RANGE_POP();
+      return ret;
+    }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    auto ret = OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    OF_PROFILER_RANGE_POP();
+    return ret;
   }
 
  protected:
@@ -1857,6 +1868,7 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
+    OF_PROFILER_RANGE_PUSH("TensorGetItemFunctor");
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
@@ -1895,13 +1907,21 @@ class TensorGetItemFunctor {
     } else {
       result = JUST(Slice(expand_input, start, end, step));
     }
-
+    // OF_PROFILER_RANGE_PUSH("shape");
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
-    if (shape != *(result->shape())) { result = JUST(Reshape(result->contiguous(), shape)); }
+    // OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH("Reshape");
+    if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
+    OF_PROFILER_RANGE_POP();
+    // OF_PROFILER_RANGE_PUSH("ApplyAdvancedIndexing");
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
+    // OF_PROFILER_RANGE_POP();
 
     // TODO(): Returns a view of tensor `x`.
+    // OF_PROFILER_RANGE_PUSH("Identity");
     if (result == x) { result = JUST(Identity(x)); }
+    // OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_POP();
     return result;
   }
 };
