@@ -1870,13 +1870,19 @@ class TensorGetItemFunctor {
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
     OF_PROFILER_RANGE_PUSH("TensorGetItemFunctor");
+    if(index.size()==1){
+      auto index_item = index.at(0);
+      if(index_item.IsInteger()){
+        return JUST(functional::Select(x, 0, index_item.integer()));
+      }
+    }
+
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
     std::vector<int64_t> expand_dims;
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
                              &target_dims));
-
     auto expand_input = x;
     for (int i = 0; i < expand_dims.size(); ++i) {
       int64_t dim = expand_dims.at(i);
