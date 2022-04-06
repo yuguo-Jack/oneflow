@@ -664,6 +664,36 @@ class ExpandDimsFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceUnsqueezeFunctor {
+ public:
+  InplaceUnsqueezeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("expand_dims").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
+    JUST(CheckInplaceValid(input));
+    int32_t expand_dim = dim;
+    const int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN(-(ndim + 1) <= dim && dim <= ndim)
+        << " Dimension out of range, expected to be in range of [" << -(ndim + 1) << ", " << ndim
+        << "], but got: " << dim;
+    if (dim < 0) { expand_dim = dim + ndim + 1; }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
+
+    if (view::IsViewApplicable(input)) { 
+      return view::Unsqueeze(input, expand_dim); 
+    } else {
+      auto outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = JUST(view::Unsqueeze(input, expand_dim));
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SqueezeFunctor {
  public:
   SqueezeFunctor() {
@@ -2782,6 +2812,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
+  m.add_functor<impl::InplaceUnsqueezeFunctor>("InplaceUnsqueeze");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::InplaceSqueezeFunctor>("InplaceSqueeze");
   m.add_functor<impl::RollFunctor>("Roll");

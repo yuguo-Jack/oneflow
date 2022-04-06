@@ -174,6 +174,7 @@ OneFlow Tensor Class
             unfold, 
             uniform_, 
             unsqueeze, 
+            unsqueeze_, 
             var, 
             view, 
             where, 

@@ -613,6 +613,10 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
+def _unsqueeze_inplace(self, dim=None):
+    return flow._C.unsqueeze_(self, dim=dim)
+
+
 def _permute(self, *dims):
     if len(dims) == 1:
         new_dims = dims[0]
@@ -1215,6 +1219,7 @@ def RegisterMethods():
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
+    Tensor.unsqueeze_ = _unsqueeze_inplace
     Tensor.permute = _permute
     Tensor.to = _to
     Tensor.gather = _gather

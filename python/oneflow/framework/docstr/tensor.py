@@ -498,6 +498,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.unsqueeze_,
+    """
+    In-place version of :func:`oneflow.Tensor.unsqueeze_`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.permute,
     """
     See :func:`oneflow.permute`
