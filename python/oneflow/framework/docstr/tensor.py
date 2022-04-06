@@ -427,6 +427,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.squeeze_,
     """
+    Tensor.squeeze_(dim) -> Tensor
     In-place version of :func:`oneflow.Tensor.squeeze`
     """,
 )
@@ -500,6 +501,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.unsqueeze_,
     """
+    Tensor.unsqueeze_(dim) -> Tensor
     In-place version of :func:`oneflow.Tensor.unsqueeze_`
     """,
 )

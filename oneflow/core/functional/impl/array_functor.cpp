@@ -684,7 +684,7 @@ class InplaceUnsqueezeFunctor {
       return view::Unsqueeze(input, expand_dim); 
     } else {
       auto outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = JUST(view::Unsqueeze(input, expand_dim));
+      outputs->at(0) = input;
       JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), attrs));
       return outputs->at(0);
     }
