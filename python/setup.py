@@ -61,7 +61,7 @@ class BinaryDistribution(Distribution):
 
 include_files = glob.glob("oneflow/include/**/*", recursive=True)
 include_files = [os.path.relpath(p, "oneflow") for p in include_files]
-assert len(include_files) > 0, os.path.abspath("oneflow/include")
+# assert len(include_files) > 0, os.path.abspath("oneflow/include")
 
 
 def get_oneflow_internal_so_path():
@@ -72,8 +72,7 @@ def get_oneflow_internal_so_path():
     return os.path.relpath(pathname, "oneflow")
 
 
-package_data = {"oneflow": [get_oneflow_internal_so_path()] + include_files}
-
+package_data = {}
 
 def get_version():
     import importlib.util
@@ -90,11 +89,6 @@ setup(
     name=args.package_name,
     version=get_version(),
     url="https://www.oneflow.org/",
-    install_requires=REQUIRED_PACKAGES,
-    packages=find_packages(),
-    package_dir={"oneflow": "oneflow"},
-    package_data=package_data,
-    zip_safe=False,
-    distclass=BinaryDistribution,
-    cmdclass={"install": InstallPlatlib},
+    install_requires=[],
+    packages=find_packages()
 )

@@ -11,8 +11,8 @@ parser.add_argument("--out", type=str, required=False)
 args = parser.parse_args()
 
 local_label = ""
-version = f"0.8.0"
-
+version = f"0.7.0"
+os.environ["ONEFLOW_RELEASE_VERSION"] = version
 # set version if release of nightly
 assert (
     os.getenv("ONEFLOW_RELEASE_VERSION") != ""
@@ -39,7 +39,7 @@ if args.xla:
     compute_platform += ".xla"
 assert compute_platform
 version += f"+{compute_platform}"
-
+version = f"0.7.0"
 try:
     git_hash = (
         subprocess.check_output("git rev-parse --short HEAD", shell=True, cwd=args.src)

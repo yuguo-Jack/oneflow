@@ -18,6 +18,7 @@ import os
 import sys
 import collections
 
+raise RuntimeError("This package is a placeholder. Please install oneflow following the instructions in https://github.com/Oneflow-Inc/oneflow#install-oneflow")
 import oneflow._oneflow_internal
 
 oneflow._oneflow_internal.InitNumpyCAPI()
