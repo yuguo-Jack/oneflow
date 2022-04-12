@@ -47,6 +47,12 @@ def parse_args():
         "--files", type=str, help="files to run, support pattern", required=True,
     )
     parser.add_argument(
+        "--pytest_log_prefix",
+        type=str,
+        help="log prefix for --log-file of pytest",
+        required=True,
+    )
+    parser.add_argument(
         "--group_size",
         type=int,
         help="for one command, how many duplications to run",
@@ -166,6 +172,14 @@ def main():
         master_ports = list(
             range(default_master_port, default_master_port + parallel_num)
         )
+    if args.pytest_log_prefix:
+        log_path_prefix = os.path.join(args.pytest_log_prefix)
+        log_file_args = [
+            f"--log-file={log_path_prefix}-rank-{i}.txt" for i in range(parallel_num)
+        ]
+    else:
+        log_file_args = ["" for _i in range(parallel_num)]
+
     assert parallel_num > 0
     assert len(master_ports) == parallel_num
     chunk_size = ceil(len(files) / parallel_num)
@@ -180,8 +194,11 @@ def main():
     cmds = [
         [sys.executable, "-m", args.training_script, "--master_port", str(master_port)]
         + args.training_script_args
+        + [log_file_arg]
         + chunck
-        for (master_port, chunck) in zip(master_ports, chunks)
+        for (master_port, chunck, log_file_arg) in zip(
+            master_ports, chunks, log_file_args
+        )
     ]
     loop = asyncio.get_event_loop()
     processes = launch_multiple(
