@@ -58,9 +58,9 @@ class AddNFunctor {
       if (i == 0 && inplace) {
         JUST(CheckInplaceValid(partial_inputs.at(0)));
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
-        outs->at(0) = partial_inputs.at(0);
+        (*outs)[0] = partial_inputs[0]->contiguous();
         JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
-        outputs.emplace_back(outs->at(0));
+        outputs.emplace_back((*outs)[0]);
       } else {
         outputs.emplace_back(
             JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
@@ -114,14 +114,14 @@ class ScalarMathBaseFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x->contiguous()}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     if (inplace) {
       JUST(CheckInplaceCastValid(x, casted_vec[0]));
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
@@ -257,7 +257,7 @@ class ScalarPowGradFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPowGrad should be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), dy->contiguous()}, attrs);
   }
 
  private:
@@ -326,7 +326,7 @@ class ReduceMaxFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -350,7 +350,7 @@ class ReduceMinFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -430,7 +430,7 @@ class ReduceSumFunctor {
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    JUST(tensor_processor.AddInputs({x->contiguous()}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -456,7 +456,7 @@ class ReduceAllFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -480,7 +480,7 @@ class ReduceAnyFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -501,7 +501,7 @@ class ReduceDeviceStageBaseFunctor {
                                 const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous()}, attrs);
   }
   virtual ~ReduceDeviceStageBaseFunctor() = default;
 
@@ -525,7 +525,8 @@ class ReduceDeviceStageGradBaseFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {out_diff->contiguous(), mask->contiguous(), count->contiguous()}, attrs);
   }
   virtual ~ReduceDeviceStageGradBaseFunctor() = default;
 
@@ -573,7 +574,8 @@ class ReduceGlobalStageBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous(), device_count->contiguous()},
+                                               attrs);
   }
   virtual ~ReduceGlobalStageBaseFunctor() = default;
 
@@ -598,7 +600,8 @@ class ReduceGlobalStageGradBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {out_diff->contiguous(), mask->contiguous(), device_count->contiguous()}, attrs);
   }
   virtual ~ReduceGlobalStageGradBaseFunctor() = default;
 
@@ -668,7 +671,7 @@ class ReduceProdFunctor {
     } else {
       lowest_dtype = x->dtype();
     }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x->contiguous()}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
@@ -705,9 +708,10 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
           << ndim << " ) but got " << positive_perm[i];
     }
-
+    // currently, view only support eager and local mode
+    if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, positive_perm)); }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
  private:
@@ -719,10 +723,10 @@ class Transpose2dimFunctor {
   Transpose2dimFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t dim0,
                            const int32_t dim1) const {
     MutableAttrMap attrs;
-    const int64_t ndim = x->shape()->NumAxes();
+    const int64_t ndim = input->shape()->NumAxes();
     std::vector<int32_t> permute;
     permute.reserve(ndim);
     int32_t dim_0 = dim0;
@@ -737,9 +741,10 @@ class Transpose2dimFunctor {
         << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
-
+    Shape shape(DimVector(permute.begin(), permute.end()));
+    if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, permute)); }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
  private:
@@ -760,6 +765,9 @@ class AsStridedFunctor {
       CHECK_OR_RETURN(stride[i] >= 0)
           << "as_strided: Negative strides are not supported at the moment, got strides:"
           << stride[i];
+    }
+    if (view::IsViewApplicable(input)) {
+      return JUST(view::AsStrided(input, size, stride, storage_offset));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
@@ -786,7 +794,7 @@ class AsStridedGradFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
     JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), input->contiguous()}, attrs);
   }
 
  private:
@@ -936,7 +944,7 @@ class CastFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -993,13 +1001,14 @@ class ClampBaseFunctor {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       if (x->requires_grad()) {
-        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x))}, outputs.get(), attrs));
+        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x->contiguous()))},
+                                    outputs.get(), attrs));
       } else {
-        JUST(OpInterpUtil::Dispatch(*op, {x}, outputs.get(), attrs));
+        JUST(OpInterpUtil::Dispatch(*op, {x->contiguous()}, outputs.get(), attrs));
       }
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op, {x->contiguous()}, attrs);
     }
   }
 
@@ -1479,7 +1488,7 @@ class ClampGradFunctor {
     } else {
       op = clip_op_.get();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op, {dy->contiguous(), x->contiguous()}, attrs);
   }
 
  private:
@@ -1551,9 +1560,11 @@ class MinimumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
+                                            {x->contiguous(), y->contiguous()});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
+                                            {x->contiguous(), y->contiguous()});
     }
   }
 
@@ -1574,9 +1585,11 @@ class MaximumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
+                                            {x->contiguous(), y->contiguous()});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
+                                            {x->contiguous(), y->contiguous()});
     }
   }
 
@@ -1622,7 +1635,7 @@ class ScalarLogicalBaseFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x->contiguous()}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
@@ -1886,7 +1899,7 @@ class DotFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), other->contiguous()});
   }
 
  private:
@@ -2100,7 +2113,7 @@ class ErfinvFunctor {
  public:
   ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, {});
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}, {});
   }
 
  private:
@@ -2116,7 +2129,7 @@ class ErfinvInplaceFunctor {
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), {}));
+    JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get(), {}));
     return outputs->at(0);
   }
 
@@ -2139,7 +2152,7 @@ class CumBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    JUST(tensor_processor.AddInputs({input->contiguous()}, DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }

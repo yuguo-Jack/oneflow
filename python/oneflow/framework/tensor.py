@@ -72,7 +72,10 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
 
 
 def _getitem(self, key):
-    return flow._C.tensor_getitem(self, key)
+    flow._oneflow_internal.profiler.RangePush('_getitem')
+    ret = flow._C.tensor_getitem(self, key)
+    flow._oneflow_internal.profiler.RangePop()
+    return ret
 
 
 def _setitem(self, key, value):
@@ -164,6 +167,16 @@ def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
 
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
+
+
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.permute(self, new_dims)
 
 
 def is_nonzero(input):
@@ -609,16 +622,6 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, new_dims)
-
-
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -673,6 +676,12 @@ def _roll(self, shifts, dims=None):
 
 def _bmm(self, other):
     return flow.bmm(self, other)
+
+
+def _contiguous(self):
+    if self.is_contiguous():
+        return self
+    return flow._C.contiguous(self)
 
 
 def _chunk(self, chunks=None, dim=None):
@@ -1192,6 +1201,7 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.norm = _norm
     Tensor.transpose = _transpose
+    Tensor.permute = _permute
     Tensor.to_global = _to_global
     Tensor.relu = _relu
     Tensor.softmax = _softmax
@@ -1211,7 +1221,6 @@ def RegisterMethods():
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
-    Tensor.permute = _permute
     Tensor.to = _to
     Tensor.gather = _gather
     Tensor.all = _all
