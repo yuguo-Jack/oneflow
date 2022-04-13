@@ -18,7 +18,9 @@ fn main() {
     for entry in glob("oneflow/core/common/**/*.cpp").expect("Failed to read glob pattern") {
         match entry {
             Ok(path) => {
-                oneflow_common.file(path);
+                if !path.to_str().unwrap().ends_with("test.cpp") {
+                    oneflow_common.file(path);
+                }
             }
             Err(e) => println!("{:?}", e),
         }
