@@ -73,9 +73,9 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
 
 
 def _getitem(self, key):
-    flow._oneflow_internal.profiler.RangePush('_getitem')
+    # flow._oneflow_internal.profiler.RangePush('_getitem')
     ret = flow._C.tensor_getitem(self, key)
-    flow._oneflow_internal.profiler.RangePop()
+    # flow._oneflow_internal.profiler.RangePop()
     return ret
 
 

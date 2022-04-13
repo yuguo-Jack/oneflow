@@ -129,9 +129,9 @@ inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
     DispatchFrame::Guard f_guard(cur_f_str);
     return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
   } else {
-    OF_PROFILER_RANGE_PUSH("dispatcher.call");
+    // OF_PROFILER_RANGE_PUSH("dispatcher.call");
     auto ret = dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
-    OF_PROFILER_RANGE_POP();
+    // OF_PROFILER_RANGE_POP();
     return ret;
   }
 }

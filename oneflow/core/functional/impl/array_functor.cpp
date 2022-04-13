@@ -1869,7 +1869,7 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    OF_PROFILER_RANGE_PUSH("TensorGetItemFunctor");
+    // OF_PROFILER_RANGE_PUSH("TensorGetItemFunctor");
     if(index.size()==1){
       auto index_item = index.at(0);
       if(index_item.IsInteger()){
@@ -1893,7 +1893,7 @@ class TensorGetItemFunctor {
         sizes.erase(sizes.begin() + pos_dim);
         strides.erase(strides.begin() + pos_dim);
         auto ret = JUST(view::AsStrided(x, sizes, strides, storage_offset));
-        OF_PROFILER_RANGE_POP();
+        // OF_PROFILER_RANGE_POP();
         return ret;
 
       }
@@ -1939,9 +1939,9 @@ class TensorGetItemFunctor {
     // OF_PROFILER_RANGE_PUSH("shape");
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     // OF_PROFILER_RANGE_POP();
-    OF_PROFILER_RANGE_PUSH("Reshape");
+    // OF_PROFILER_RANGE_PUSH("Reshape");
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
-    OF_PROFILER_RANGE_POP();
+    // OF_PROFILER_RANGE_POP();
     // OF_PROFILER_RANGE_PUSH("ApplyAdvancedIndexing");
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
     // OF_PROFILER_RANGE_POP();
@@ -1950,7 +1950,7 @@ class TensorGetItemFunctor {
     // OF_PROFILER_RANGE_PUSH("Identity");
     if (result == x) { result = JUST(Identity(x)); }
     // OF_PROFILER_RANGE_POP();
-    OF_PROFILER_RANGE_POP();
+    // OF_PROFILER_RANGE_POP();
     return result;
   }
 };
