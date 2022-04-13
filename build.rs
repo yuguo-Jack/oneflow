@@ -34,6 +34,8 @@ fn main() {
                         "./",
                         "--cpp_out",
                         out_dir.to_str().unwrap(),
+                        "--python_out",
+                        "python",
                         path.to_str().unwrap(),
                     ])
                     .status()
