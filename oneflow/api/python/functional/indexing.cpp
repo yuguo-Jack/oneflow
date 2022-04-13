@@ -91,7 +91,7 @@ void ParseScalar(PyObject* object, char* data, const DataType& dtype) {
   } else if (dtype == DataType::kUInt8 || dtype == DataType::kBool) {
     CHECK_OR_THROW(PyBool_Check(object) || PyLong_Check(object))
         << "Expected a boolean or long value.";
-    if (PyBool_Check(object)) {
+    if (PyBool_Check(object) || numpy::PyArrayCheckBoolScalar(object)) {
       *(reinterpret_cast<bool*>(data)) = (object == Py_True);
     } else {
       int64_t value = PyLong_AsLongLong(object);
