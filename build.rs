@@ -9,7 +9,7 @@ fn main() {
     let glog_hash = "2368e3e0a95cce8b5b35a133271b480f";
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let out_include: PathBuf = [out_dir.to_str().unwrap(), "include"].iter().collect();
-    let dst = cmake::Config::new("external/stub")
+    cmake::Config::new("external/stub")
         .define("GLOG_URL", glog_url)
         .define("GLOG_HASH", glog_hash)
         .generator("Ninja")
