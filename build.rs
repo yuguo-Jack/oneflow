@@ -1,6 +1,10 @@
 // build.rs
 
-use std::{env, path::PathBuf};
+use std::{
+    env,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use glob::glob;
 
@@ -14,6 +18,32 @@ fn main() {
         .define("GLOG_HASH", glog_hash)
         .generator("Ninja")
         .build();
+
+    // generate c++ and python from proto
+    let protoc_path = Path::new(&out_dir).join("bin").join("protoc");
+    let proto_include_path = Path::new(&out_dir).join("include");
+    for entry in glob("oneflow/core/common/**/*.proto").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                let status = Command::new(protoc_path.to_str().unwrap())
+                    .args(&[
+                        "-I",
+                        proto_include_path.to_str().unwrap(),
+                        "-I",
+                        "./",
+                        "--cpp_out",
+                        out_dir.to_str().unwrap(),
+                        path.to_str().unwrap(),
+                    ])
+                    .status()
+                    .expect("failed to execute process");
+                assert!(status.success());
+            }
+            Err(e) => println!("{:?}", e),
+        }
+    }
+
+    // build oneflow common
     let mut oneflow_common = cc::Build::new();
     for entry in glob("oneflow/core/common/**/*.cpp").expect("Failed to read glob pattern") {
         match entry {
@@ -28,6 +58,7 @@ fn main() {
     oneflow_common
         .include(".")
         .include(out_include)
+        .include(out_dir)
         .compile("oneflow_common");
     println!("cargo:rerun-if-changed=src/hello.c");
 }
