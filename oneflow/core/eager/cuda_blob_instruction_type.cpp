@@ -34,18 +34,6 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "cuda.AccessBlobByCallback"));
 
-<<<<<<< HEAD
-=======
-class GpuTensorViewInstructionType final : public TensorViewInstructionType {
- public:
-  GpuTensorViewInstructionType() = default;
-  ~GpuTensorViewInstructionType() override = default;
-
-  using stream_type = vm::CudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<GpuTensorViewInstructionType>("cuda.TensorView"));
-
->>>>>>> dev_optimize_python_functions
 class GpuRecordEventInstructionType : public RecordEventInstructionType {
  public:
   GpuRecordEventInstructionType() = default;
