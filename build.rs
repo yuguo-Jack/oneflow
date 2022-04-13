@@ -25,6 +25,10 @@ fn main() {
     for entry in glob("oneflow/core/common/**/*.proto").expect("Failed to read glob pattern") {
         match entry {
             Ok(path) => {
+                println!(
+                    "cargo:rerun-if-changed={}",
+                    proto_include_path.to_str().unwrap()
+                );
                 let status = Command::new(protoc_path.to_str().unwrap())
                     .args(&[
                         "-I",
@@ -60,5 +64,4 @@ fn main() {
         .include(out_include)
         .include(out_dir)
         .compile("oneflow_common");
-    println!("cargo:rerun-if-changed=src/hello.c");
 }
