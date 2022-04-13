@@ -1905,7 +1905,7 @@ class TensorGetItemFunctor {
       }
     }
 
-    {
+  {
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
@@ -1959,6 +1959,7 @@ class TensorGetItemFunctor {
     // OF_PROFILER_RANGE_POP();
     return result;
   }
+}
 };
 
 class TensorSetItemFunctor {
