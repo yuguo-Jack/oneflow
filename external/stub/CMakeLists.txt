@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.18.0)
+include(FetchContent)
+project(oneflow_deps DESCRIPTION "this is used by Cargo")
+FetchContent_Declare(glog URL ${GLOG_URL} URL_HASH MD5=${GLOG_HASH})
+FetchContent_MakeAvailable(glog)
