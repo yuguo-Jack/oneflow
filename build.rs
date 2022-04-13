@@ -26,6 +26,7 @@ fn main() {
         match entry {
             Ok(path) => {
                 println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
+                // TODO: create __init__.py for pb
                 let status = Command::new(protoc_path.to_str().unwrap())
                     .args(&[
                         "-I",
