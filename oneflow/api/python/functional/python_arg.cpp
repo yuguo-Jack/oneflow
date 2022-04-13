@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/api/python/functional/python_arg.h"
+
+#include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/extension/python/numpy.h"
@@ -47,7 +48,7 @@ namespace functional {
   }                                                                                              \
   template<>                                                                                     \
   std::shared_ptr<std::vector<T>> PythonArg::ObjectAs<std::shared_ptr<std::vector<T>>>() const { \
-    return std::make_shared<std::vector<T>>(std::move(ObjectAs<std::vector<T>>()));              \
+    return std::make_shared<std::vector<T>>(ObjectAs<std::vector<T>>());                         \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
@@ -67,7 +68,7 @@ OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
   }                                                                                              \
   template<>                                                                                     \
   std::shared_ptr<std::vector<T>> PythonArg::ObjectAs<std::shared_ptr<std::vector<T>>>() const { \
-    return std::make_shared<std::vector<T>>(std::move(ObjectAs<std::vector<T>>()));              \
+    return std::make_shared<std::vector<T>>(ObjectAs<std::vector<T>>());                         \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
@@ -76,7 +77,7 @@ OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
 #define INSTANCE_OBJECT_AS_SHARED_PTR(T)                               \
   template<>                                                           \
   std::shared_ptr<T> PythonArg::ObjectAs<std::shared_ptr<T>>() const { \
-    return std::make_shared<T>(std::move(ObjectAs<T>()));              \
+    return std::make_shared<T>(ObjectAs<T>());                         \
   }
 
 template<>
@@ -93,7 +94,7 @@ INSTANCE_OBJECT_AS_SHARED_PTR(Scalar)
 
 template<>
 std::shared_ptr<one::Tensor> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
-  return PyUnpackTensor(object_);
+  return PyTensor_Unpack(object_);
 }
 
 template<>
@@ -216,7 +217,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
       return PyScalarCheck(object_) || numpy::PyArrayCheckLongScalar(object_)
              || numpy::PyArrayCheckFloatScalar(object_);
     case kTENSOR:
-    case kTENSOR_REF: return PyTensorCheck(object_);
+    case kTENSOR_REF: return PyTensor_Check(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
     case kSHAPE: return PyLongSequenceCheck(object_);

@@ -98,8 +98,9 @@ void ParseScalar(PyObject* object, char* data, const DataType& dtype) {
       CHECK_OR_THROW(value >= 0 && value <= 255) << "Out of range 0-255.";
       *(reinterpret_cast<uint8_t*>(data)) = value;
     }
+  } else {
+    THROW(RuntimeError) << "Can't parse scalar with data type " << dtype;
   }
-  THROW(RuntimeError) << "Can't parse scalar with data type " << dtype;
 }
 
 void RecursiveParseAndAssign(PyObject* object, char* data, const int& ndims, const int& dim,
@@ -192,9 +193,8 @@ IndexItem UnpackIndexItem(PyObject* object) {
     return IndexItem(object == Py_True);
   } else if (object == Py_None) {
     return IndexItem(NoneIndex{});
-  } else if (PyTensorCheck(object)) {
-    auto obj = py::reinterpret_borrow<py::object>(object);
-    return IndexItem(py::cast<std::shared_ptr<Tensor>>(obj));
+  } else if (PyTensor_Check(object)) {
+    return IndexItem(PyTensor_Unpack(object));
   } else if (PySequence_Check(object)) {
     return IndexItem(ConvertToIndexingTensor(object).GetPtrOrThrow());
   }
