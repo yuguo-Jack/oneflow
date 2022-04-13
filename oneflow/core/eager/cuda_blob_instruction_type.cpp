@@ -32,8 +32,20 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
   using stream_type = vm::CudaStreamType;
 };
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
-    "gpu.AccessBlobByCallback"));
+    "cuda.AccessBlobByCallback"));
 
+<<<<<<< HEAD
+=======
+class GpuTensorViewInstructionType final : public TensorViewInstructionType {
+ public:
+  GpuTensorViewInstructionType() = default;
+  ~GpuTensorViewInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+};
+COMMAND(vm::RegisterInstructionType<GpuTensorViewInstructionType>("cuda.TensorView"));
+
+>>>>>>> dev_optimize_python_functions
 class GpuRecordEventInstructionType : public RecordEventInstructionType {
  public:
   GpuRecordEventInstructionType() = default;
@@ -52,7 +64,7 @@ class GpuRecordEventInstructionType : public RecordEventInstructionType {
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
   }
 };
-COMMAND(vm::RegisterInstructionType<GpuRecordEventInstructionType>("gpu.RecordEvent"));
+COMMAND(vm::RegisterInstructionType<GpuRecordEventInstructionType>("cuda.RecordEvent"));
 
 }  // namespace vm
 }  // namespace oneflow
