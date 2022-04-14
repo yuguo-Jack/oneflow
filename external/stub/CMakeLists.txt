@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.18.0)
 include(FetchContent)
 project(oneflow_deps DESCRIPTION "this is used by Cargo")
 
+set(CMAKE_DEBUG_POSTFIX "" CACHE STRING "" FORCE)
+
 # glog
 FetchContent_Declare(glog URL ${GLOG_URL} URL_HASH MD5=${GLOG_HASH})
 set(WITH_UNWIND OFF CACHE BOOL "" FORCE)

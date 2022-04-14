@@ -44,10 +44,12 @@ fn main() {
         "oneflow/core/common/device_type.proto",
         "oneflow/core/serving/saved_model.proto",
     ]);
+    println!("cargo:rerun-if-changed={}", "external/stub/CMakeLists.txt");
     let glog_url = "https://github.com/google/glog/archive/refs/tags/v0.5.0.tar.gz";
     let glog_hash = "2368e3e0a95cce8b5b35a133271b480f";
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let out_include: PathBuf = [out_dir.to_str().unwrap(), "include"].iter().collect();
+    let out_lib_path = Path::new(&out_dir).join("lib");
     cmake::Config::new("external/stub")
         .define("GLOG_URL", glog_url)
         .define("GLOG_HASH", glog_hash)
@@ -124,7 +126,15 @@ fn main() {
     oneflow_common
         .include(".")
         .include(out_include)
-        .include(out_dir)
+        .include(&out_dir)
         .include("./tools/cfg/include")
+        .cpp_link_stdlib("stdc++")
+        .flag("-w")
         .compile("oneflow_common");
+    println!(
+        "cargo:rustc-link-search=native={}",
+        &out_lib_path.to_str().unwrap()
+    );
+    println!("cargo:rustc-link-lib=static=glogd");
+    println!("cargo:rustc-link-lib=static=stdc++");
 }
