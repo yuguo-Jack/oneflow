@@ -79,7 +79,16 @@ fn main() {
                     .status()
                     .expect("failed to execute process");
                 assert!(status.success());
-                if (cfg_proto_paths.contains(path.to_str().unwrap())) {
+            }
+            Err(e) => println!("{:?}", e),
+        }
+    }
+    // generate cfg, because cfg doesn't have include mechanism so must compile all protobuf before
+    for entry in glob("oneflow/core/**/*.proto").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
+                if cfg_proto_paths.contains(path.to_str().unwrap()) {
                     let status = Command::new("python3")
                         .args(&[
                             "tools/cfg/template_convert.py",
