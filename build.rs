@@ -37,6 +37,22 @@ fn main() {
                         out_dir.to_str().unwrap(),
                         "--python_out",
                         "python",
+                        "--python_out",
+                        out_dir.to_str().unwrap(), // this is for cfg to use in reflection
+                        path.to_str().unwrap(),
+                    ])
+                    .status()
+                    .expect("failed to execute process");
+                assert!(status.success());
+                let status = Command::new("python3")
+                    .args(&[
+                        "tools/cfg/template_convert.py",
+                        "--project_build_dir",
+                        out_dir.to_str().unwrap(),
+                        "--of_cfg_proto_python_dir",
+                        out_dir.to_str().unwrap(),
+                        "--generate_file_type=cfg.cpp",
+                        "--proto_file_path",
                         path.to_str().unwrap(),
                     ])
                     .status()
@@ -63,5 +79,6 @@ fn main() {
         .include(".")
         .include(out_include)
         .include(out_dir)
+        .include("./tools/cfg/include")
         .compile("oneflow_common");
 }
