@@ -19,3 +19,20 @@ set(protobuf_BUILD_TESTS OFF CACHE BOOL "")
 set(protobuf_DEBUG_POSTFIX "" CACHE STRING "")
 FetchContent_Declare(protobuf URL ${PROTOBUF_URL} URL_HASH MD5=${PROTOBUF_MD5} SOURCE_SUBDIR cmake)
 FetchContent_MakeAvailable(protobuf)
+
+# half
+
+set(HALF_URL https://github.com/Oneflow-Inc/half/archive/v2.1.0-fix-cuda-raise.zip)
+set(HALF_URL_HASH 30b0dc289729f9e85ddf6995f2e6968f)
+FetchContent_Declare(half URL ${HALF_URL} URL_HASH MD5=${HALF_URL_HASH} SOURCE_SUBDIR cmake)
+FetchContent_MakeAvailable(half)
+install(
+FILES ${half_SOURCE_DIR}/include/half.hpp
+TYPE INCLUDE
+COMPONENT half_headers)
+add_custom_target(
+install_half_headers ALL
+COMMAND
+    "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=half_headers
+    -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+DEPENDS ${half_SOURCE_DIR}/include/half.hpp)
