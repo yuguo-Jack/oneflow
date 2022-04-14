@@ -50,16 +50,27 @@ PyTypeObject* PyParameterObject_Type = NULL;
 
 static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* _self = functional::_legacy_tensor_ctor(NULL, args, kwargs);
-  ((PyTensorObject*)self)->data = PyTensor_Unpack(_self);
-  Py_XDECREF(_self);
+  auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
+  auto* _self = (PyTensorObject*)self;
+  _self->data = PyTensor_Unpack(temp);
+  _self->data->set_pyobject(self);
+
+  // reset temp data to prevent clearing the pyobject
+  // when the temp is deallocated
+  ((PyTensorObject*)temp)->data.reset();
+  Py_XDECREF(temp);
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
 
 static void PyTensorObject_dealloc(PyObject* self) {
-  ((PyTensorObject*)self)->data.reset();
-
+  auto* _self = (PyTensorObject*)self;
+  // clear pyobject
+  if (_self->data) {
+    _self->data->set_pyobject(NULL);
+    _self->data.reset();
+  }
+  // clear __dict__
   PyObject** dict_ptr = _PyObject_GetDictPtr(self);
   if (dict_ptr) { Py_CLEAR(*dict_ptr); }
   auto* type = Py_TYPE(self);
@@ -70,35 +81,19 @@ static void PyTensorObject_dealloc(PyObject* self) {
 static int PyParameterObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* data = NULL;
-  bool requires_grad = true;
-  static const char* keywords[2] = {"data", "requires_grad"};
+  int requires_grad = 1;
+  static const char* keywords[3] = {"data", "requires_grad", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|p:__init__", const_cast<char**>(keywords),
                                    &data, &requires_grad)) {
     return -1;
   }
   if (self) {
-    ((PyTensorObject*)self)->data =
-        ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad));
+    auto* _self = (PyTensorObject*)self;
+    _self->data = ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad));
+    _self->data->set_pyobject(self);
   }
   return 0;
   END_HANDLE_ERRORS_RET(-1)
-}
-
-static PyObject* PyParameterObject_new(PyTypeObject* type, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* data = NULL;
-  bool requires_grad = true;
-  static const char* keywords[2] = {"data", "requires_grad"};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|p:__new__", const_cast<char**>(keywords), &data,
-                                   &requires_grad)) {
-    return NULL;
-  }
-  auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(type, 0);
-  if (self) {
-    self->data = ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad));
-  }
-  return (PyObject*)self;
-  END_HANDLE_ERRORS
 }
 
 static Py_ssize_t PyTensorObject_length(PyTensorObject* self) {
@@ -152,7 +147,12 @@ static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused)
 
 static PyObject* PyTensorObject_stride(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  return functional::CastToPyObject(PyTensor_Unpack(self)->stride());
+  const auto& stride = ASSERT_PTR(PyTensor_Unpack(self)->stride());
+  PyObject* tup = PyTuple_New(stride->NumAxes());
+  for (int i = 0; i < stride->NumAxes(); ++i) {
+    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->At(i)));
+  }
+  return tup;
   END_HANDLE_ERRORS
 }
 
@@ -170,13 +170,14 @@ static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_requires_grad_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  bool requires_grad = true;
-  static const char* keywords[1] = {"requires_grad"};
+  int requires_grad = 1;
+  static const char* keywords[2] = {"requires_grad", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|p:requires_grad_", const_cast<char**>(keywords),
                                    &requires_grad)) {
     return NULL;
   }
   ASSERT(PyTensor_Unpack(self)->set_requires_grad(requires_grad));
+  Py_XINCREF(self);
   return self;
   END_HANDLE_ERRORS
 }
@@ -189,7 +190,7 @@ static PyObject* PyTensorObject_retain_grad(PyObject* self, PyObject* unused) {
                         "can't retain_grad on Tensor that has requires_grad=False");
   }
   ASSERT(t->set_retain_grad(true));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -208,6 +209,7 @@ static PyObject* PyTensorObject_clone(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_zeros_(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   ASSERT(EagerMirroredTensorZeros(PyTensor_Unpack(self)));
+  Py_XINCREF(self);
   return self;
   END_HANDLE_ERRORS
 }
@@ -216,7 +218,7 @@ static PyObject* PyTensorObject_register_hook(PyObject* self, PyObject* hook) {
   HANDLE_ERRORS
   const auto& _hook = py::cast<AutogradMeta::Hook>(py::reinterpret_borrow<py::object>(hook));
   ASSERT(RegisterTensorHook(PyTensor_Unpack(self), _hook));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -225,7 +227,7 @@ static PyObject* PyTensorObject__register_post_grad_accumulation_hook(PyObject* 
   HANDLE_ERRORS
   const auto& _hook = py::cast<AutogradMeta::Hook>(py::reinterpret_borrow<py::object>(hook));
   ASSERT(RegisterTensorPostGradAccumulationHook(PyTensor_Unpack(self), _hook));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -239,7 +241,7 @@ static PyObject* PyTensorObject_global_id(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   ASSERT(CheckMetaConsistency(PyTensor_Unpack(self)));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -266,7 +268,7 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
     ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), array,             \
                                                 BlobNumpyCopyUtil<T>::To, "const",        \
                                                 /*block_host_until_done=*/true));         \
-    return Py_None;                                                                       \
+    Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
   }                                                                                       \
   static PyObject* PyTensorObject__copy_from_numpy_##T(PyObject* self, PyObject* array) { \
@@ -275,7 +277,7 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
     ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), copied,            \
                                                 BlobNumpyCopyUtil<T>::From, "mut",        \
                                                 /*block_host_until_done=*/false));        \
-    return Py_None;                                                                       \
+    Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
@@ -301,7 +303,7 @@ static PyObject* PyTensorObject__register_storage_delete_hook(PyObject* self, Py
   HANDLE_ERRORS
   auto _hook = py::cast<std::function<void()>>(py::reinterpret_borrow<py::object>(hook));
   ASSERT(PyTensor_Unpack(self)->RegisterStorageDeleteHook(_hook));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -318,7 +320,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"zeros_", PyTensorObject_zeros_, METH_NOARGS, NULL},
     {"register_hook", PyTensorObject_register_hook, METH_O, NULL},
     {"_register_post_grad_accumulation_hook", PyTensorObject__register_post_grad_accumulation_hook,
-     METH_VARARGS, NULL},
+     METH_O, NULL},
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_VARARGS, NULL},
@@ -532,6 +534,7 @@ static PyTypeObject* MakeTensorType() {
   type->tp_getset = PyTensorObject_properties;
   type->tp_methods = PyTensorObject_methods;
 
+  type->tp_as_number = &heap_type->as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
 
@@ -554,7 +557,6 @@ static PyTypeObject* MakeParameterType() {
   type->tp_basicsize = sizeof(PyTensorObject);
 
   type->tp_init = PyParameterObject_init;
-  type->tp_new = PyParameterObject_new;
 
   type->tp_base = PY_XINCREF(PyTensorObject_Type);
 
@@ -565,20 +567,34 @@ static PyTypeObject* MakeParameterType() {
 }
 
 PyObject* PyTensor_New(const std::shared_ptr<Tensor>& data) {
+  if (!data) { Py_RETURN_NONE; }
+  if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
-  if (self) { self->data = data; }
+  if (self) {
+    self->data = data;
+    self->data->set_pyobject(self);
+  }
   return (PyObject*)self;
 }
 
 PyObject* PyParameter_New(const std::shared_ptr<Parameter>& data) {
+  if (!data) { Py_RETURN_NONE; }
+  if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
-  if (self) { self->data = data; }
+  if (self) {
+    self->data = data;
+    self->data->set_pyobject(self);
+  }
   return (PyObject*)self;
 }
 
 PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_grad) {
+  if (!data) { Py_RETURN_NONE; }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
-  if (self) { self->data = ASSERT_PTR(Parameter::MakeTensor(data, requires_grad)); }
+  if (self) {
+    self->data = ASSERT_PTR(Parameter::MakeTensor(data, requires_grad));
+    self->data->set_pyobject(self);
+  }
   return (PyObject*)self;
 }
 
