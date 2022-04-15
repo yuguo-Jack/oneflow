@@ -7,6 +7,7 @@ use std::{
 };
 
 use glob::glob;
+use jobserver::Client;
 use std::collections::HashSet;
 
 fn main() {
@@ -55,8 +56,12 @@ fn main() {
         .define("GLOG_HASH", glog_hash)
         .generator("Ninja")
         .build();
+    let client = match unsafe { Client::from_env() } {
+        Some(client) => client,
+        None => panic!("client not configured"),
+    };
+    let token = client.acquire().unwrap(); // blocks until it is available
 
-    // generate c++ and python from proto
     let protoc_path = Path::new(&out_dir).join("bin").join("protoc");
     let proto_include_path = Path::new(&out_dir).join("include");
     for entry in glob("oneflow/core/**/*.proto").expect("Failed to read glob pattern") {
@@ -64,23 +69,22 @@ fn main() {
             Ok(path) => {
                 println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
                 // TODO: create __init__.py for pb
-                let status = Command::new(protoc_path.to_str().unwrap())
-                    .args(&[
-                        "-I",
-                        proto_include_path.to_str().unwrap(),
-                        "-I",
-                        "./",
-                        "--cpp_out",
-                        out_dir.to_str().unwrap(),
-                        "--python_out",
-                        "python",
-                        "--python_out",
-                        out_dir.to_str().unwrap(), // this is for cfg to use in reflection
-                        path.to_str().unwrap(),
-                    ])
-                    .status()
-                    .expect("failed to execute process");
-                assert!(status.success());
+                let mut cmd = Command::new(protoc_path.to_str().unwrap());
+                cmd.args(&[
+                    "-I",
+                    proto_include_path.to_str().unwrap(),
+                    "-I",
+                    "./",
+                    "--cpp_out",
+                    out_dir.to_str().unwrap(),
+                    "--python_out",
+                    "python",
+                    "--python_out",
+                    out_dir.to_str().unwrap(), // this is for cfg to use in reflection
+                    path.to_str().unwrap(),
+                ]);
+                client.configure(&mut cmd);
+                // assert!(cmd.status().expect("failed to execute process");.success());
             }
             Err(e) => println!("{:?}", e),
         }
@@ -91,27 +95,28 @@ fn main() {
             Ok(path) => {
                 println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
                 if cfg_proto_paths.contains(path.to_str().unwrap()) {
-                    let status = Command::new("python3")
-                        .args(&[
-                            "tools/cfg/template_convert.py",
-                            "--project_build_dir",
-                            out_dir.to_str().unwrap(),
-                            "--of_cfg_proto_python_dir",
-                            out_dir.to_str().unwrap(),
-                            "--generate_file_type=cfg.cpp",
-                            "--proto_file_path",
-                            path.to_str().unwrap(),
-                        ])
-                        .status()
-                        .expect("failed to execute process");
-                    assert!(status.success());
+                    let mut cmd = Command::new("python3");
+                    cmd.args(&[
+                        "tools/cfg/template_convert.py",
+                        "--project_build_dir",
+                        out_dir.to_str().unwrap(),
+                        "--of_cfg_proto_python_dir",
+                        out_dir.to_str().unwrap(),
+                        "--generate_file_type=cfg.cpp",
+                        "--proto_file_path",
+                        path.to_str().unwrap(),
+                    ]);
+                    println!("cargo:warning={}", path.to_str().unwrap());
+                    client.configure(&mut cmd);
+                    assert!(cmd.status().expect("failed to execute process").success());
                 }
             }
             Err(e) => println!("{:?}", e),
         }
     }
-
-    // build oneflow common
+    drop(token); // releases the token when the work is done
+                 // generate c++ and python from proto
+                 // build oneflow common
     let mut oneflow_common = cc::Build::new();
     for entry in glob("oneflow/core/common/**/*.cpp").expect("Failed to read glob pattern") {
         match entry {
