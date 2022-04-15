@@ -106,7 +106,6 @@ fn main() {
                         "--proto_file_path",
                         path.to_str().unwrap(),
                     ]);
-                    println!("cargo:warning={}", path.to_str().unwrap());
                     client.configure(&mut cmd);
                     assert!(cmd.status().expect("failed to execute process").success());
                 }
