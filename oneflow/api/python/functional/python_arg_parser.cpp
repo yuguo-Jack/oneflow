@@ -77,8 +77,12 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
       }
       obj = PyTuple_GetItem(args, arg_pos);
     } else if (kwargs) {
-      obj = PyDict_GetItemString(kwargs, param.name.c_str());
-      if (obj) { remaining_kwargs--; }
+      PyObject* key = PyBytes_FromString(param.name.c_str());
+      if (PyDict_Contains(kwargs, key)) {
+        obj = PyDict_GetItem(kwargs, key);
+        remaining_kwargs--;
+      }
+      Py_DECREF(key);
     }
 
     if (obj) {
