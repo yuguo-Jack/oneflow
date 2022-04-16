@@ -19,16 +19,19 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <vector>
+#include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/value_types.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
 struct ReturnDef {
-  explicit ReturnDef(const ValueType& t) : type(t) {}
+  ReturnDef(const ValueType& t) : type(t) {}
   ValueType type;
 };
 
