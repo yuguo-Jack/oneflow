@@ -44,8 +44,6 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/profiler/profiler.h"
 
-#include "oneflow/core/profiler/profiler.h"
-
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -1154,10 +1152,10 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    OF_PROFILER_RANGE_PUSH("SliceBaseFunctor");
+    // OF_PROFILER_RANGE_PUSH("SliceBaseFunctor");
     if (view::IsViewApplicable(x)) { 
       auto ret = view::Slice(x, start, stop, step); 
-      OF_PROFILER_RANGE_POP();
+      // OF_PROFILER_RANGE_POP();
       return ret;
     }
 
@@ -1166,7 +1164,7 @@ class SliceBaseFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
     auto ret = OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
-    OF_PROFILER_RANGE_POP();
+    // OF_PROFILER_RANGE_POP();
     return ret;
   }
 
@@ -1876,10 +1874,6 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    std::shared_ptr<one::Tensor> result;
-    OF_PROFILER_RANGE_PUSH("impl");
-
-    {
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
@@ -1911,6 +1905,7 @@ class TensorGetItemFunctor {
       }
       return true;
     }();
+    std::shared_ptr<one::Tensor> result;
     if (is_identity) {
       result = expand_input;
     } else {
@@ -1919,9 +1914,9 @@ class TensorGetItemFunctor {
     // OF_PROFILER_RANGE_PUSH("shape");
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     // OF_PROFILER_RANGE_POP();
-    OF_PROFILER_RANGE_PUSH("Reshape");
+    // OF_PROFILER_RANGE_PUSH("Reshape");
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
-    OF_PROFILER_RANGE_POP();
+    // OF_PROFILER_RANGE_POP();
     // OF_PROFILER_RANGE_PUSH("ApplyAdvancedIndexing");
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
     // OF_PROFILER_RANGE_POP();
@@ -1929,8 +1924,6 @@ class TensorGetItemFunctor {
     // TODO(): Returns a view of tensor `x`.
     // OF_PROFILER_RANGE_PUSH("Identity");
     if (result == x) { result = JUST(Identity(x)); }
-    }
-    OF_PROFILER_RANGE_POP();
     return result;
   }
 };

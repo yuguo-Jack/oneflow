@@ -82,9 +82,7 @@ Maybe<void> CopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor,
 }
 
 std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
-  py::object obj = py::reinterpret_steal<py::object>(
-      functional::_legacy_tensor_ctor(NULL, args.ptr(), kwargs.ptr()));
-  return py::cast<std::shared_ptr<Tensor>>(obj);
+  return py::cast<std::shared_ptr<Tensor>>(functional::_legacy_tensor_ctor(args, kwargs));
 }
 
 Maybe<void> ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
