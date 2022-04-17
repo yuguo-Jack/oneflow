@@ -768,8 +768,15 @@ def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
 
 
 def _normal(self, mean=0, std=1):
-    initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
-    return _init_by_initializer_conf(self, initializer_conf)
+    return flow.normal(
+        mean,
+        std,
+        self.size(),
+        out=self,
+        dtype=self.dtype,
+        device=self.device,
+        requires_grad=self.requires_grad,
+    )
 
 
 def _fill(self, value):
