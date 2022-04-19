@@ -116,25 +116,11 @@ docker pull oneflowinc/oneflow:nightly-cuda11.2
 <details>
 <summary>Build OneFlow</summary>
 
-- #### Option 1: Build with [earthly](https://github.com/earthly/earthly) (recommended)
-
-  1. install earthly
-
-  https://earthly.dev/get-earthly
-
-  2. build
-
-  ```
-  earthly +build
-  ```
-
-  You should find built `.whl` in `wheelhouse` directory.
-
-- #### Option 2: Build with Conda (recommended)
+- #### Option 1: Build with Conda (recommended)
 
   Please refer to [this repo](https://github.com/Oneflow-Inc/conda-env)
 
-- #### Option 3: Build in docker container (recommended)
+- #### Option 2: Build in docker container (recommended)
 
   - Pull the docker image:
 
@@ -144,7 +130,7 @@ docker pull oneflowinc/oneflow:nightly-cuda11.2
 
   - Follow the instructions in the bare metal build guide below.
 
-- #### Option 4: Build on bare metal
+- #### Option 3: Build on bare metal
 
   - Install dependencies (not required if you are using docker):
     - on Ubuntu 20.04, run:
