@@ -1,4 +1,4 @@
-# Earthfile
+VERSION 0.5
 FROM registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda10.2
 
 WORKDIR /code
