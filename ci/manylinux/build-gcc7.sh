@@ -18,7 +18,7 @@ clean_artifacts
 
 # cmake config
 mkdir -p ${ONEFLOW_CI_BUILD_DIR}
-cd ${ONEFLOW_CI_BUILD_DIR}
+cd ${ONEFLOW_CI_SRC_DIR}
 find ${ONEFLOW_CI_BUILD_DIR} -name CMakeCache.txt
 find ${ONEFLOW_CI_BUILD_DIR} -name CMakeCache.txt -delete
 if [ ! -f "$ONEFLOW_CI_CMAKE_INIT_CACHE" ]; then
@@ -27,7 +27,7 @@ if [ ! -f "$ONEFLOW_CI_CMAKE_INIT_CACHE" ]; then
 fi
 export PATH="${PATH}:$(dirname ${ONEFLOW_CI_PYTHON_EXE})"
 export PYTHON_BIN_PATH=${ONEFLOW_CI_PYTHON_EXE}
-cmake -S ${ONEFLOW_CI_SRC_DIR} -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECUTABLE=${ONEFLOW_CI_PYTHON_EXE}
+cmake -B ${ONEFLOW_CI_BUILD_DIR} -S ${ONEFLOW_CI_SRC_DIR} -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECUTABLE=${ONEFLOW_CI_PYTHON_EXE}
 
 # cmake build
 cd ${ONEFLOW_CI_BUILD_DIR}
