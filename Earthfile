@@ -1,7 +1,6 @@
 VERSION 0.5
 ARG BASE_IMAGE=oneflowinc/manylinux2014_x86_64_cuda11.2
 ARG ONEFLOW_CI_CMAKE_INIT_CACHE=cmake/caches/international/cuda.cmake
-ARG ONEFLOW_CI_BUILD_SCRIPT=ci/manylinux/build-gcc7.sh
 ARG ONEFLOW_CI_PYTHON_EXE=/opt/python/cp37-cp37m/bin/python3
 ARG ONEFLOW_CI_BUILD_PARALLEL=8
 FROM ${BASE_IMAGE}
