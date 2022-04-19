@@ -128,6 +128,8 @@ docker pull oneflowinc/oneflow:nightly-cuda11.2
   earthly +build
   ```
 
+  You should find built `.whl` in `wheelhouse` directory.
+
 - #### Option 2: Build with Conda (recommended)
 
   Please refer to [this repo](https://github.com/Oneflow-Inc/conda-env)
