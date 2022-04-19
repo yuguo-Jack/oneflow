@@ -1,6 +1,7 @@
 source scl_source enable devtoolset-7
 set -ex
 ONEFLOW_CI_BUILD_PARALLEL=${ONEFLOW_CI_BUILD_PARALLEL:-$(nproc)}
+set -u
 gcc --version
 ld --version
 # clean python dir
