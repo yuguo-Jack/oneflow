@@ -22,11 +22,11 @@ build:
       --mount=type=cache,target=/root/.ccache \
       --mount=type=cache,target=/root/.local \
       --mount=type=cache,target=/root/.cache \
-     cmake -B /code/build -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECUTABLE=${ONEFLOW_CI_PYTHON_EXE}
+     source scl_source enable devtoolset-7 && cmake -B /code/build -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECUTABLE=${ONEFLOW_CI_PYTHON_EXE}
   RUN --mount=type=cache,target=/code/build/CMakeFiles \
       --mount=type=cache,target=/root/.ccache \
       --mount=type=cache,target=/root/.local \
       --mount=type=cache,target=/root/.cache \
-     cmake --build /code/build --parallel ${ONEFLOW_CI_BUILD_PARALLEL}
+     source scl_source enable devtoolset-7 && cmake --build /code/build --parallel ${ONEFLOW_CI_BUILD_PARALLEL}
   RUN auditwheel repair python/dist/* --wheel-dir wheelhouse
   SAVE ARTIFACT wheelhouse AS LOCAL wheelhouse
