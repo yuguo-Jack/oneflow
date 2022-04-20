@@ -22,3 +22,5 @@ OneFlow one_embedding operations.
 .. autofunction:: oneflow.one_embedding.make_table
 .. autofunction:: oneflow.one_embedding.make_persistent_table_reader
 .. autofunction:: oneflow.one_embedding.make_persistent_table_writer
+.. automodule:: oneflow.one_embedding
+    :members: Ftrl

@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Callable, Dict, Iterator, List, Union
 import oneflow as flow
 from oneflow.nn.module import Module
+from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.parameter import Parameter
 import json
 import datetime
 from oneflow._oneflow_internal import OneEmbeddingHandler
@@ -235,7 +238,7 @@ class Embedding(Module):
 
         Args:
             snapshot_name (str): the snapshot_name, snapshot will be saved in the snapshots dir under your_configed_persistent_path
-    
+
         For example:
 
         .. code-block:: python
@@ -253,7 +256,7 @@ class Embedding(Module):
 
         Args:
             snapshot_name (str): the snapshot_name, snapshot will be load from your_configed_persistent_path
-    
+
         For example:
 
         .. code-block:: python
@@ -352,7 +355,7 @@ def make_cached_ssd_store_options(
 
     .. code-block:: python
 
-        >>> import oneflow as flow    
+        >>> import oneflow as flow
         >>> store_options = flow.one_embedding.make_cached_ssd_store_options(
         >>>     cache_budget_mb=8192, persistent_path="/your_path_to_ssd", capacity=vocab_size,
         >>> )
@@ -452,7 +455,7 @@ def make_uniform_initializer(low, high):
 
     Returns:
         dict: initializer param of make_table_options
-    
+
     For example:
 
     .. code-block:: python
@@ -474,7 +477,7 @@ def make_normal_initializer(mean, std):
 
     Returns:
         dict: initializer param of make_table_options
-    
+
     For example:
 
     .. code-block:: python
@@ -495,7 +498,7 @@ def make_table_options(param):
 
     Returns:
         dict: table param of Embedding tables
-    
+
     For example:
 
     .. code-block:: python
@@ -507,7 +510,7 @@ def make_table_options(param):
         >>> tables = [table1, table2]
         >>> # pass the tables to the "tables" param of flow.one_embedding.MultiTableEmbedding or flow.one_embedding.MultiTableMultiColumnEmbedding
         >>> # ...
-        
+
     """
     if isinstance(param, dict):
         table = {"initializer": param}
@@ -541,7 +544,7 @@ class MultiTableEmbedding(Embedding):
         tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
-    
+
     For example:
 
     .. code-block:: python
@@ -591,13 +594,13 @@ class MultiTableEmbedding(Embedding):
         >>>         )
         >>>         self.add_optimizer(
         >>>             flow.optim.SGD(self.mlp.parameters(), lr=0.1, momentum=0.0)
-        >>>         ) 
+        >>>         )
         >>>     def build(self, ids):
         >>>         embedding = self.embedding_lookup(ids)
         >>>         loss = self.mlp(flow.reshape(embedding, (-1, num_tables * embedding_size)))
         >>>         loss = loss.sum()
         >>>         loss.backward()
-        >>>         return loss 
+        >>>         return loss
         >>> ids = np.random.randint(0, 1000, (100, num_tables), dtype=np.int64)
         >>> ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
         >>> graph = TrainGraph()
@@ -639,7 +642,7 @@ class MultiTableMultiColumnEmbedding(Embedding):
         tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
-    
+
     For example:
 
     .. code-block:: python
@@ -656,9 +659,9 @@ class MultiTableMultiColumnEmbedding(Embedding):
         >>> scales = np.sqrt(1 / np.array(table_size_array))
         >>> tables = [
         >>>     flow.one_embedding.make_table_options(
-        >>>       [flow.one_embedding.make_column_options(    
-        >>>         flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)), 
-        >>>        flow.one_embedding.make_column_options(    
+        >>>       [flow.one_embedding.make_column_options(
+        >>>         flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)),
+        >>>        flow.one_embedding.make_column_options(
         >>>         flow.one_embedding.make_normal_initializer(mean=0, std=scale))]
         >>>     )
         >>>     for scale in scales
@@ -693,13 +696,13 @@ class MultiTableMultiColumnEmbedding(Embedding):
         >>>         )
         >>>         self.add_optimizer(
         >>>             flow.optim.SGD(self.mlp.parameters(), lr=0.1, momentum=0.0)
-        >>>         ) 
+        >>>         )
         >>>     def build(self, ids):
         >>>         embedding = self.embedding_lookup(ids)
         >>>         loss = self.mlp(flow.reshape(embedding, (-1, num_tables * sum(embedding_size_list))))
         >>>         loss = loss.sum()
         >>>         loss.backward()
-        >>>         return loss 
+        >>>         return loss
         >>> ids = np.random.randint(0, 1000, (100, num_tables), dtype=np.int64)
         >>> ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
         >>> graph = TrainGraph()
@@ -779,3 +782,168 @@ def make_persistent_table_writer(
         4 * 1024,
         physical_block_size,
     )
+
+
+class Ftrl(Optimizer):
+    r"""FTRL Optimizer.
+
+    The formula is:
+
+        .. math::
+
+            & accumlator_{i+1} = accumlator_{i} + grad * grad
+
+            & sigma = (accumulator_{i+1}^{lr\_power} - accumulator_{i}^{lr\_power}) / learning\_rate
+
+            & z_{i+1} = z_{i} + grad - sigma * param_{i}
+
+            \text{}
+                param_{i+1} = \begin{cases}
+            0 & \text{ if } |z_{i+1}| < \lambda_1 \\
+            -(\frac{\beta+accumlator_{i+1}^{lr\_power}}{learning\_rate} + \lambda_2)*(z_{i+1} - sign(z_{i+1})*\lambda_1) & \text{ otherwise } \\
+            \end{cases}
+
+    Example 1:
+
+    .. code-block:: python
+
+        # Assume net is a custom model.
+        adam = flow.one_embedding.FTRL(net.parameters(), lr=1e-3)
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on.
+            # ...
+            loss.backward()
+            adam.step()
+            adam.zero_grad()
+
+    Args:
+        params (Union[Iterator[Parameter], List[Dict]]): _description_
+        lr (float, optional): _description_. Defaults to 0.001.
+        weight_decay (float, optional): _description_. Defaults to 0.0.
+        lr_power (float, optional): _description_. Defaults to -0.5.
+        initial_accumulator_value (float, optional): _description_. Defaults to 0.1.
+        lambda1 (float, optional): _description_. Defaults to 0.0.
+        lambda2 (float, optional): _description_. Defaults to 0.0.
+        beta (float, optional): _description_. Defaults to 0.0.
+    """
+
+    def __init__(
+        self,
+        params: Union[Iterator[Parameter], List[Dict]],
+        lr: float = 0.001,
+        weight_decay: float = 0.0,
+        lr_power: float = -0.5,
+        initial_accumulator_value: float = 0.1,
+        lambda1: float = 0.0,
+        lambda2: float = 0.0,
+        beta: float = 0.0,
+    ):
+        assert lr >= 0.0, f"Invalid learning rate: {lr}"
+        assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
+        options = dict()
+        options["lr"] = lr
+        options["weight_decay"] = weight_decay
+        options["lr_power"] = lr_power
+        options["initial_accumulator_value"] = initial_accumulator_value
+        options["lambda1"] = lambda1
+        options["lambda2"] = lambda2
+        options["beta"] = beta
+        super().__init__(params, options)
+        # print("initial accumulator value is: ", options["initial_accumulator_value"])
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                assert param.is_leaf, "parameters must be leaf tensor"
+                self._state[param] = dict()
+                self._state[param]["accumulator_value"] = flow.zeros_like(param).fill_(
+                    param_group["initial_accumulator_value"]
+                )
+
+        self._op = (
+            flow.stateful_op("ftrl_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("accumulate")
+            .Input("z")
+            .Build()
+        )
+
+    def step(self, closure: Callable = None):
+        """Performs a single optimization step.
+
+        Args:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
+        with flow.no_grad():
+            loss = None
+            if closure is not None:
+                loss = closure()
+
+            for param_group in self.param_groups:
+                kwargs = {
+                    "learning_rate": param_group["lr"],
+                    "l2": param_group["weight_decay"],
+                    "lr_power": param_group["lr_power"],
+                    "lambda1": param_group["lambda1"],
+                    "lambda2": param_group["lambda2"],
+                    "beta": param_group["beta"],
+                }
+                for param in param_group.parameters:
+                    if param.grad is None:
+                        continue
+                    if "z" not in self._state[param]:
+                        self._state[param]["z"] = flow.zeros_like(param)
+
+                    accumulate_tensor = self._state[param]["accumulator_value"]
+                    z_tensor = self._state[param]["z"]
+
+                    flow._C.dispatch_ftrl_update(
+                        self._op,
+                        (param, param.grad, accumulate_tensor, z_tensor),
+                        **kwargs,
+                    )
+
+            return loss
+
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+
+            lr = (
+                param_group["initial_lr"]
+                if "initial_lr" in param_group
+                else param_group["lr"]
+            )
+
+            l2 = param_group["weight_decay"]
+            initial_accumulator_value = param_group["initial_accumulator_value"]
+            lr_power = param_group["lr_power"]
+            lambda1 = param_group["lambda1"]
+            lambda2 = param_group["lambda2"]
+            beta = param_group["beta"]
+
+            optimizer_conf.set_base_learning_rate(lr)
+            optimizer_conf.mutable_ftrl_conf().set_initial_accumulator_value(
+                initial_accumulator_value
+            )
+            optimizer_conf.mutable_ftrl_conf().set_lr_power(lr_power)
+            optimizer_conf.mutable_ftrl_conf().set_lambda1(lambda1)
+            optimizer_conf.mutable_ftrl_conf().set_lambda2(lambda2)
+            optimizer_conf.mutable_ftrl_conf().set_beta(beta)
+
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+
+            for param in param_group.parameters:
+                vars_conf[param].l2 = l2
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+
+            new_opt_confs.append(optimizer_conf)
+        return new_opt_confs
+
+    @property
+    def support_sparse(self):
+        return False
+
