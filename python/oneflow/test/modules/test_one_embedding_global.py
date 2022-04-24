@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
@@ -25,16 +24,84 @@ import tempfile
 
 from oneflow.test_utils.automated_test_util import *
 
-if flow.env.get_rank() == 0:
-    if os.path.exists("./test1"):
-        os.system("rm -rf ./test1")
-    if os.path.exists("./test2"):
-        os.system("rm -rf ./test2")
 path1 = "test1"
 path2 = "test2"
+path3 = "test3"
 
 
-def _test_one_embedding(test_case, has_column_id, num_columns, use_fp16):
+def get_param_list(parameters):
+    param_list = []
+    for x in parameters:
+        param_list.append(x)
+    return param_list
+
+
+def get_optimizer_param(
+    optimizer_test_case,
+    norm_type,
+    embedding_lookup1_params,
+    embedding_lookup2_params,
+    embedding_lookup3_params,
+    dense1_params,
+    dense2_params,
+):
+    embedding_lookup1_params = get_param_list(embedding_lookup1_params)
+    embedding_lookup2_params = get_param_list(embedding_lookup2_params)
+    embedding_lookup3_params = get_param_list(embedding_lookup3_params)
+    dense1_params = get_param_list(dense1_params)
+    dense2_params = get_param_list(dense2_params)
+    if optimizer_test_case == 1:
+        parameters1 = (
+            embedding_lookup1_params
+            + embedding_lookup2_params
+            + embedding_lookup3_params
+            + dense1_params
+            + dense2_params
+        )
+        params = [
+            {
+                "params": parameters1,
+                "clip_grad_max_norm": 0.5,
+                "clip_grad_norm_type": norm_type,
+            },
+        ]
+    elif optimizer_test_case == 2:
+        # all grad in 1 group
+        parameters1 = (
+            embedding_lookup1_params + embedding_lookup2_params + dense1_params
+        )
+        parameters2 = embedding_lookup3_params + dense2_params
+        params = [
+            {
+                "params": parameters1,
+                "clip_grad_max_norm": 0.5,
+                "clip_grad_norm_type": norm_type,
+            },
+            {"params": parameters2, "clip_grad_max_norm": 1, "clip_grad_norm_type": 2,},
+        ]
+    elif optimizer_test_case == 3:
+        parameters1 = (
+            embedding_lookup1_params
+            + embedding_lookup2_params
+            + dense1_params
+            + dense2_params
+        )
+        parameters2 = embedding_lookup3_params
+        params = [
+            {
+                "params": parameters1,
+                "clip_grad_max_norm": 0.5,
+                "clip_grad_norm_type": norm_type,
+            },
+            {"params": parameters2, "clip_grad_max_norm": 1, "clip_grad_norm_type": 2,},
+        ]
+    return params
+
+
+def _test_one_embedding(
+    test_case, has_column_id, num_columns, use_fp16, optimizer_test_case, norm_type
+):
+    print(has_column_id, num_columns, use_fp16, optimizer_test_case, norm_type)
     placement = flow.placement(type="cuda", ranks=list(range(2)))
     batch_size = 4
     embedding_size = 2
@@ -79,17 +146,15 @@ def _test_one_embedding(test_case, has_column_id, num_columns, use_fp16):
                         }
                     }
                 )
-            store_options = flow.one_embedding.make_device_mem_cached_ssd_store_options(
-                device_memory_budget_mb_per_rank=16,
-                persistent_path=path,
-                size_factor=1,
+            store_options = flow.one_embedding.make_cached_ssd_store_options(
+                cache_budget_mb=16, persistent_path=path, size_factor=1,
             )
-            self.embedding = flow.one_embedding.Embedding(
+            self.embedding = flow.one_embedding.MultiTableEmbedding(
                 name,
                 embedding_size,
                 flow.float,
                 flow.int64,
-                columns=initializer_list,
+                tables=initializer_list,
                 store_options=store_options,
             )
             self.embedding = self.embedding.to_global(
@@ -111,29 +176,33 @@ def _test_one_embedding(test_case, has_column_id, num_columns, use_fp16):
                     growth_interval=2000,
                 )
                 self.set_grad_scaler(grad_scaler)
-            self.dense = MatMul(embedding_size * num_columns, 1)
+            self.dense1 = MatMul(embedding_size * num_columns, 1)
+            self.dense2 = MatMul(embedding_size * num_columns, 1)
             self.embedding_lookup1 = OneEmbedding("emb1", path1)
             self.embedding_lookup2 = OneEmbedding("emb2", path2)
-            self.add_optimizer(
-                flow.optim.SGD(self.dense.parameters(), lr=0.1, momentum=0.0)
+            self.embedding_lookup3 = OneEmbedding("emb3", path3)
+
+            params = get_optimizer_param(
+                optimizer_test_case,
+                norm_type,
+                self.embedding_lookup1.parameters(),
+                self.embedding_lookup2.parameters(),
+                self.embedding_lookup3.parameters(),
+                self.dense1.parameters(),
+                self.dense2.parameters(),
             )
-            self.add_optimizer(
-                flow.optim.SGD(
-                    self.embedding_lookup1.parameters(), lr=0.1, momentum=0.0
-                )
-            )
-            self.add_optimizer(
-                flow.optim.SGD(
-                    self.embedding_lookup2.parameters(), lr=0.1, momentum=0.0
-                )
-            )
+            self.add_optimizer(flow.optim.SGD(params, lr=0.1, momentum=0.0))
 
         def build(self, ids, column_ids):
             embedding1 = self.embedding_lookup1.forward(ids, column_ids)
             embedding2 = self.embedding_lookup2.forward(ids, column_ids)
+            embedding3 = self.embedding_lookup3.forward(ids, column_ids)
             embedding = embedding1 + embedding2
+            embedding = embedding + embedding3
             loss = embedding.reshape(embedding.shape[0], -1)
-            loss = self.dense(loss)
+            loss1 = self.dense1(loss)
+            loss2 = self.dense2(loss)
+            loss = loss1 + loss2
             loss = loss.mean()
             loss.backward()
             return loss
@@ -145,19 +214,13 @@ def _test_one_embedding(test_case, has_column_id, num_columns, use_fp16):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class OneEmbeddingTestCase(flow.unittest.TestCase):
-    def test_one_embedding1(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["has_column_id"] = [True, False]
-        arg_dict["num_columns"] = [1, 2]
-        arg_dict["use_fp16"] = [False]
-        for kwargs in GenArgDict(arg_dict):
-            _test_one_embedding(test_case, **kwargs)
-
     def test_one_embedding2(test_case):
         arg_dict = OrderedDict()
         arg_dict["has_column_id"] = [True]
         arg_dict["num_columns"] = [26]
         arg_dict["use_fp16"] = [True]
+        arg_dict["optimizer_test_case"] = [3]  # ,2,3,4,5]
+        arg_dict["norm_type"] = [2]  # , np.inf, -np.inf]
         for kwargs in GenArgDict(arg_dict):
             _test_one_embedding(test_case, **kwargs)
 
