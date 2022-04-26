@@ -29,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
-#include "oneflow/api/python/env/env.h"
+#include "oneflow/api/python/env/env_bak.h"
 
 namespace py = pybind11;
 
@@ -92,7 +92,7 @@ class PyFunctionDispatcher {
   const std::string func_name_;
   std::vector<const char*> signatures_;
 };
-
+/*
 namespace {
 std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
   std::string cur_f_str;
@@ -133,14 +133,15 @@ std::string get_cur_frame_stack_str() {
   return get_cur_frame_stack_str(max_stack_depth);
 }
 }  // namespace
-
+*/
 template<typename... SchemaT>
 inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
   static PyFunctionDispatcher<SchemaT...> dispatcher;
-
   if (OF_PREDICT_FALSE(LazyMode::is_enabled())) {
-    std::string cur_f_str =
-        get_cur_frame_stack_str() + "C API: <func " + dispatcher.func_name() + ">";
+    std::string cur_f_str = "";
+    std::cerr << "===" << dispatcher.func_name() << std::endl;
+    //std::string cur_f_str =
+    //    get_cur_frame_stack_str() + "C API: <func " + dispatcher.func_name() + ">";
     // User DispathFram to pass frame info to OpExpr or Interpreter.
     DispatchFrame::Guard f_guard(cur_f_str);
     return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});

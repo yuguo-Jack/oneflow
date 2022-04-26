@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_PYTHON_ENV_ENV_H_
-#define ONEFLOW_API_PYTHON_ENV_ENV_H_
+#ifndef ONEFLOW_API_PYTHON_ENV_ENV_BAK_H_
+#define ONEFLOW_API_PYTHON_ENV_ENV_BAK_H_
 
 #include <string>
 #include <google/protobuf/text_format.h>
@@ -28,8 +28,9 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
 
-namespace oneflow {
 
+namespace oneflow {
+/*
 inline Maybe<std::string> CurrentResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
   return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
@@ -39,19 +40,26 @@ inline Maybe<std::string> EnvResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForEnv>::Get()));
   return PbMessage2TxtString(Global<ResourceDesc, ForEnv>::Get()->resource());
 }
-
-inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
+*/
+inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {  //ok
   CHECK_NOTNULL_OR_RETURN((Global<bool, EagerExecution>::Get()));
   *Global<bool, EagerExecution>::Get() = enable_eager_execution;
   return Maybe<void>::Ok();
 }
 
-inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
+inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }  //ok
 
-inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }
-inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
-inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
-inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
+inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }  //ok
+inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }  //ok
+inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }  //ok
+inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }  //ok
+
+
+
+
+
+
+
 inline Maybe<size_t> CudaGetDeviceCount() {
   return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
 }
@@ -73,6 +81,14 @@ inline Maybe<void> SetGraphLRVerbose(bool verbose) {
 }
 inline bool GetGraphLRVerbose() { return IsOpenGraphVerboseStepLr(); }
 
+
+
+
+
+
+
+
+
 inline Maybe<void> SetGraphDebugMaxPyStackDepth(int32_t depth) {
   SetGraphDebugMaxPyStackDepthVar(depth);
   return Maybe<void>::Ok();
@@ -86,4 +102,4 @@ inline Maybe<void> SetGraphDebugMode(bool mode) {
 inline bool GetGraphDebugMode() { return GetGraphDebugModeFlag(); }
 }  // namespace oneflow
 
-#endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_
+#endif  // ONEFLOW_API_PYTHON_ENV_ENV_BAK_H_

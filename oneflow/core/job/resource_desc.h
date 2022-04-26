@@ -23,8 +23,6 @@ limitations under the License.
 
 namespace oneflow {
 
-static const size_t kMB = 1024 * 1024;
-
 class ResourceDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ResourceDesc);
@@ -41,8 +39,8 @@ class ResourceDesc final {
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
   int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
   int32_t MaxMdSaveWorkerNum() const { return resource_.max_mdsave_worker_num(); }
-  size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * kMB; }
-  size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * kMB; }
+  size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * 1024 * 1024; }
+  size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * 1024 * 1024; }
   bool enable_thread_local_cache() const { return resource_.enable_thread_local_cache(); }
   size_t thread_local_cache_max_size() const { return resource_.thread_local_cache_max_size(); }
   int32_t ComputeThreadPoolSize() const;

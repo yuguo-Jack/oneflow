@@ -23,6 +23,17 @@ std::atomic<bool>* GetGraphVerboseStepLr() {
   static std::atomic<bool> graph_verbose_step_lr{false};
   return &graph_verbose_step_lr;
 }
+
+int32_t* GetGraphDebugMaxPyStackDepthVarPtr() {
+  static thread_local int32_t graph_debug_max_py_stack_depth = 2;
+  return &graph_debug_max_py_stack_depth;
+}
+
+bool* GetGraphDebugModeFlagPtr() {
+  static thread_local bool graph_debug_mode_flag = false;
+  return &graph_debug_mode_flag;
+}
+
 }  // namespace
 
 bool IsOpenGraphVerboseStepLr() {
@@ -36,13 +47,20 @@ void SetGraphVerboseStepLr(bool verbose) {
   *graph_verbose_step_lr = verbose;
 }
 
-std::atomic<int32_t>* GetGraphDebugMaxPyStackDepthVar() {
-  static std::atomic<int32_t> graph_debug_max_py_stack_depth{2};
-  return &graph_debug_max_py_stack_depth;
+int32_t GetGraphDebugMaxPyStackDepthVar() {
+  return *GetGraphDebugMaxPyStackDepthVarPtr();
 }
 
-std::atomic<bool>* GetGraphDebugModeFlag() {
-  static std::atomic<bool> graph_debug_mode_flag{false};
-  return &graph_debug_mode_flag;
+void SetGraphDebugMaxPyStackDepthVar(int32_t depth) {
+  *GetGraphDebugMaxPyStackDepthVarPtr() = depth; 
+}
+
+
+bool GetGraphDebugModeFlag() {
+  return *GetGraphDebugModeFlagPtr();
+}
+
+void SetGraphDebugModeFlag(bool flag) {
+  *GetGraphDebugModeFlagPtr() = flag;
 }
 }  // namespace oneflow
