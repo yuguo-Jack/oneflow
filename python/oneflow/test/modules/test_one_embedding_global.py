@@ -95,11 +95,29 @@ def get_optimizer_param(
             },
             {"params": parameters2, "clip_grad_max_norm": 1, "clip_grad_norm_type": 2,},
         ]
+    elif optimizer_test_case == 4:
+        parameters1 = (
+            embedding_lookup1_params
+            + embedding_lookup2_params
+            + dense1_params
+            + dense2_params
+        )
+        parameters2 = embedding_lookup3_params
+        params = [
+            {"params": parameters1,},
+            {"params": parameters2},
+        ]
     return params
 
 
 def _test_one_embedding(
-    test_case, has_column_id, num_columns, use_fp16, optimizer_test_case, norm_type
+    test_case,
+    has_column_id,
+    num_columns,
+    use_fp16,
+    loss_scale_policy,
+    optimizer_test_case,
+    norm_type,
 ):
     print(has_column_id, num_columns, use_fp16, optimizer_test_case, norm_type)
     placement = flow.placement(type="cuda", ranks=list(range(2)))
@@ -169,12 +187,15 @@ def _test_one_embedding(
             super().__init__()
             if use_fp16:
                 self.config.enable_amp(True)
-                grad_scaler = flow.amp.GradScaler(
-                    init_scale=1073741824,
-                    growth_factor=2.0,
-                    backoff_factor=0.5,
-                    growth_interval=2000,
-                )
+                if loss_scale_policy == "static":
+                    grad_scaler = flow.amp.StaticGradScaler(1024)
+                else:
+                    grad_scaler = flow.amp.GradScaler(
+                        init_scale=1073741824,
+                        growth_factor=2.0,
+                        backoff_factor=0.5,
+                        growth_interval=2000,
+                    )
                 self.set_grad_scaler(grad_scaler)
             self.dense1 = MatMul(embedding_size * num_columns, 1)
             self.dense2 = MatMul(embedding_size * num_columns, 1)
@@ -218,8 +239,9 @@ class OneEmbeddingTestCase(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["has_column_id"] = [True]
         arg_dict["num_columns"] = [26]
-        arg_dict["use_fp16"] = [True]
-        arg_dict["optimizer_test_case"] = [3]  # ,2,3,4,5]
+        arg_dict["use_fp16"] = [False]  # [True, False]
+        arg_dict["loss_scale_policy"] = ["dynamic"]  # ["static", "dynamic"]
+        arg_dict["optimizer_test_case"] = [4]  # [1,2,3,4,5]
         arg_dict["norm_type"] = [2]  # , np.inf, -np.inf]
         for kwargs in GenArgDict(arg_dict):
             _test_one_embedding(test_case, **kwargs)
