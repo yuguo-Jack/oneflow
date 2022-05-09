@@ -39,12 +39,12 @@ class VirtualMachine final {
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
 
-  const vm::VirtualMachineEngine& vm() const { return *vm_; }
-
   Maybe<void> CloseVMThreads();
 
  private:
   friend class InstructionsBuilder;
+
+  const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
   void ScheduleLoop(const std::function<void()>& Initializer);
   void CallbackLoop(const std::function<void()>& Initializer);
@@ -62,6 +62,7 @@ class VirtualMachine final {
   Notifier pending_notifier_;
   std::thread callback_thread_;
   Notifier callback_notifier_;
+  std::recursive_mutex vm_mutex_;
 };
 
 }  // namespace oneflow

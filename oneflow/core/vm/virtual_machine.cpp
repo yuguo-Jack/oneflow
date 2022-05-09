@@ -157,6 +157,7 @@ void VirtualMachine::ControlSync() {
 }
 
 Maybe<void> VirtualMachine::CloseVMThreads() {
+  std::unique_lock<std::recursive_mutex> lock(vm_mutex_);
   CHECK_OR_RETURN(!vm_threads_closed_);
   ControlSync();
   pending_notifier_.Close();
@@ -201,6 +202,7 @@ std::string VirtualMachine::GetBlockingDebugString() {
 }
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
+  std::unique_lock<std::recursive_mutex> lock(vm_mutex_);
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
